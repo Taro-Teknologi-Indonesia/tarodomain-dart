@@ -1,0 +1,17 @@
+name: tarodomain_serverpod_server
+description: Serverpod module that provides TaroDomain persistence, scheduling and endpoint helpers on top of Serverpod.
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  serverpod: 4.0.4
+  tarodomain: ^0.0.1
+
+dev_dependencies:
+  lints: ^6.1.0
+  serverpod_test: 4.0.4
+  test: ^1.33.0

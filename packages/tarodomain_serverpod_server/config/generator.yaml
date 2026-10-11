@@ -1,0 +1,5 @@
+type: module
+nickname: tarodomain_serverpod
+
+client_package_path: ../tarodomain_serverpod_client
+server_test_tools_path: test/integration/test_tools

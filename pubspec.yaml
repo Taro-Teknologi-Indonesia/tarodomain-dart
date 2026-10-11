@@ -1,0 +1,33 @@
+name: tarodomain_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+workspace:
+  - packages/tarodomain
+  - packages/tarodomain_local
+  - packages/tarodomain_serverpod_server
+  - packages/tarodomain_serverpod_client
+  - examples/bank_account
+
+dev_dependencies:
+  lints: ^6.1.0
+  melos: ^8.9.0
+
+melos:
+  scripts:
+    analyze:
+      run: dart analyze --fatal-infos
+      description: Analyze every package.
+    format:
+      run: dart format .
+      description: Format every package.
+    format:check:
+      run: dart format --output=none --set-exit-if-changed .
+      description: Fail if any file is not formatted.
+    test:
+      exec: dart test
+      description: Run tests in every package that has a test folder.
+      packageFilters:
+        dirExists: test
