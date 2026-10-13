@@ -124,8 +124,8 @@ class _LotCardWidgetState extends State<LotCardWidget>
                 style: title,
               ),
             ),
-            const SizedBox(width: 8),
-            StatusBadge(lot.status, large: _large),
+            // On the big screen it sits on the picture instead.
+            if (!_large) ...[const SizedBox(width: 8), StatusBadge(lot.status)],
             if (lot.unpaid) ...[const SizedBox(width: 4), const UnpaidTag()],
           ],
         ),
@@ -188,6 +188,12 @@ class _LotCardWidgetState extends State<LotCardWidget>
                           lot.bidCount == 1 ? '1 bid' : '${lot.bidCount} bids',
                         ),
                       ),
+                    ),
+                  if (_large)
+                    Positioned(
+                      left: padding * 0.75,
+                      top: padding * 0.75,
+                      child: StatusBadge(lot.status, large: true),
                     ),
                   if (accent != null)
                     Positioned(
@@ -522,6 +528,8 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = switch (status) {
+      // Solid on the big screen, where it sits on the picture.
+      'OPEN' when large => (Brand.live, Colors.white),
       'OPEN' => (Brand.live.withValues(alpha: 0.1), Brand.live),
       'SOLD' => (Brand.gold, Brand.ink),
       _ => (Colors.grey.shade200, Colors.grey.shade700),
