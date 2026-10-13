@@ -62,8 +62,11 @@ void main() {
           );
 
       Future<void> close() async {
-        final wait = closeAt.difference(DateTime.now().toUtc());
-        if (!wait.isNegative) await Future<void>.delayed(wait);
+        // Timers round down to whole milliseconds; loop past closeAt.
+        while (DateTime.now().toUtc().isBefore(closeAt)) {
+          final wait = closeAt.difference(DateTime.now().toUtc());
+          await Future<void>.delayed(wait + const Duration(milliseconds: 1));
+        }
         // Not the sweep: it logs a failed close, and this should throw.
         await closeAuction(session, auctionId.value);
       }

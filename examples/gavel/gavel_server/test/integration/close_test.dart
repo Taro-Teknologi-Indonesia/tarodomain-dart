@@ -71,9 +71,13 @@ void main() {
           e.eventName,
       ];
 
+      // Timers round down to whole milliseconds, so one delay can wake up
+      // just before closeAt; loop until the clock has actually passed it.
       Future<void> waitUntilClosed() async {
-        final wait = closeAt.difference(DateTime.now().toUtc());
-        if (!wait.isNegative) await Future<void>.delayed(wait);
+        while (DateTime.now().toUtc().isBefore(closeAt)) {
+          final wait = closeAt.difference(DateTime.now().toUtc());
+          await Future<void>.delayed(wait + const Duration(milliseconds: 1));
+        }
       }
 
       setUp(() async {
