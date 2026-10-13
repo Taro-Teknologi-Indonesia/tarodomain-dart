@@ -22,7 +22,7 @@ class SnapshotInput {
   /// The aggregate version the snapshot represents.
   final int sourceVersion;
 
-  /// The aggregate's state, from `Snapshottable.toSnapshot`.
+  /// The aggregate's state, from `AggregateRoot.toSnapshot`.
   final Map<String, Object?> data;
 
   /// Free-form metadata.

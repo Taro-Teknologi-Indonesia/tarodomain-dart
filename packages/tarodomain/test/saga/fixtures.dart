@@ -127,6 +127,15 @@ class Wallet extends AggregateRoot<WalletId, WalletEvent> {
     MoneyRefunded(:final cents) => balance += cents,
     WithdrawalRejected() || DepositRejected() || FeeRejected() => null,
   };
+
+  @override
+  Map<String, Object?> toSnapshot() => {'balance': balance, 'frozen': frozen};
+
+  @override
+  void restoreSnapshotState(Map<String, Object?> data) {
+    balance = data['balance']! as int;
+    frozen = data['frozen']! as bool;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +226,13 @@ class Transfer extends AggregateRoot<TransferId, TransferEvent> {
     TransferCompleted() => 'completed',
     TransferFailed() => 'failed',
   };
+
+  @override
+  Map<String, Object?> toSnapshot() => {'status': status};
+
+  @override
+  void restoreSnapshotState(Map<String, Object?> data) =>
+      status = data['status']! as String;
 }
 
 EventRegistry transferRegistry() {

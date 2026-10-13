@@ -96,7 +96,7 @@ void main() {
     });
 
     test('restoreSnapshot sets state and version, then replay continues', () {
-      final account = SnapshottableAccount(id)
+      final account = BankAccount(id)
         ..restoreSnapshot({'owner': 'ann', 'balance': 10}, 4)
         ..loadFromHistory([FundsDeposited(cents: 1)]);
       expect(account.owner, 'ann');
@@ -105,15 +105,8 @@ void main() {
     });
 
     test('toSnapshot captures the business state', () {
-      final account = SnapshottableAccount.open(id, 'ann')..deposit(7);
+      final account = BankAccount.open(id, 'ann')..deposit(7);
       expect(account.toSnapshot(), {'owner': 'ann', 'balance': 7});
-    });
-
-    test('restoreSnapshot requires Snapshottable', () {
-      expect(
-        () => BankAccount(id).restoreSnapshot({}, 1),
-        throwsA(isA<InvalidConfigurationError>()),
-      );
     });
 
     test('restoreVersion rebuilds from state', () {

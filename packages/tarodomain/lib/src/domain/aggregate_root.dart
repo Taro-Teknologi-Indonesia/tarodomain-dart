@@ -25,8 +25,19 @@ import '../errors/error_codes.dart';
 ///     AccountOpened() => null,
 ///     MoneyDeposited(:final cents) => balance += cents,
 ///   };
+///
+///   @override
+///   Map<String, Object?> toSnapshot() => {'balance': balance};
+///
+///   @override
+///   void restoreSnapshotState(Map<String, Object?> data) =>
+///       balance = data['balance']! as int;
 /// }
 /// ```
+///
+/// Every aggregate implements [toSnapshot] and [restoreSnapshotState], so
+/// any of them can be snapshotted (spec §5.4). Dart can't enumerate fields,
+/// so the aggregate lists its state itself.
 ///
 /// The constructor takes only the ID and must not raise events, because
 /// repositories use it to rehydrate (spec §5.3). Events need no enrichment
@@ -94,21 +105,21 @@ abstract class AggregateRoot<TId extends AggregateId, E extends DomainEvent> {
   /// Clears the uncommitted events after they were stored.
   void markChangesAsCommitted() => _uncommitted.clear();
 
+  /// The business state as JSON-safe data, excluding the ID and version
+  /// (spec §5.4).
+  Map<String, Object?> toSnapshot();
+
+  /// Restores the state written by [toSnapshot]. Called by
+  /// [restoreSnapshot] on a freshly constructed aggregate.
+  @protected
+  void restoreSnapshotState(Map<String, Object?> data);
+
   /// Restores the state from a snapshot taken at [version].
   ///
-  /// Throws [InvalidConfigurationError] if this aggregate isn't
-  /// [Snapshottable], and [StateError] if there are uncommitted changes.
+  /// Throws [StateError] if there are uncommitted changes.
   void restoreSnapshot(Map<String, Object?> data, int version) {
-    // Typed as Object so the `is!` check can promote it.
-    final Object self = this;
-    if (self is! Snapshottable) {
-      throw InvalidConfigurationError(
-        '$runtimeType does not implement Snapshottable',
-        context: {'aggregate': '$runtimeType'},
-      );
-    }
     restoreVersion(version);
-    self.restoreSnapshotState(data);
+    restoreSnapshotState(data);
   }
 
   /// Sets the version of an aggregate rebuilt from stored state rather than
@@ -129,28 +140,4 @@ abstract class AggregateRoot<TId extends AggregateId, E extends DomainEvent> {
 
   @override
   String toString() => '$runtimeType($id, version: $_version)';
-}
-
-/// An aggregate whose state can be captured in a snapshot (spec §5.4).
-///
-/// Dart can't enumerate fields, so the aggregate lists them itself:
-///
-/// ```dart
-/// class BankAccount extends AggregateRoot<AccountId, AccountEvent>
-///     implements Snapshottable {
-///   @override
-///   Map<String, Object?> toSnapshot() => {'balance': balance};
-///
-///   @override
-///   void restoreSnapshotState(Map<String, Object?> data) =>
-///       balance = data['balance']! as int;
-/// }
-/// ```
-abstract interface class Snapshottable {
-  /// The business state as JSON-safe data, excluding the ID and version.
-  Map<String, Object?> toSnapshot();
-
-  /// Restores the state written by [toSnapshot]. Called by
-  /// [AggregateRoot.restoreSnapshot] on a freshly constructed aggregate.
-  void restoreSnapshotState(Map<String, Object?> data);
 }

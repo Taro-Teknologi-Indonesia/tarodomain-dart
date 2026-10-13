@@ -17,8 +17,7 @@ typedef SnapshotErrorHandler =
 ///
 /// With a [snapshotStore] and a positive [snapshotEvery], it saves a snapshot
 /// each time the version crosses a multiple of [snapshotEvery], and loads
-/// from the latest snapshot plus the events after it. The aggregate must then
-/// implement [Snapshottable].
+/// from the latest snapshot plus the events after it.
 class EventSourcedRepository<
   A extends AggregateRoot<TId, DomainEvent>,
   TId extends AggregateId
@@ -116,13 +115,6 @@ class EventSourcedRepository<
   Future<void> save(A aggregate) async {
     final changes = aggregate.getUncommittedChanges();
     if (changes.isEmpty) return;
-    if (_snapshotsEnabled && aggregate is! Snapshottable) {
-      throw InvalidConfigurationError(
-        '$aggregateType has snapshots enabled but ${aggregate.runtimeType} '
-        'does not implement Snapshottable',
-        context: {'aggregateType': aggregateType},
-      );
-    }
     final committedVersion = aggregate.committedVersion;
     await eventStore.appendToStream(
       streamIdFor(aggregate.id),
@@ -146,7 +138,7 @@ class EventSourcedRepository<
           sourceUuid: aggregate.id.value,
           sourceType: aggregateType,
           sourceVersion: aggregate.version,
-          data: (aggregate as Snapshottable).toSnapshot(),
+          data: aggregate.toSnapshot(),
         ),
       );
     } catch (error, stackTrace) {

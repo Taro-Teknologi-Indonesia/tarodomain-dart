@@ -9,3 +9,4 @@ export 'src/in_memory_snapshot_store_adapter.dart';
 export 'src/in_memory_unit_of_work.dart';
 export 'src/local_database.dart' show LocalDatabase;
 export 'src/local_provider.dart';
+export 'src/use_local.dart';

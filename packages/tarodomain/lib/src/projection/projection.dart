@@ -8,6 +8,11 @@ import '../bus/event_handler.dart';
 import '../domain/domain_event.dart';
 import '../errors/error_codes.dart';
 import '../errors/framework_error.dart';
+import '../event_sourcing/event_registry.dart';
+
+/// Called by [Projection.handle] with an event the projection has no
+/// handler for.
+typedef UnhandledEventCallback = void Function(DomainEvent event);
 
 /// Handles one event type in a [Projection].
 typedef ProjectionHandler<E extends DomainEvent> =
@@ -81,6 +86,19 @@ abstract class Projection implements EventHandler {
   /// The event types registered with [on], in registration order.
   List<Type> get handledEventTypes => [for (final r in _routes) r.type];
 
+  /// The event types registered with [on] that no event registered in
+  /// [registry] can match.
+  List<Type> unregisteredEventTypes(EventRegistry registry) => [
+    for (final route in _routes)
+      if (!route.isRegisteredIn(registry)) route.type,
+  ];
+
+  /// Called with each event that has no handler, before it is recorded as
+  /// processed. If it throws, the event isn't recorded and the error
+  /// propagates. The framework sets it from its projection validation mode
+  /// (see `DispatchGuard`); null skips such events silently (spec §12.2).
+  UnhandledEventCallback? onUnhandledEvent;
+
   /// Whether a handler is registered for [event].
   bool handles(DomainEvent event) => _routeFor(event) != null;
 
@@ -117,6 +135,8 @@ abstract class Projection implements EventHandler {
           stackTrace: stackTrace,
         );
       }
+    } else {
+      onUnhandledEvent?.call(event);
     }
     await markProcessed(event);
   }
@@ -148,6 +168,8 @@ final class _ProjectionRoute<E extends DomainEvent> {
   Type get type => E;
 
   bool matches(DomainEvent event) => event is E;
+
+  bool isRegisteredIn(EventRegistry registry) => registry.mayProduce<E>();
 
   FutureOr<void> call(DomainEvent event) => handler(event as E);
 }

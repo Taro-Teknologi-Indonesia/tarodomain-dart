@@ -44,7 +44,8 @@ class EventRegistry {
     }
     (_types[eventType] ??= _Registration())
       ..factory = fromData
-      ..version = version;
+      ..version = version
+      ..eventClass = _EventClass<E>();
   }
 
   /// Registers [upcast], which turns [eventType] data from [fromVersion] into
@@ -82,6 +83,12 @@ class EventRegistry {
       return false;
     }
   }
+
+  /// Whether a registered event may be a [T]: the class of some
+  /// registration is a subtype or a supertype of [T]. Startup validation
+  /// uses it to find handlers for events that can never occur.
+  bool mayProduce<T extends DomainEvent>() =>
+      _types.values.any((r) => r.eventClass?.overlaps<T>() ?? false);
 
   /// The current version of [eventType], or null if it isn't registered.
   String? currentVersion(String eventType) => _types[eventType]?.version;
@@ -208,8 +215,13 @@ class EventRegistry {
 
 typedef _Upcaster = ({String toVersion, Upcaster upcast});
 
+final class _EventClass<E extends DomainEvent> {
+  bool overlaps<T>() => <E>[] is List<T> || <T>[] is List<E>;
+}
+
 class _Registration {
   EventFactory<DomainEvent>? factory;
   String? version;
+  _EventClass? eventClass;
   final upcasters = <String, _Upcaster>{};
 }

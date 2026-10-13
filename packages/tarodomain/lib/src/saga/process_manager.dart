@@ -6,6 +6,7 @@ import '../domain/command.dart';
 import '../domain/domain_event.dart';
 import '../domain/execution_context.dart';
 import '../errors/error_codes.dart';
+import '../event_sourcing/event_registry.dart';
 import 'compensation_stack.dart';
 import 'saga_state_machine.dart';
 
@@ -27,6 +28,9 @@ final class SagaRoute<E extends DomainEvent> {
 
   /// Whether it handles [event].
   bool matches(DomainEvent event) => event is E;
+
+  /// Whether [registry] has an event type this route can receive.
+  bool isRegisteredIn(EventRegistry registry) => registry.mayProduce<E>();
 
   /// The step name recorded as the saga's `currentStep`, such as
   /// `continueWhenMoneyWithdrawn`.
@@ -206,6 +210,13 @@ abstract class ProcessManager<TState> {
     }
     return null;
   }
+
+  /// The event types of [routes] that no event registered in [registry] can
+  /// match.
+  List<Type> unregisteredEventTypes(EventRegistry registry) => [
+    for (final route in _routes)
+      if (!route.isRegisteredIn(registry)) route.eventType,
+  ];
 
   /// Whether [event] would start this saga.
   bool canStart(DomainEvent event) =>

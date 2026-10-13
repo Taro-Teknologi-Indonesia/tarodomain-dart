@@ -79,13 +79,6 @@ class BankAccount extends AggregateRoot<AccountId, AccountEvent> {
     AccountOpened(:final owner) => this.owner = owner,
     FundsDeposited(:final cents) => balance += cents,
   };
-}
-
-class SnapshottableAccount extends BankAccount implements Snapshottable {
-  SnapshottableAccount(super.id);
-
-  factory SnapshottableAccount.open(AccountId id, String owner) =>
-      SnapshottableAccount(id)..raise(AccountOpened(owner: owner));
 
   @override
   Map<String, Object?> toSnapshot() => {'owner': owner, 'balance': balance};

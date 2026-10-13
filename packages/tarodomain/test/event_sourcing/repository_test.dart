@@ -120,8 +120,8 @@ void main() {
     final id = AccountId.generate();
 
     test('saves a snapshot when the version crosses snapshotEvery', () async {
-      final repo = repository(SnapshottableAccount.new, snapshotEvery: 3);
-      final account = SnapshottableAccount.open(id, 'ann')..deposit(1);
+      final repo = repository(BankAccount.new, snapshotEvery: 3);
+      final account = BankAccount.open(id, 'ann')..deposit(1);
       await repo.save(account); // version 2: no snapshot
       expect(snapshots.saved, isEmpty);
 
@@ -138,8 +138,8 @@ void main() {
     });
 
     test('loads from the snapshot plus later events', () async {
-      final repo = repository(SnapshottableAccount.new, snapshotEvery: 2);
-      final account = SnapshottableAccount.open(id, 'ann')..deposit(1);
+      final repo = repository(BankAccount.new, snapshotEvery: 2);
+      final account = BankAccount.open(id, 'ann')..deposit(1);
       await repo.save(account); // snapshot at 2
       await repo.save(account..deposit(10)); // version 3
 
@@ -150,8 +150,8 @@ void main() {
     });
 
     test('falls back to full replay when the snapshot load fails', () async {
-      final repo = repository(SnapshottableAccount.new, snapshotEvery: 1);
-      await repo.save(SnapshottableAccount.open(id, 'ann')..deposit(4));
+      final repo = repository(BankAccount.new, snapshotEvery: 1);
+      await repo.save(BankAccount.open(id, 'ann')..deposit(4));
       snapshots.failWith = SnapshotLoadFailedError('corrupt');
 
       final loaded = await repo.load(id);
@@ -161,8 +161,8 @@ void main() {
     });
 
     test('falls back to full replay when the snapshot data is bad', () async {
-      final repo = repository(SnapshottableAccount.new, snapshotEvery: 1);
-      await repo.save(SnapshottableAccount.open(id, 'ann')..deposit(4));
+      final repo = repository(BankAccount.new, snapshotEvery: 1);
+      await repo.save(BankAccount.open(id, 'ann')..deposit(4));
       snapshots.saved.add(
         SnapshotInput(
           sourceUuid: id.value,
@@ -179,22 +179,13 @@ void main() {
     });
 
     test('a failed snapshot save does not fail the save', () async {
-      final repo = repository(SnapshottableAccount.new, snapshotEvery: 1);
+      final repo = repository(BankAccount.new, snapshotEvery: 1);
       snapshots.failWith = SnapshotSaveFailedError('full');
-      final account = SnapshottableAccount.open(id, 'ann');
+      final account = BankAccount.open(id, 'ann');
       await repo.save(account);
       expect(account.hasUncommittedChanges, isFalse);
       expect(bus.published, hasLength(1));
       expect(snapshotErrors.single, isA<SnapshotSaveFailedError>());
-    });
-
-    test('requires Snapshottable when snapshots are enabled', () async {
-      final repo = repository(BankAccount.new, snapshotEvery: 1);
-      await expectLater(
-        repo.save(BankAccount.open(id, 'ann')),
-        throwsA(isA<InvalidConfigurationError>()),
-      );
-      expect(adapter.appendCalls, 0);
     });
   });
 
