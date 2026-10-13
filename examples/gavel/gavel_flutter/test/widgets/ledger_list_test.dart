@@ -30,6 +30,12 @@ List<String> _rows(WidgetTester tester) => [
     '#${row.entry.sequence}',
 ];
 
+/// The decoration the row starting with [text] is drawn with.
+TextDecoration? _decoration(WidgetTester tester, String text) =>
+    DefaultTextStyle.of(
+      tester.element(find.textContaining(text).first),
+    ).style.decoration;
+
 void main() {
   testWidgets('shows every bid, newest on top', (tester) async {
     await tester.pumpWidget(
@@ -58,10 +64,8 @@ void main() {
     await tester.pumpWidget(_app(entries));
 
     expect(find.byType(LedgerRow), findsNWidgets(2));
-    final struck = tester.widget<Text>(find.textContaining('#2 · Siti').first);
-    expect(struck.style?.decoration, TextDecoration.lineThrough);
-    final kept = tester.widget<Text>(find.textContaining('#1 · Budi').first);
-    expect(kept.style?.decoration, isNull);
+    expect(_decoration(tester, '#2 · Siti'), TextDecoration.lineThrough);
+    expect(_decoration(tester, '#1 · Budi'), TextDecoration.none);
     expect(
       find.text(
         'retracted ${formatClock(DateTime.utc(2026, 10, 14, 22, 1, 7))}',
@@ -143,5 +147,15 @@ void main() {
     await tester.pumpWidget(_app([]));
 
     expect(find.text('No bids yet'), findsOneWidget);
+  });
+
+  testWidgets('a retraction fades the row into strike-through and keeps '
+      'it', (tester) async {
+    await tester.pumpWidget(_app([ledgerEntry(1)]));
+    await tester.pumpWidget(_app([ledgerEntry(1, retracted: true)]));
+
+    expect(find.byType(LedgerRow), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(_decoration(tester, '#1 · Budi'), TextDecoration.lineThrough);
   });
 }

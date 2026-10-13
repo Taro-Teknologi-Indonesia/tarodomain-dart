@@ -70,6 +70,16 @@ Integration: retract with the leader's `participantId` (copied from the ledger) 
 
 Integration: retract → the ledger row has `retracted = true`, the card is recomputed, and a live message is posted.
 
+## As built
+
+- The command is handled by its own `RetractBidHandler`, the same shape as `PlaceBidHandler`. It loads no participant: the "not mine" check compares against the bid's bidder, so a participant of another auction gets `NOT_LATEST`.
+- `RetractNotAllowedError` takes the existing `RetractRefusal` enum. "Not mine" is `NOT_LATEST`, as planned. `NOT_OWNER` stays unused.
+- `LotClosedError` carries `closeAt`, because `Lot` has no `closedAt` until UC-08.
+- The projection also sets `bidCount` to the number of bids still standing, as its doc says.
+- Flutter: `RetractButton` (`widgets/retract_button.dart`) sits above `BidBar` in the lot page's bottom bar, labelled `RETRACT Rp 450.000`. It shows when `ledger.canRetract(lot, me)` holds. Each confirm sends a fresh command ID. With no bids left, the snackbar reads "Bid retracted — back to the open bid of Rp 150.000".
+- `LedgerRow` animates into strike-through with a 300 ms `AnimatedDefaultTextStyle`. `AuctionController` already replaced pushed entries by `sequence` and never un-strikes a row.
+- **Still to do:** put the deterrent sentence in the judges' write-up (X4).
+
 ## Acceptance
 
 - [ ] The confirm dialog shows the exact amount.

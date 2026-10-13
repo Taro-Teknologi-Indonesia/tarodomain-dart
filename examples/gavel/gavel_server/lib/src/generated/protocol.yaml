@@ -9,4 +9,5 @@ live:
 lot:
   - add:
   - placeBid:
+  - retractBid:
   - detail:

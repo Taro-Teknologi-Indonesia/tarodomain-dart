@@ -274,4 +274,138 @@ void main() {
       isEmpty,
     );
   });
+
+  group('retract', () {
+    late ParticipantId tono;
+
+    setUp(() async => tono = await join('Tono'));
+
+    RetractBid retract(
+      ParticipantId who, {
+      required int expectedVersion,
+      DateTime? at,
+    }) => RetractBid(
+      lotId,
+      who,
+      expectedVersion: expectedVersion,
+      timestamp: at ?? now.add(const Duration(minutes: 2)),
+    );
+
+    test('a fat-fingered bid comes back off: the one before leads '
+        'again', () async {
+      await gavel.dispatch(bid(budi, 175000, expectedVersion: 1));
+      await gavel.dispatch(bid(sari, 275000, expectedVersion: 2));
+      await gavel.dispatch(retract(sari, expectedVersion: 3));
+
+      final lot = await loadLot();
+      expect(lot.currentPrice, 175000);
+      expect(lot.lastValidBid?.bidder, budi.uuid);
+      expect([for (final b in lot.bids) b.retracted], [false, true]);
+      expect(await lotEvents(), [
+        'LotCreated',
+        'BidPlaced',
+        'BidPlaced',
+        'BidRetracted',
+      ]);
+      final retracted =
+          (await gavel.eventStore.loadStream('Lot-${lotId.uuid}')).last
+              as BidRetracted;
+      expect(retracted.participantId, sari.uuid);
+      expect(retracted.retractedSequence, 2);
+    });
+
+    test("someone else's latest bid is NOT_LATEST", () async {
+      await gavel.dispatch(bid(budi, 175000, expectedVersion: 1));
+      await gavel.dispatch(bid(sari, 275000, expectedVersion: 2));
+
+      for (final who in [tono, budi]) {
+        await expectLater(
+          gavel.dispatch(retract(who, expectedVersion: 3)),
+          throwsA(
+            isA<RetractNotAllowedError>().having(
+              (e) => e.context['reason'],
+              'reason',
+              'NOT_LATEST',
+            ),
+          ),
+        );
+      }
+      expect((await loadLot()).bids.any((b) => b.retracted), isFalse);
+    });
+
+    test('a lot with no bids is NO_BIDS', () async {
+      await expectLater(
+        gavel.dispatch(retract(budi, expectedVersion: 1)),
+        throwsA(
+          isA<RetractNotAllowedError>().having(
+            (e) => e.context['reason'],
+            'reason',
+            'NO_BIDS',
+          ),
+        ),
+      );
+    });
+
+    test('at the close time is LOT_CLOSED', () async {
+      await gavel.dispatch(bid(budi, 175000, expectedVersion: 1));
+
+      await expectLater(
+        gavel.dispatch(retract(budi, expectedVersion: 2, at: closeAt)),
+        throwsA(isA<LotClosedError>()),
+      );
+      expect(await lotEvents(), ['LotCreated', 'BidPlaced']);
+    });
+
+    test('a stale view of my own lead is OUTBID', () async {
+      await gavel.dispatch(bid(budi, 175000, expectedVersion: 1));
+      await gavel.dispatch(bid(budi, 200000, expectedVersion: 2));
+
+      await expectLater(
+        gavel.dispatch(retract(budi, expectedVersion: 2)),
+        throwsA(
+          isA<OutbidError>().having((e) => e.context['version'], 'version', 3),
+        ),
+      );
+      expect(await lotEvents(), ['LotCreated', 'BidPlaced', 'BidPlaced']);
+    });
+
+    test('retracting every bid returns to the open bid with no '
+        'leader', () async {
+      await gavel.dispatch(bid(budi, 175000, expectedVersion: 1));
+      await gavel.dispatch(bid(sari, 200000, expectedVersion: 2));
+      await gavel.dispatch(retract(sari, expectedVersion: 3));
+      await gavel.dispatch(retract(budi, expectedVersion: 4));
+
+      final lot = await loadLot();
+      expect(lot.currentPrice, 150000);
+      expect(lot.lastValidBid, isNull);
+      expect(lot.bids, hasLength(2));
+    });
+
+    test('the next bid builds on the restored price', () async {
+      await gavel.dispatch(bid(budi, 175000, expectedVersion: 1));
+      await gavel.dispatch(bid(sari, 275000, expectedVersion: 2));
+      await gavel.dispatch(retract(sari, expectedVersion: 3));
+
+      await expectLater(
+        gavel.dispatch(bid(sari, 300000, expectedVersion: 4)),
+        throwsA(isA<InvalidIncrementError>()),
+      );
+      await gavel.dispatch(bid(sari, 200000, expectedVersion: 4));
+
+      final lot = await loadLot();
+      expect(lot.currentPrice, 200000);
+      expect(lot.lastValidBid?.sequence, 3);
+    });
+
+    test('a snapshot keeps the retraction', () async {
+      await gavel.dispatch(bid(budi, 175000, expectedVersion: 1));
+      await gavel.dispatch(retract(budi, expectedVersion: 2));
+
+      final restored = Lot(lotId)
+        ..restoreSnapshotState((await loadLot()).toSnapshot());
+      expect(restored.bids.single.retracted, isTrue);
+      expect(restored.currentPrice, 150000);
+    });
+  });
 }

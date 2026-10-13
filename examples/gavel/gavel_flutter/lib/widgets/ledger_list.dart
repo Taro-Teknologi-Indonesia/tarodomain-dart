@@ -115,7 +115,8 @@ class _LedgerListState extends State<LedgerList> {
 }
 
 /// One bid: `#12 · Budi · Rp 250.000 · 22:01:47`. Struck through and muted
-/// once retracted, with when; highlighted when it's [mine].
+/// once retracted, with when, fading into it as the retraction arrives;
+/// highlighted when it's [mine].
 class LedgerRow extends StatelessWidget {
   const LedgerRow(this.entry, {this.mine = false, super.key});
 
@@ -130,13 +131,20 @@ class LedgerRow extends StatelessWidget {
     return ListTile(
       dense: true,
       tileColor: mine ? scheme.primaryContainer.withValues(alpha: 0.35) : null,
-      title: Text(
-        '#${entry.sequence} · ${entry.bidderName} · '
-        '${formatRupiah(entry.amount)} · ${formatClock(entry.placedAt)}',
-        style: TextStyle(
-          decoration: retracted ? TextDecoration.lineThrough : null,
-          color: retracted ? scheme.onSurfaceVariant : null,
-          fontFeatures: const [FontFeature.tabularFigures()],
+      title: AnimatedDefaultTextStyle(
+        duration: const Duration(milliseconds: 300),
+        style: DefaultTextStyle.of(context).style.merge(
+          TextStyle(
+            decoration: retracted
+                ? TextDecoration.lineThrough
+                : TextDecoration.none,
+            color: retracted ? scheme.onSurfaceVariant : scheme.onSurface,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        child: Text(
+          '#${entry.sequence} · ${entry.bidderName} · '
+          '${formatRupiah(entry.amount)} · ${formatClock(entry.placedAt)}',
         ),
       ),
       subtitle: retracted

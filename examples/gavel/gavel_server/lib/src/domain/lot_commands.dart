@@ -174,3 +174,50 @@ class PlaceBidHandler extends CommandHandler<PlaceBid> {
     await lots.save(lot);
   }
 }
+
+/// Takes back [participantId]'s bid on a lot, the latest valid one, seen at
+/// [expectedVersion]. Its [timestamp] is "now" for the close-time check,
+/// set by the server.
+///
+/// The caller has already checked the participant's key; the command
+/// carries only the verified ID.
+class RetractBid extends Command {
+  /// Creates the command. Pass the client's command ID as [id], so a
+  /// resend is recognized as already processed.
+  RetractBid(
+    this.lotId,
+    this.participantId, {
+    required this.expectedVersion,
+    super.id,
+    super.timestamp,
+  });
+
+  /// The lot whose bid is taken back.
+  final LotId lotId;
+
+  /// Who retracts.
+  final ParticipantId participantId;
+
+  /// The lot's version the bidder saw.
+  final int expectedVersion;
+}
+
+/// Handles [RetractBid] on the [Lot].
+class RetractBidHandler extends CommandHandler<RetractBid> {
+  /// Creates the handler.
+  RetractBidHandler(this.lots);
+
+  /// Loads and saves lots.
+  final Repository<Lot, LotId> lots;
+
+  @override
+  Future<void> handle(RetractBid command) async {
+    final lot = await lots.load(command.lotId);
+    lot.retractBid(
+      by: command.participantId.uuid,
+      expectedVersion: command.expectedVersion,
+      now: command.timestamp,
+    );
+    await lots.save(lot);
+  }
+}

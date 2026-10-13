@@ -71,7 +71,8 @@ abstract class LiveUpdate
   /// The lot as it is now, when [kind] is `lotChanged`.
   _i7jzpqum.LotCard? lot;
 
-  /// The ledger line the change added, when a bid was placed.
+  /// The ledger line the change added or struck through, when a bid was
+  /// placed or retracted.
   _ivha9tke.LedgerEntry? ledgerEntry;
 
   /// The server's clock when it posted, for the client's clock offset.

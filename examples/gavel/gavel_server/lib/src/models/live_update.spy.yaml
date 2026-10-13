@@ -10,7 +10,8 @@ fields:
   ### The lot as it is now, when [kind] is `lotChanged`.
   lot: LotCard?
 
-  ### The ledger line the change added, when a bid was placed.
+  ### The ledger line the change added or struck through, when a bid was
+  ### placed or retracted.
   ledgerEntry: LedgerEntry?
 
   ### The server's clock when it posted, for the client's clock offset.

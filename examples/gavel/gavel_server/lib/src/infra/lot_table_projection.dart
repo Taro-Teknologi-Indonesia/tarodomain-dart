@@ -72,6 +72,41 @@ class LotTableProjection extends Projection {
       );
       await _postLot(updated, ledgerEntry: entry);
     });
+    on<BidRetracted>((e) async {
+      final lotId = UuidValue.fromString(e.lotId);
+      final ledger = await LedgerEntry.db.find(
+        session,
+        where: (t) => t.lotId.equals(lotId),
+        orderBy: (t) => t.sequence,
+        transaction: _transaction,
+      );
+      final i = ledger.indexWhere((l) => l.sequence == e.retractedSequence);
+      if (i < 0) throw StateError('No ledger entry ${e.retractedSequence}');
+      final entry = await LedgerEntry.db.updateRow(
+        session,
+        ledger[i].copyWith(retracted: true, retractedAt: e.occurredAt),
+        transaction: _transaction,
+      );
+      ledger[i] = entry;
+      final standing = [
+        for (final l in ledger)
+          if (!l.retracted) l,
+      ];
+      final leader = standing.lastOrNull;
+      final card = await _card(e.lotId);
+      final updated = await LotCard.db.updateRow(
+        session,
+        card.copyWith(
+          currentPrice: leader?.amount ?? card.openBid,
+          leaderId: leader?.participantId,
+          leaderName: leader?.bidderName,
+          bidCount: standing.length,
+          version: card.version + 1,
+        ),
+        transaction: _transaction,
+      );
+      await _postLot(updated, ledgerEntry: entry);
+    });
   }
 
   /// The request's session.

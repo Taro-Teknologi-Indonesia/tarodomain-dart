@@ -33,7 +33,8 @@ TaroDomainBuilder registerGavel(
         (a) => a
             .factory(Lot.new)
             .event<LotCreated>('LotCreated', LotCreated.fromData)
-            .event<BidPlaced>('BidPlaced', BidPlaced.fromData),
+            .event<BidPlaced>('BidPlaced', BidPlaced.fromData)
+            .event<BidRetracted>('BidRetracted', BidRetracted.fromData),
       )
       .aggregate<Participant, ParticipantId>(
         'Participant',
@@ -55,6 +56,10 @@ TaroDomainBuilder registerGavel(
       .command<PlaceBid>(
         'PlaceBid',
         (c) => PlaceBidHandler(c.repository(), c.repository()),
+      )
+      .command<RetractBid>(
+        'RetractBid',
+        (c) => RetractBidHandler(c.repository()),
       )
       .command<JoinAuction>(
         'JoinAuction',

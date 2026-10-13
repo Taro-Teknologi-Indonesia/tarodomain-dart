@@ -238,6 +238,45 @@ class Endpoints extends _is.EndpointDispatch {
                 params['commandId'],
               ),
         ),
+        'retractBid': _is.MethodConnector(
+          name: 'retractBid',
+          params: {
+            'lotId': _is.ParameterDescription(
+              name: 'lotId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantId': _is.ParameterDescription(
+              name: 'participantId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantKey': _is.ParameterDescription(
+              name: 'participantKey',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'expectedVersion': _is.ParameterDescription(
+              name: 'expectedVersion',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+            'commandId': _is.ParameterDescription(
+              name: 'commandId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['lot'] as _i6hhfich.LotEndpoint).retractBid(
+                session,
+                params['lotId'],
+                params['participantId'],
+                params['participantKey'],
+                params['expectedVersion'],
+                params['commandId'],
+              ),
+        ),
         'detail': _is.MethodConnector(
           name: 'detail',
           params: {

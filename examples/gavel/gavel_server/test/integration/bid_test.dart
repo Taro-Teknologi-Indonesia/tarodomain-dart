@@ -111,6 +111,24 @@ void main() {
         isA<TaroDomainException>().having((e) => e.code, 'code', code),
       );
 
+      Future<LotCard> retractBid(
+        JoinResult who, {
+        int? expectedVersion,
+        String? key,
+        UuidValue? participantId,
+      }) async => endpoints.lot.retractBid(
+        sessionBuilder,
+        lot.lotId,
+        participantId ?? who.participantId,
+        key ?? who.participantKey,
+        expectedVersion ??
+            (await LotCard.db.findFirstRow(
+              session,
+              where: (t) => t.lotId.equals(lot.lotId),
+            ))!.version,
+        const Uuid().v7obj(),
+      );
+
       test('a bid returns the fresh card, writes the ledger and pushes '
           'both', () async {
         final received = await watch();
@@ -237,6 +255,84 @@ void main() {
         ))!;
         expect(stored.bidCount, 1);
         expect(stored.version, card.version);
+      });
+
+      test('a retraction strikes the row, restores the leader and pushes '
+          'both', () async {
+        await placeBid(budi, 175000);
+        await placeBid(sari, 275000, expectedVersion: lot.version + 1);
+        final received = await watch();
+
+        final card = await retractBid(sari);
+        await settle();
+
+        expect(card.currentPrice, 175000);
+        expect(card.leaderId, budi.participantId);
+        expect(card.leaderName, 'Budi');
+        expect(card.bidCount, 1);
+        expect(card.version, lot.version + 3);
+        final stored = await taro
+            .runtime(session)
+            .repository<Lot, LotId>()
+            .load(LotId.fromExisting(lot.lotId.uuid));
+        expect(card.version, stored.version);
+
+        final ledger = await LedgerEntry.db.find(
+          session,
+          orderBy: (t) => t.sequence,
+        );
+        expect([for (final e in ledger) e.retracted], [false, true]);
+        expect(ledger.last.retractedAt, isNotNull);
+
+        final update = received.singleWhere(
+          (u) => u.kind == LiveUpdateKind.lotChanged,
+        );
+        expect(update.lot?.version, card.version);
+        expect(update.lot?.leaderName, 'Budi');
+        expect(update.ledgerEntry?.sequence, 2);
+        expect(update.ledgerEntry?.retracted, isTrue);
+      });
+
+      test('retracting the only bid clears the leader', () async {
+        await placeBid(budi, 175000);
+
+        final card = await retractBid(budi);
+
+        expect(card.currentPrice, 150000);
+        expect(card.leaderId, isNull);
+        expect(card.leaderName, isNull);
+        expect(card.bidCount, 0);
+      });
+
+      test("the leader's ID from the ledger without their key is "
+          'NOT_PARTICIPANT, and the bid stands', () async {
+        await placeBid(budi, 175000);
+        final leader = (await LedgerEntry.db.find(session)).single;
+
+        await expectLater(
+          retractBid(
+            sari,
+            participantId: leader.participantId,
+            key: sari.participantKey,
+          ),
+          failsWith('NOT_PARTICIPANT'),
+        );
+        expect(await lotEvents(), ['LotCreated', 'BidPlaced']);
+        expect((await LedgerEntry.db.find(session)).single.retracted, isFalse);
+      });
+
+      test("someone else's bid is RETRACT_NOT_ALLOWED", () async {
+        await placeBid(budi, 175000);
+
+        await expectLater(
+          retractBid(sari),
+          throwsA(
+            isA<TaroDomainException>()
+                .having((e) => e.code, 'code', 'RETRACT_NOT_ALLOWED')
+                .having((e) => e.context, 'context', contains('NOT_LATEST')),
+          ),
+        );
+        expect(await lotEvents(), ['LotCreated', 'BidPlaced']);
       });
     },
   );

@@ -90,6 +90,45 @@ class LotEndpoint extends Endpoint {
     return _card(session, lotId);
   });
 
+  /// Takes back [participantId]'s bid on the lot [lotId], which must be
+  /// the latest valid one, as seen at [expectedVersion], and returns the
+  /// lot's fresh card. The bid stays in the ledger, struck through.
+  ///
+  /// [commandId] comes from the client, so a resend retracts once.
+  ///
+  /// Throws `NOT_PARTICIPANT` unless [participantKey] is the key of a
+  /// participant of the lot's auction: the ledger shows every bidder's ID,
+  /// so the ID alone proves nothing. Then `LOT_CLOSED` at or after the
+  /// close, `RETRACT_NOT_ALLOWED` with `NO_BIDS` or `NOT_LATEST`, `OUTBID`
+  /// if the lot changed since [expectedVersion], and `AGGREGATE_NOT_FOUND`
+  /// for an unknown lot. Nothing is stored on any of them.
+  Future<LotCard> retractBid(
+    Session session,
+    UuidValue lotId,
+    UuidValue participantId,
+    String participantKey,
+    int expectedVersion,
+    UuidValue commandId,
+  ) => rethrowAsTaroDomainException(() async {
+    final card = await _card(session, lotId);
+    await verifyParticipant(
+      session,
+      card.auctionId,
+      participantId,
+      participantKey,
+    );
+    await _taro.dispatch(
+      session,
+      RetractBid(
+        LotId.fromExisting(lotId.uuid),
+        ParticipantId.fromExisting(participantId.uuid),
+        expectedVersion: expectedVersion,
+        id: commandId,
+      ),
+    );
+    return _card(session, lotId);
+  });
+
   /// The lot [lotId] with every bid on it, retracted ones included, in
   /// ledger order.
   ///

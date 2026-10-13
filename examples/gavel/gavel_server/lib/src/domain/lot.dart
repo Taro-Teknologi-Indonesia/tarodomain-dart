@@ -184,6 +184,42 @@ class BidPlaced extends LotEvent {
   };
 }
 
+/// The holder of a lot's latest valid bid took it back (UC-07).
+///
+/// A compensating event: the bid stays in the ledger, marked, and the bid
+/// before it leads again.
+class BidRetracted extends LotEvent {
+  /// Creates the event.
+  BidRetracted(
+    super.lotId, {
+    required this.participantId,
+    required this.retractedSequence,
+  });
+
+  /// Rebuilds the event from [toData]'s output.
+  factory BidRetracted.fromData(Map<String, Object?> data) => BidRetracted(
+    data['lotId']! as String,
+    participantId: data['participantId']! as String,
+    retractedSequence: data['retractedSequence']! as int,
+  );
+
+  /// Who retracted: the bid's bidder.
+  final String participantId;
+
+  /// The retracted bid's place in the ledger.
+  final int retractedSequence;
+
+  @override
+  String get eventName => 'BidRetracted';
+
+  @override
+  Map<String, Object?> toData() => {
+    'lotId': lotId,
+    'participantId': participantId,
+    'retractedSequence': retractedSequence,
+  };
+}
+
 /// One bid on a [Lot]. Retracted bids stay, marked, so the ledger never
 /// loses a line.
 class Bid {
@@ -224,6 +260,16 @@ class Bid {
 
   /// Whether the bidder took it back (UC-07).
   final bool retracted;
+
+  /// This bid, taken back.
+  Bid retract() => Bid(
+    sequence: sequence,
+    bidder: bidder,
+    bidderName: bidderName,
+    amount: amount,
+    at: at,
+    retracted: true,
+  );
 
   /// The bid as JSON, for snapshots.
   Map<String, Object?> toJson() => {
@@ -453,6 +499,51 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     );
   }
 
+  /// Takes back the latest valid bid as [by], who saw the lot at
+  /// [expectedVersion]. The bid before it leads again, or the price goes
+  /// back to [openBid].
+  ///
+  /// The checks run in this order:
+  ///
+  /// 1. A lot that isn't open, or [now] at or after [closeAt], throws
+  ///    [LotClosedError].
+  /// 2. A lot with no valid bid throws [RetractNotAllowedError] `NO_BIDS`.
+  /// 3. A latest valid bid that isn't [by]'s throws `NOT_LATEST`: someone
+  ///    bid after them, which says more than a stale version would.
+  /// 4. A lot that changed since [expectedVersion] throws [OutbidError].
+  ///
+  /// There is no limit on retractions: each one is public and permanent,
+  /// and that is the deterrent.
+  void retractBid({
+    required String by,
+    required int expectedVersion,
+    required DateTime now,
+  }) {
+    if (status != LotStatus.open || !now.isBefore(closeAt)) {
+      throw LotClosedError(closedAt: closeAt);
+    }
+    final last = lastValidBid;
+    if (last == null) throw RetractNotAllowedError(RetractRefusal.noBids);
+    if (last.bidder != by) {
+      throw RetractNotAllowedError(RetractRefusal.notLatest);
+    }
+    if (expectedVersion != version) {
+      throw OutbidError(
+        currentPrice: currentPrice,
+        leaderName: last.bidderName,
+        leaderId: last.bidder,
+        version: version,
+      );
+    }
+    raise(
+      BidRetracted(
+        id.uuid,
+        participantId: by,
+        retractedSequence: last.sequence,
+      ),
+    );
+  }
+
   @override
   void apply(LotEvent event) {
     switch (event) {
@@ -474,6 +565,11 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
             amount: event.amount,
             at: event.occurredAt,
           ),
+        ];
+      case BidRetracted():
+        bids = [
+          for (final bid in bids)
+            bid.sequence == event.retractedSequence ? bid.retract() : bid,
         ];
     }
   }

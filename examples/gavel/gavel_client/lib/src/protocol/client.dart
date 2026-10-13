@@ -154,6 +154,32 @@ class EndpointLot extends _isc.EndpointRef {
     'commandId': commandId,
   });
 
+  /// Takes back [participantId]'s bid on the lot [lotId], which must be
+  /// the latest valid one, as seen at [expectedVersion], and returns the
+  /// lot's fresh card. The bid stays in the ledger, struck through.
+  ///
+  /// [commandId] comes from the client, so a resend retracts once.
+  ///
+  /// Throws `NOT_PARTICIPANT` unless [participantKey] is the key of a
+  /// participant of the lot's auction: the ledger shows every bidder's ID,
+  /// so the ID alone proves nothing. Then `LOT_CLOSED` at or after the
+  /// close, `RETRACT_NOT_ALLOWED` with `NO_BIDS` or `NOT_LATEST`, `OUTBID`
+  /// if the lot changed since [expectedVersion], and `AGGREGATE_NOT_FOUND`
+  /// for an unknown lot. Nothing is stored on any of them.
+  _ida.Future<_ik2e60uo.LotCard> retractBid(
+    _isc.UuidValue lotId,
+    _isc.UuidValue participantId,
+    String participantKey,
+    int expectedVersion,
+    _isc.UuidValue commandId,
+  ) => caller.callServerEndpoint<_ik2e60uo.LotCard>('lot', 'retractBid', {
+    'lotId': lotId,
+    'participantId': participantId,
+    'participantKey': participantKey,
+    'expectedVersion': expectedVersion,
+    'commandId': commandId,
+  });
+
   /// The lot [lotId] with every bid on it, retracted ones included, in
   /// ledger order.
   ///

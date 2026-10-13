@@ -15,13 +15,16 @@ import '../core/ledger.dart';
 import '../core/live.dart';
 import '../core/money.dart';
 import '../core/organizer_keys.dart';
+import '../core/retracting.dart';
 import '../widgets/bid_bar.dart';
 import '../widgets/join_sheet.dart';
 import '../widgets/ledger_list.dart';
 import '../widgets/lot_visual.dart';
+import '../widgets/retract_button.dart';
 
 /// One lot (UC-05): its visual, price and status, and the full ledger, with
-/// the kelipatan chips in a bottom bar the thumb reaches (UC-06).
+/// the kelipatan chips in a bottom bar the thumb reaches (UC-06), and
+/// RETRACT there for whoever holds the latest valid bid (UC-07).
 class LotPage extends StatefulWidget {
   const LotPage({required this.code, required this.lotId, super.key});
 
@@ -39,6 +42,7 @@ class _LotPageState extends State<LotPage> {
   late final AuctionController _auction = AuctionScope.read(context);
   late final UuidValue? _lotId = _parse(widget.lotId);
   final _bidder = Bidder(sendBidWith(client));
+  final _sendRetract = sendRetractWith(client);
 
   /// Who this browser bids as here, once read from localStorage.
   Identity? _identity;
@@ -171,19 +175,51 @@ class _LotPageState extends State<LotPage> {
                         child: const Text('Join to bid'),
                       )
                     : null
-              : BidBar(
-                  lot: lot,
-                  identity: identity,
-                  closeAt: closeAt,
-                  offset: auction.clockOffset,
-                  bidder: _bidder,
-                  onAccepted: auction.merge,
-                  onStale: _refresh,
-                  onNotParticipant: _rejoin,
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_retractable(auction, lot, identity) case final bid?)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: RetractButton(
+                          lot: lot,
+                          bid: bid,
+                          identity: identity,
+                          send: _sendRetract,
+                          onRetracted: auction.merge,
+                          onStale: _refresh,
+                          onNotParticipant: _rejoin,
+                        ),
+                      ),
+                    BidBar(
+                      lot: lot,
+                      identity: identity,
+                      closeAt: closeAt,
+                      offset: auction.clockOffset,
+                      bidder: _bidder,
+                      onAccepted: auction.merge,
+                      onStale: _refresh,
+                      onNotParticipant: _rejoin,
+                    ),
+                  ],
                 ),
         ),
       ),
     );
+  }
+
+  /// [identity]'s bid on [lot] if they may take it back now, else null.
+  LedgerEntry? _retractable(
+    AuctionController auction,
+    LotCard lot,
+    Identity identity,
+  ) {
+    final ledger = auction.ledgerFor(lot.lotId);
+    if (ledger == null || !ledger.canRetract(lot, identity.participantId)) {
+      return null;
+    }
+    return ledger.lastValid;
   }
 }
 
