@@ -48,12 +48,15 @@ class AuctionEndpoint extends Endpoint {
       ),
     );
 
-    // After the commit: UC-08's sweep closes the auction if the server stops
-    // between the two.
-    await Serverpod.instance.futureCalls
-        .callAtTime(utcCloseAt, identifier: 'close-${auctionId.uuid}')
-        .auctionCloseCalls
-        .close(auctionId.value);
+    // After the commit: the sweep closes the auction if the server stops
+    // between the two, and is the only trigger where future calls are
+    // disabled.
+    if (session.serverpod.config.futureCall.enabled) {
+      await session.serverpod.futureCalls
+          .callAtTime(utcCloseAt, identifier: 'close-${auctionId.uuid}')
+          .auctionCloseCalls
+          .close(auctionId.value);
+    }
 
     return CreatedAuction(
       code: code,

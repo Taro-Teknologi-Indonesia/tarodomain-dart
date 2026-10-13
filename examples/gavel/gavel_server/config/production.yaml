@@ -6,19 +6,19 @@
 
 apiServer:
   port: 8080
-  publicHost: gavel.api.serverpod.space
+  publicHost: gavel-auction.api.serverpod.space
   publicPort: 443
   publicScheme: https
 
 insightsServer:
   port: 8081
-  publicHost: gavel.insights.serverpod.space
+  publicHost: gavel-auction.insights.serverpod.space
   publicPort: 443
   publicScheme: https
 
 webServer:
   port: 8082
-  publicHost: gavel.serverpod.space
+  publicHost: gavel-auction.serverpod.space
   publicPort: 443
   publicScheme: https
 

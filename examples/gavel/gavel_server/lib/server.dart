@@ -5,18 +5,24 @@ import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
 
 import 'src/gavel.dart';
 import 'src/generated/serverpod.dart';
+import 'src/infra/timer_jobs.dart';
 
 /// Starts the Gavel server: the API, plus the Flutter web app from `web/app`.
 ///
 /// TaroDomain's definition is validated once the database is up, so a
-/// broken configuration stops the server instead of failing requests.
+/// broken configuration stops the server instead of failing requests. The
+/// scheduled jobs run as future calls, or from timers where the plan
+/// disables future calls (Serverpod Cloud's).
 Future<void> run(List<String> args) async {
   final pod = Serverpod(args);
+  final futureCalls = pod.config.futureCall.enabled;
 
   final taro = TaroDomainServerpod(
     gavelServerDefinition(),
-    scheduleCatchUp: (session, delay) =>
-        pod.futureCalls.callWithDelay(delay).taroDomainCalls.catchUp(),
+    scheduleCatchUp: futureCalls
+        ? (session, delay) =>
+              pod.futureCalls.callWithDelay(delay).taroDomainCalls.catchUp()
+        : null,
   )..install();
 
   // Static files with a fallback to index.html, so deep links such as
@@ -33,7 +39,11 @@ Future<void> run(List<String> args) async {
     await pod.shutdown(exitProcess: false);
     exit(1);
   }
-  await scheduleTaroDomainJobs(pod);
+  if (futureCalls) {
+    await scheduleTaroDomainJobs(pod);
+  } else {
+    startTimerJobs(pod);
+  }
 }
 
 /// Schedules TaroDomain's recurring jobs, replacing any scheduled by an
