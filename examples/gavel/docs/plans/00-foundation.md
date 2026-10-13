@@ -31,7 +31,7 @@ examples/gavel/
 ## 3. Server stack
 
 - Copy the shape of `examples/bank_account_serverpod`: `TaroDomainServerpod(definition, scheduleCatchUp: …)..install()`, `validate(pod)` after start, and recurring `catchUp`/`sagaTimeouts`/`cleanup` jobs.
-- **Database:** use SQLite for dev and the demo (as the bank example does), which keeps hosting to a single process. Switch to Postgres only if the hosting target needs it. Both work because everything goes through the ORM.
+- **Database:** PostgreSQL in every run mode. Serverpod Cloud only offers Postgres, and Serverpod requires one dialect across run modes. Development and tests use Serverpod's embedded Postgres (`database.dataPath`), so no Docker is needed. No app code changed, because everything goes through the ORM.
 - **Default consistency: `ConsistencyMode.strong`** for every command (see use-cases §5). Projections then update in the command's transaction, so the read model and the live push are never ahead of or behind the event store.
 - Snapshots: `snapshotEvery(100)`. A lot gets about 50 bids, so this hardly matters.
 

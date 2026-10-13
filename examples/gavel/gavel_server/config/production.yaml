@@ -1,0 +1,39 @@
+# Production on Serverpod Cloud. Cloud supplies the database host, name, user
+# and password at runtime, and the server, insights and web hosts are its
+# `<project>.api.serverpod.space`, `<project>.insights.serverpod.space` and
+# `<project>.serverpod.space`. Nothing secret lives here: passwords are set
+# with `serverpod cloud password set`.
+
+apiServer:
+  port: 8080
+  publicHost: gavel.api.serverpod.space
+  publicPort: 443
+  publicScheme: https
+
+insightsServer:
+  port: 8081
+  publicHost: gavel.insights.serverpod.space
+  publicPort: 443
+  publicScheme: https
+
+webServer:
+  port: 8082
+  publicHost: gavel.serverpod.space
+  publicPort: 443
+  publicScheme: https
+
+database:
+  host: localhost
+  port: 5432
+  name: serverpod
+  user: postgres
+  requireSsl: true
+
+maxRequestSize: 524288
+
+sessionLogs:
+  persistentEnabled: true
+  consoleEnabled: true
+
+futureCall:
+  scanInterval: 1000

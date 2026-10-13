@@ -1,5 +1,5 @@
 name: gavel_server
-description: Gavel, a live silent auction that closes itself, served by Serverpod on SQLite.
+description: Gavel, a live silent auction that closes itself, served by Serverpod on PostgreSQL.
 publish_to: none
 resolution: workspace
 
@@ -18,3 +18,9 @@ dev_dependencies:
   tarodomain_local: ^0.0.1
   tarodomain_testing: ^0.0.1
   test: ^1.33.0
+
+serverpod:
+  scripts:
+    # Builds the Flutter web app into web/app. `serverpod cloud deploy` runs
+    # it before every upload.
+    flutter_build: ../tool/build_web.sh

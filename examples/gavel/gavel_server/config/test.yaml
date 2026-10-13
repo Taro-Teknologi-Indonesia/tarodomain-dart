@@ -1,5 +1,6 @@
-# Tests: every port is 0, so the server picks a free one, and each test
-# group gets its own SQLite file next to this one.
+# Tests: every port is 0, so the server picks a free one. Serverpod starts
+# and manages an embedded PostgreSQL in `.serverpod/test/`, shared by every
+# test file, so `dart_test.yaml` runs the files one at a time.
 
 apiServer:
   port: 0
@@ -14,8 +15,11 @@ insightsServer:
   publicScheme: http
 
 database:
-  dialect: sqlite
-  filePath: db/test.db
+  host: localhost
+  port: 9090
+  name: gavel_test
+  user: postgres
+  dataPath: .serverpod/test/pgdata
 
 sessionLogs:
   persistentEnabled: false

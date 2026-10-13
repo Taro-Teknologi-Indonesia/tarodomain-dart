@@ -17,7 +17,7 @@ void main() {
   // Commands run in real transactions, which the default per-test rollback
   // (one shared transaction) doesn't allow.
   withServerpod(
-    'Given Gavel on SQLite',
+    'Given Gavel on PostgreSQL',
     rollbackDatabase: RollbackDatabase.disabled,
     (sessionBuilder, endpoints) {
       late Session session;

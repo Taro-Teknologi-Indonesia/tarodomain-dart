@@ -82,7 +82,7 @@ Domain (`tarodomain_local`):
 - Bid after `LotClosed` → `LotClosedError`.
 - **Race:** two `dispatch(PlaceBid)` calls with the same expectedVersion, run with `Future.wait`. Exactly one succeeds and the other is `OutbidError`, with stream length +1. Use the shared concurrency suite from `tarodomain_testing` if it fits.
 
-Integration (`serverpod_test`, SQLite):
+Integration (`serverpod_test`, PostgreSQL):
 - `placeBid` with another participant's ID and a wrong key (or a valid key from another auction) → `NOT_PARTICIPANT`, no event appended.
 - The same race through the endpoint: one `LotCard`, one ledger row, one `TaroDomainException(code: OUTBID)`.
 - Bid vs close: dispatch `CloseLot` and `PlaceBid` concurrently 20 times. Each run ends either as (bid counted, then closed with that bid as the winner) or as (`LOT_CLOSED`, winner = previous leader). Never a bid after `LotClosed` in the stream.

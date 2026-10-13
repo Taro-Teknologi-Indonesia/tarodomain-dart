@@ -1,5 +1,6 @@
 # Local development: API on 8080, insights on 8081 and the Flutter web app on
-# 8082, with a SQLite database file.
+# 8082. Serverpod starts and manages an embedded PostgreSQL in `.serverpod/`,
+# so no Docker is needed.
 
 apiServer:
   port: 8080
@@ -20,14 +21,16 @@ webServer:
   publicScheme: http
 
 database:
-  dialect: sqlite
-  filePath: db/development.db
+  host: localhost
+  port: 8090
+  name: gavel
+  user: postgres
+  dataPath: .serverpod/development/pgdata
 
 maxRequestSize: 524288
 
 sessionLogs:
-  # SQLite allows no concurrent writes, so logs go to the console only.
-  persistentEnabled: false
+  persistentEnabled: true
   consoleEnabled: true
   consoleLogFormat: text
 

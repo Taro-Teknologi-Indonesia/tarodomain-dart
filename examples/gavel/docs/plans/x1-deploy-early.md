@@ -8,17 +8,18 @@ By about hour 3 there's a public HTTPS URL where the Flutter web app loads from 
 
 ## Target
 
-1. **Serverpod Cloud** (preferred, because it earns stack points). Check:
-   - Whether it supports SQLite with a persistent volume. If it doesn't, switch `config/production.yaml` to its managed Postgres. TaroDomain persists only through the Serverpod ORM, which means no code changes.
+1. **Serverpod Cloud** (chosen, because it earns stack points). Check:
+   - ~~Whether it supports SQLite with a persistent volume.~~ It doesn't: Cloud offers only managed Postgres, and Serverpod requires one dialect in every run mode. So dev, test and production all moved to Postgres (embedded locally), and the migrations were regenerated. TaroDomain persists only through the Serverpod ORM, so no app code changed.
+   - The API lives on `<project>.api.serverpod.space` and the web app on `<project>.serverpod.space`; `gavel_flutter/lib/config.dart` derives one from the other.
    - That WebSocket streaming endpoints work through its ingress.
    - That the web server serves `web/app` and the SPA fallback for `/a/*`.
 2. **Fallback:** a small VM (any provider) running `dart compile exe` plus Caddy for automatic HTTPS, with `reverse_proxy` for the API, web and WebSocket ports. Docker is optional. Budget 1 h. Pick the fallback only if Serverpod Cloud blocks you for more than 30 min.
 
 ## Steps
 
-1. `config/production.yaml` and `passwords.yaml` come from environment variables or secrets, never committed.
-2. `tool/deploy.sh`: `flutter build web --release` → copy into `gavel_server/web/app` → `serverpod generate` → apply migrations → deploy.
-3. Point `gavel_flutter/lib/config.dart` at the same origin (`Uri.base`), so one build works locally and deployed.
+1. ✅ `config/production.yaml` holds no secrets (Cloud injects the database credentials). The committed `passwords.yaml` has only the local embedded-Postgres passwords; production secrets go through `serverpod cloud password set`.
+2. ✅ `tool/deploy.sh` runs the tests, then `serverpod cloud deploy`. Its `scloud.yaml` pre-deploy hooks run `serverpod generate` and the `flutter_build` script (`tool/build_web.sh` → `gavel_server/web/app`, shipped through `.scloudignore`), and Cloud applies the migrations. One-time setup: `serverpod cloud launch` in `gavel_server`.
+3. ✅ `gavel_flutter/lib/config.dart` derives the API URL from `Uri.base`, so one build works locally and deployed.
 4. Smoke test on the deployed URL:
    - [ ] `/a/TEST` loads the app (deep link, SPA fallback).
    - [ ] Two devices (a laptop and a phone on mobile data) both receive the ping.
