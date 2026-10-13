@@ -1,5 +1,52 @@
 /// TaroDomain core: domain primitives, event sourcing, CQRS pipelines,
-/// projections and sagas.
+/// projections and sagas, catch-up, rebuilds and operations tooling.
 library;
 
+export 'package:uuid/uuid_value.dart' show UuidValue;
+
+export 'src/adapters/dead_letter_store.dart';
+export 'src/adapters/event_store_adapter.dart';
+export 'src/adapters/idempotency_stores.dart';
+export 'src/adapters/provider.dart';
+export 'src/adapters/saga_store_adapter.dart';
+export 'src/adapters/snapshot_store_adapter.dart';
+export 'src/adapters/unit_of_work.dart';
+export 'src/bus/event_bus.dart';
+export 'src/bus/event_handler.dart';
+export 'src/bus/in_memory_event_bus.dart';
+export 'src/catch_up/backpressure_controller.dart';
+export 'src/catch_up/cron_dispatcher.dart';
+export 'src/catch_up/subscription_manager.dart';
+export 'src/command/command_dispatch_result.dart';
+export 'src/command/command_dispatcher.dart';
+export 'src/command/command_handler.dart';
+export 'src/command/command_pipeline.dart';
+export 'src/command/command_registry.dart';
+export 'src/command/concurrency_checker.dart';
+export 'src/dead_letter/dead_letter_writer.dart';
+export 'src/dead_letter/retry_policy.dart';
+export 'src/domain/aggregate_id.dart';
+export 'src/domain/aggregate_root.dart';
+export 'src/domain/command.dart';
+export 'src/domain/domain_event.dart';
+export 'src/domain/event_envelope.dart';
+export 'src/domain/execution_context.dart';
+export 'src/domain/serialized_event.dart';
+export 'src/domain/value_object.dart';
+export 'src/errors/error_codes.dart';
 export 'src/errors/framework_error.dart';
+export 'src/event_sourcing/event_registry.dart';
+export 'src/event_sourcing/event_store.dart';
+export 'src/projection/projection.dart';
+export 'src/rebuild/projection_rebuilder.dart';
+export 'src/rebuild/saga_rebuilder.dart';
+export 'src/repository/event_sourced_repository.dart';
+export 'src/repository/repository.dart';
+export 'src/repository/state_repository.dart';
+export 'src/saga/compensation_stack.dart';
+export 'src/saga/process_manager.dart';
+export 'src/saga/saga_event_handler.dart';
+export 'src/saga/saga_state_machine.dart';
+export 'src/saga/saga_timeout.dart';
+export 'src/saga/saga_timeout_scheduler.dart';
+export 'src/trace/correlation_trace.dart';

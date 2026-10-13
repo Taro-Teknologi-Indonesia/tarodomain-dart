@@ -1,5 +1,11 @@
 /// In-memory TaroDomain provider for tests and local development.
-///
-/// Implements the Provider interface (spec §24) once it lands in
-/// `package:tarodomain`.
 library;
+
+export 'src/in_memory_dead_letter_store.dart';
+export 'src/in_memory_event_store_adapter.dart';
+export 'src/in_memory_idempotency_stores.dart';
+export 'src/in_memory_saga_store_adapter.dart';
+export 'src/in_memory_snapshot_store_adapter.dart';
+export 'src/in_memory_unit_of_work.dart';
+export 'src/local_database.dart' show LocalDatabase;
+export 'src/local_provider.dart';

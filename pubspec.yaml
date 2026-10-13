@@ -7,6 +7,7 @@ environment:
 workspace:
   - packages/tarodomain
   - packages/tarodomain_local
+  - packages/tarodomain_testing
   - packages/tarodomain_serverpod_server
   - packages/tarodomain_serverpod_client
   - examples/bank_account

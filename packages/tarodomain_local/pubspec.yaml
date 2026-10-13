@@ -8,8 +8,10 @@ environment:
   sdk: ^3.12.2
 
 dependencies:
+  meta: ^1.19.0
   tarodomain: ^0.0.1
 
 dev_dependencies:
   lints: ^6.1.0
+  tarodomain_testing: ^0.0.1
   test: ^1.33.0

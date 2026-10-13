@@ -84,3 +84,54 @@ abstract class FrameworkError implements Exception {
 /// True when an operation that threw [error] may succeed on retry. Errors from
 /// outside the framework are not retried.
 bool shouldRetry(Object error) => error is FrameworkError && error.retryable;
+
+/// Base class for [ErrorCategory.domain] errors: business rule violations.
+abstract class DomainError extends FrameworkError {
+  /// Creates an error with a human-readable [message].
+  DomainError(super.message, {super.context, super.cause, super.stackTrace});
+
+  @override
+  ErrorCategory get category => ErrorCategory.domain;
+}
+
+/// Base class for [ErrorCategory.concurrency] errors: transient conflicts.
+abstract class ConcurrencyError extends FrameworkError {
+  /// Creates an error with a human-readable [message].
+  ConcurrencyError(
+    super.message, {
+    super.context,
+    super.cause,
+    super.stackTrace,
+  });
+
+  @override
+  ErrorCategory get category => ErrorCategory.concurrency;
+}
+
+/// Base class for [ErrorCategory.infrastructure] errors: transient failures.
+abstract class InfrastructureError extends FrameworkError {
+  /// Creates an error with a human-readable [message].
+  InfrastructureError(
+    super.message, {
+    super.context,
+    super.cause,
+    super.stackTrace,
+  });
+
+  @override
+  ErrorCategory get category => ErrorCategory.infrastructure;
+}
+
+/// Base class for [ErrorCategory.configuration] errors: misconfiguration.
+abstract class ConfigurationError extends FrameworkError {
+  /// Creates an error with a human-readable [message].
+  ConfigurationError(
+    super.message, {
+    super.context,
+    super.cause,
+    super.stackTrace,
+  });
+
+  @override
+  ErrorCategory get category => ErrorCategory.configuration;
+}

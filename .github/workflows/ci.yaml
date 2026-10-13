@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.5
+      - run: dart pub get
+      - run: dart run melos run format:check
+      - run: dart run melos run analyze
+      # Serverpod tests start an embedded PostgreSQL (config/test.yaml
+      # `dataPath`), so no database service is needed.
+      - run: dart run melos run test
