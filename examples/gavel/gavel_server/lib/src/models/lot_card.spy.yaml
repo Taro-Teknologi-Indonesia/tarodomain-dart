@@ -35,6 +35,9 @@ fields:
   ### The allowed raises (kelipatan), in rupiah, ascending.
   increments: List<int>
 
+  ### The Buy Now (BN) price, in rupiah, or null for no BN.
+  buyNowPrice: int?
+
   ### The leading bid, or the open bid while there is none.
   currentPrice: int
 

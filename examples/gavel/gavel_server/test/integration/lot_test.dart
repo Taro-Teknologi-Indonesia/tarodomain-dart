@@ -46,10 +46,12 @@ void main() {
       NewLot pirus({
         String name = 'Natural Pirus Hubei',
         int openBid = 150000,
+        int? buyNowPrice,
       }) => NewLot(
         name: name,
         openBid: openBid,
         increments: [50000, 25000, 100000],
+        buyNowPrice: buyNowPrice,
         description: 'Berat: 2 kg\nAsal: Hubei',
         imageUrl: 'https://example.com/pirus.jpg',
         tileEmoji: '💎',
@@ -107,6 +109,7 @@ void main() {
         expect(card.status, 'OPEN');
         expect(card.bidCount, 0);
         expect(card.leaderId, isNull);
+        expect(card.buyNowPrice, isNull);
         expect(card.version, (await loadLot(card.lotId)).version);
 
         final lotUpdates = [
@@ -118,6 +121,26 @@ void main() {
         expect(lotUpdates.single.lot?.currentPrice, 150000);
         expect([for (final u in received) u.auction?.lotCount], contains(1));
         expect((await view(created)).lotCount, 1);
+      });
+
+      test('add with a BN price stores and pushes it', () async {
+        final created = await createAuction();
+        final received = await watch(created.code);
+
+        final card = await endpoints.lot.add(
+          sessionBuilder,
+          created.code,
+          created.organizerKey,
+          pirus(buyNowPrice: 1500000),
+        );
+        await settle();
+
+        expect(card.buyNowPrice, 1500000);
+        final pushed = [
+          for (final u in received)
+            if (u.kind == LiveUpdateKind.lotChanged) u.lot,
+        ];
+        expect(pushed.single?.buyNowPrice, 1500000);
       });
 
       test('board lists the lots in order', () async {
@@ -203,6 +226,7 @@ void main() {
               name: 'Natural Pirus Hubei',
               openBid: 150000,
               increments: [25000],
+              buyNowPrice: null,
               description: '',
               imageUrl: null,
               tileEmoji: '💎',

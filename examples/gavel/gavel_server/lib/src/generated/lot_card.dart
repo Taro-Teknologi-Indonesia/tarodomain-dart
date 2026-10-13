@@ -29,6 +29,7 @@ abstract class LotCard
     required this.tileColor,
     required this.openBid,
     required this.increments,
+    this.buyNowPrice,
     required this.currentPrice,
     this.leaderId,
     this.leaderName,
@@ -54,6 +55,7 @@ abstract class LotCard
     required String tileColor,
     required int openBid,
     required List<int> increments,
+    int? buyNowPrice,
     required int currentPrice,
     _is.UuidValue? leaderId,
     String? leaderName,
@@ -84,6 +86,7 @@ abstract class LotCard
       increments: _imkuj2yl.Protocol().deserialize<List<int>>(
         jsonSerialization['increments'],
       ),
+      buyNowPrice: jsonSerialization['buyNowPrice'] as int?,
       currentPrice: jsonSerialization['currentPrice'] as int,
       leaderId: jsonSerialization['leaderId'] == null
           ? null
@@ -141,6 +144,9 @@ abstract class LotCard
   /// The allowed raises (kelipatan), in rupiah, ascending.
   List<int> increments;
 
+  /// The Buy Now (BN) price, in rupiah, or null for no BN.
+  int? buyNowPrice;
+
   /// The leading bid, or the open bid while there is none.
   int currentPrice;
 
@@ -190,6 +196,7 @@ abstract class LotCard
     String? tileColor,
     int? openBid,
     List<int>? increments,
+    int? buyNowPrice,
     int? currentPrice,
     _is.UuidValue? leaderId,
     String? leaderName,
@@ -217,6 +224,7 @@ abstract class LotCard
       'tileColor': tileColor,
       'openBid': openBid,
       'increments': increments.toJson(),
+      if (buyNowPrice != null) 'buyNowPrice': buyNowPrice,
       'currentPrice': currentPrice,
       if (leaderId != null) 'leaderId': leaderId?.toJson(),
       if (leaderName != null) 'leaderName': leaderName,
@@ -246,6 +254,7 @@ abstract class LotCard
       'tileColor': tileColor,
       'openBid': openBid,
       'increments': increments.toJson(),
+      if (buyNowPrice != null) 'buyNowPrice': buyNowPrice,
       'currentPrice': currentPrice,
       if (leaderId != null) 'leaderId': leaderId?.toJson(),
       if (leaderName != null) 'leaderName': leaderName,
@@ -303,6 +312,7 @@ class _LotCardImpl extends LotCard {
     required String tileColor,
     required int openBid,
     required List<int> increments,
+    int? buyNowPrice,
     required int currentPrice,
     _is.UuidValue? leaderId,
     String? leaderName,
@@ -326,6 +336,7 @@ class _LotCardImpl extends LotCard {
          tileColor: tileColor,
          openBid: openBid,
          increments: increments,
+         buyNowPrice: buyNowPrice,
          currentPrice: currentPrice,
          leaderId: leaderId,
          leaderName: leaderName,
@@ -355,6 +366,7 @@ class _LotCardImpl extends LotCard {
     String? tileColor,
     int? openBid,
     List<int>? increments,
+    Object? buyNowPrice = _Undefined,
     int? currentPrice,
     Object? leaderId = _Undefined,
     Object? leaderName = _Undefined,
@@ -379,6 +391,7 @@ class _LotCardImpl extends LotCard {
       tileColor: tileColor ?? this.tileColor,
       openBid: openBid ?? this.openBid,
       increments: increments ?? this.increments.map((e0) => e0).toList(),
+      buyNowPrice: buyNowPrice is int? ? buyNowPrice : this.buyNowPrice,
       currentPrice: currentPrice ?? this.currentPrice,
       leaderId: leaderId is _is.UuidValue? ? leaderId : this.leaderId,
       leaderName: leaderName is String? ? leaderName : this.leaderName,
@@ -430,6 +443,9 @@ class LotCardUpdateTable extends _is.UpdateTable<LotCardTable> {
   _is.ColumnValue<List<int>, List<int>> increments(List<int> value) =>
       _is.ColumnValue(table.increments, value);
 
+  _is.ColumnValue<int, int> buyNowPrice(int? value) =>
+      _is.ColumnValue(table.buyNowPrice, value);
+
   _is.ColumnValue<int, int> currentPrice(int value) =>
       _is.ColumnValue(table.currentPrice, value);
 
@@ -476,6 +492,7 @@ class LotCardTable extends _is.Table<int?> {
     tileColor = _is.ColumnString('tileColor', this);
     openBid = _is.ColumnInt('openBid', this);
     increments = _is.ColumnSerializable<List<int>>('increments', this);
+    buyNowPrice = _is.ColumnInt('buyNowPrice', this);
     currentPrice = _is.ColumnInt('currentPrice', this);
     leaderId = _is.ColumnUuid('leaderId', this);
     leaderName = _is.ColumnString('leaderName', this);
@@ -523,6 +540,9 @@ class LotCardTable extends _is.Table<int?> {
   /// The allowed raises (kelipatan), in rupiah, ascending.
   late final _is.ColumnSerializable<List<int>> increments;
 
+  /// The Buy Now (BN) price, in rupiah, or null for no BN.
+  late final _is.ColumnInt buyNowPrice;
+
   /// The leading bid, or the open bid while there is none.
   late final _is.ColumnInt currentPrice;
 
@@ -567,6 +587,7 @@ class LotCardTable extends _is.Table<int?> {
     tileColor,
     openBid,
     increments,
+    buyNowPrice,
     currentPrice,
     leaderId,
     leaderName,

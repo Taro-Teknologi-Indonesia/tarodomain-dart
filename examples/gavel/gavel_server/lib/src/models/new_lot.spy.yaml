@@ -10,6 +10,9 @@ fields:
   ### The allowed raises (kelipatan), in rupiah, in any order.
   increments: List<int>
 
+  ### The Buy Now (BN) price, in rupiah, or null for no BN.
+  buyNowPrice: int?
+
   ### The seller's description, at most 2000 characters.
   description: String
 

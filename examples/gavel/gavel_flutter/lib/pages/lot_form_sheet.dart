@@ -70,6 +70,7 @@ class LotFormSheet extends StatefulWidget {
 class _LotFormSheetState extends State<LotFormSheet> {
   final _name = TextEditingController();
   final _openBid = TextEditingController();
+  final _buyNow = TextEditingController();
   final _description = TextEditingController();
   final _imageUrl = TextEditingController();
   final _customStep = TextEditingController();
@@ -103,14 +104,26 @@ class _LotFormSheetState extends State<LotFormSheet> {
   @override
   void dispose() {
     _previewDelay?.cancel();
-    for (final c in [_name, _openBid, _description, _imageUrl, _customStep]) {
+    for (final c in [
+      _name,
+      _openBid,
+      _buyNow,
+      _description,
+      _imageUrl,
+      _customStep,
+    ]) {
       c.dispose();
     }
     super.dispose();
   }
 
-  int get _openBidValue =>
-      int.tryParse(_openBid.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
+  int get _openBidValue => _rupiahIn(_openBid) ?? 0;
+
+  /// The BN price, or null when the field is empty.
+  int? get _buyNowValue => _rupiahIn(_buyNow);
+
+  static int? _rupiahIn(TextEditingController field) =>
+      int.tryParse(field.text.replaceAll(RegExp(r'\D'), ''));
 
   List<int> get _steps => [
     ...LotFormSheet.presetSteps.where(_selectedSteps.contains),
@@ -154,6 +167,7 @@ class _LotFormSheetState extends State<LotFormSheet> {
           name: _name.text,
           openBid: _openBidValue,
           increments: _steps,
+          buyNowPrice: _buyNowValue,
           description: _description.text,
           imageUrl: _imageUrl.text.trim().isEmpty ? null : _imageUrl.text,
           tileEmoji: _emoji,
@@ -230,6 +244,20 @@ class _LotFormSheetState extends State<LotFormSheet> {
               hintText: '150.000',
               helperText: 'In rupiah',
               errorText: _errors['openBid'],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _buyNow,
+            onChanged: (_) => _clearError('buyNowPrice'),
+            keyboardType: TextInputType.number,
+            inputFormatters: [_ThousandsFormatter()],
+            decoration: InputDecoration(
+              labelText: 'Buy now (BN, optional)',
+              prefixText: 'Rp ',
+              hintText: '1.500.000',
+              helperText: 'Above the open bid. Leave empty for no BN',
+              errorText: _errors['buyNowPrice'],
             ),
           ),
           const SizedBox(height: 24),

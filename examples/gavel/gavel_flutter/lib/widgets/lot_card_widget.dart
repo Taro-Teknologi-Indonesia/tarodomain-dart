@@ -131,30 +131,16 @@ class _LotCardWidgetState extends State<LotCardWidget>
                       ],
                     ),
                     const SizedBox(height: 4),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween(
-                            begin: const Offset(0, 0.4),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      ),
-                      layoutBuilder: (current, previous) => Stack(
-                        alignment: Alignment.centerLeft,
-                        children: [...previous, ?current],
-                      ),
-                      child: Text(
-                        formatRupiah(lot.currentPrice),
-                        key: ValueKey(lot.currentPrice),
-                        style: price?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
+                    Row(
+                      children: [
+                        Flexible(child: _price(lot, price)),
+                        if (lot.buyNowPrice case final bn?
+                            when lot.status == 'OPEN' &&
+                                lot.currentPrice < bn) ...[
+                          const SizedBox(width: 8),
+                          BuyNowTag(bn),
+                        ],
+                      ],
                     ),
                     _Leader(lot: lot, me: widget.me, style: detail),
                   ],
@@ -163,6 +149,60 @@ class _LotCardWidgetState extends State<LotCardWidget>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// [lot]'s price, the new one sliding in over the old.
+  Widget _price(LotCard lot, TextStyle? style) => AnimatedSwitcher(
+    duration: const Duration(milliseconds: 300),
+    transitionBuilder: (child, animation) => FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: Tween(
+          begin: const Offset(0, 0.4),
+          end: Offset.zero,
+        ).animate(animation),
+        child: child,
+      ),
+    ),
+    layoutBuilder: (current, previous) => Stack(
+      alignment: Alignment.centerLeft,
+      children: [...previous, ?current],
+    ),
+    child: Text(
+      formatRupiah(lot.currentPrice),
+      key: ValueKey(lot.currentPrice),
+      style: style?.copyWith(
+        fontWeight: FontWeight.bold,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    ),
+  );
+}
+
+/// The lot's Buy Now price, as `BN Rp 1.500.000`.
+class BuyNowTag extends StatelessWidget {
+  const BuyNowTag(this.price, {super.key});
+
+  final int price;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.secondary),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        'BN ${formatRupiah(price)}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: colors.secondary),
       ),
     );
   }

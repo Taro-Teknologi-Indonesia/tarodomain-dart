@@ -308,6 +308,12 @@ class Protocol extends _is.DatabaseSerializationManager {
           dartType: 'List<int>',
         ),
         _isp.ColumnDefinition(
+          name: 'buyNowPrice',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: true,
+          dartType: 'int?',
+        ),
+        _isp.ColumnDefinition(
           name: 'currentPrice',
           columnType: _isp.ColumnType.bigint,
           isNullable: false,

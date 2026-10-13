@@ -29,6 +29,7 @@ abstract class LotCard
     required this.tileColor,
     required this.openBid,
     required this.increments,
+    this.buyNowPrice,
     required this.currentPrice,
     this.leaderId,
     this.leaderName,
@@ -54,6 +55,7 @@ abstract class LotCard
     required String tileColor,
     required int openBid,
     required List<int> increments,
+    int? buyNowPrice,
     required int currentPrice,
     _isc.UuidValue? leaderId,
     String? leaderName,
@@ -84,6 +86,7 @@ abstract class LotCard
       increments: _ivmqq51r.Protocol().deserialize<List<int>>(
         jsonSerialization['increments'],
       ),
+      buyNowPrice: jsonSerialization['buyNowPrice'] as int?,
       currentPrice: jsonSerialization['currentPrice'] as int,
       leaderId: jsonSerialization['leaderId'] == null
           ? null
@@ -139,6 +142,9 @@ abstract class LotCard
   /// The allowed raises (kelipatan), in rupiah, ascending.
   List<int> increments;
 
+  /// The Buy Now (BN) price, in rupiah, or null for no BN.
+  int? buyNowPrice;
+
   /// The leading bid, or the open bid while there is none.
   int currentPrice;
 
@@ -185,6 +191,7 @@ abstract class LotCard
     String? tileColor,
     int? openBid,
     List<int>? increments,
+    int? buyNowPrice,
     int? currentPrice,
     _isc.UuidValue? leaderId,
     String? leaderName,
@@ -212,6 +219,7 @@ abstract class LotCard
       'tileColor': tileColor,
       'openBid': openBid,
       'increments': increments.toJson(),
+      if (buyNowPrice != null) 'buyNowPrice': buyNowPrice,
       'currentPrice': currentPrice,
       if (leaderId != null) 'leaderId': leaderId?.toJson(),
       if (leaderName != null) 'leaderName': leaderName,
@@ -241,6 +249,7 @@ abstract class LotCard
       'tileColor': tileColor,
       'openBid': openBid,
       'increments': increments.toJson(),
+      if (buyNowPrice != null) 'buyNowPrice': buyNowPrice,
       'currentPrice': currentPrice,
       if (leaderId != null) 'leaderId': leaderId?.toJson(),
       if (leaderName != null) 'leaderName': leaderName,
@@ -276,6 +285,7 @@ class _LotCardImpl extends LotCard {
     required String tileColor,
     required int openBid,
     required List<int> increments,
+    int? buyNowPrice,
     required int currentPrice,
     _isc.UuidValue? leaderId,
     String? leaderName,
@@ -299,6 +309,7 @@ class _LotCardImpl extends LotCard {
          tileColor: tileColor,
          openBid: openBid,
          increments: increments,
+         buyNowPrice: buyNowPrice,
          currentPrice: currentPrice,
          leaderId: leaderId,
          leaderName: leaderName,
@@ -328,6 +339,7 @@ class _LotCardImpl extends LotCard {
     String? tileColor,
     int? openBid,
     List<int>? increments,
+    Object? buyNowPrice = _Undefined,
     int? currentPrice,
     Object? leaderId = _Undefined,
     Object? leaderName = _Undefined,
@@ -352,6 +364,7 @@ class _LotCardImpl extends LotCard {
       tileColor: tileColor ?? this.tileColor,
       openBid: openBid ?? this.openBid,
       increments: increments ?? this.increments.map((e0) => e0).toList(),
+      buyNowPrice: buyNowPrice is int? ? buyNowPrice : this.buyNowPrice,
       currentPrice: currentPrice ?? this.currentPrice,
       leaderId: leaderId is _isc.UuidValue? ? leaderId : this.leaderId,
       leaderName: leaderName is String? ? leaderName : this.leaderName,

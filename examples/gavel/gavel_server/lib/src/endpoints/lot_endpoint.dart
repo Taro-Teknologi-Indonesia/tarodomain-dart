@@ -34,6 +34,7 @@ class LotEndpoint extends Endpoint {
         name: lot.name,
         openBid: lot.openBid,
         increments: lot.increments,
+        buyNowPrice: lot.buyNowPrice,
         description: lot.description,
         imageUrl: lot.imageUrl,
         tileEmoji: lot.tileEmoji,

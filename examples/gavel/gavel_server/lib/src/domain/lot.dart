@@ -49,6 +49,7 @@ class LotCreated extends LotEvent {
     required this.name,
     required this.openBid,
     required this.increments,
+    required this.buyNowPrice,
     required this.description,
     required this.imageUrl,
     required this.tileEmoji,
@@ -65,6 +66,7 @@ class LotCreated extends LotEvent {
     name: data['name']! as String,
     openBid: data['openBid']! as int,
     increments: [for (final step in data['increments']! as List) step as int],
+    buyNowPrice: data['buyNowPrice'] as int?,
     description: data['description']! as String,
     imageUrl: data['imageUrl'] as String?,
     tileEmoji: data['tileEmoji']! as String,
@@ -88,6 +90,10 @@ class LotCreated extends LotEvent {
 
   /// The allowed raises (kelipatan), in rupiah, ascending.
   final List<int> increments;
+
+  /// The Buy Now (BN) price, in rupiah, or null for no BN. Events stored
+  /// before BN existed have no key and read as null.
+  final int? buyNowPrice;
 
   /// The seller's description, newlines kept.
   final String description;
@@ -118,6 +124,7 @@ class LotCreated extends LotEvent {
     'name': name,
     'openBid': openBid,
     'increments': increments,
+    'buyNowPrice': buyNowPrice,
     'description': description,
     'imageUrl': imageUrl,
     'tileEmoji': tileEmoji,
@@ -137,7 +144,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
   ///
   /// Throws [CommandValidationError], with the offending `field`, if the
   /// trimmed [name] is empty or longer than [maxNameLength], [openBid] isn't
-  /// positive, [increments] is empty or has a step that isn't positive or
+  /// positive, [buyNowPrice] is set but not above [openBid], [increments] is empty or has a step that isn't positive or
   /// appears twice, [description] is longer than [maxDescriptionLength],
   /// [imageUrl] isn't an http(s) URL, or the tile is malformed.
   factory Lot.create(
@@ -147,6 +154,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     required String name,
     required int openBid,
     required List<int> increments,
+    required int? buyNowPrice,
     required String description,
     required String? imageUrl,
     required String tileEmoji,
@@ -164,6 +172,13 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     }
     if (openBid <= 0) {
       throw _invalid('openBid', 'NOT_POSITIVE', 'The open bid must be above 0');
+    }
+    if (buyNowPrice != null && buyNowPrice <= openBid) {
+      throw _invalid(
+        'buyNowPrice',
+        'NOT_ABOVE_OPEN_BID',
+        'The BN price must be above the open bid',
+      );
     }
     if (increments.isEmpty) {
       throw _invalid('increments', 'EMPTY', 'Choose at least one step');
@@ -209,6 +224,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
         name: trimmed,
         openBid: openBid,
         increments: [...increments]..sort(),
+        buyNowPrice: buyNowPrice,
         description: description,
         imageUrl: image,
         tileEmoji: emoji,
@@ -259,6 +275,9 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
   /// The allowed raises, in rupiah, ascending.
   List<int> increments = [];
 
+  /// The Buy Now (BN) price, in rupiah, or null for no BN.
+  int? buyNowPrice;
+
   /// When the lot closes, in UTC.
   DateTime closeAt = DateTime.utc(0);
 
@@ -276,6 +295,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
         name = event.name;
         openBid = event.openBid;
         increments = event.increments;
+        buyNowPrice = event.buyNowPrice;
         closeAt = event.closeAt;
         position = event.position;
     }
@@ -287,6 +307,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     'name': name,
     'openBid': openBid,
     'increments': increments,
+    'buyNowPrice': buyNowPrice,
     'closeAt': closeAt.toIso8601String(),
     'position': position,
     'status': status.code,
@@ -298,6 +319,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     name = data['name']! as String;
     openBid = data['openBid']! as int;
     increments = [for (final step in data['increments']! as List) step as int];
+    buyNowPrice = data['buyNowPrice'] as int?;
     closeAt = DateTime.parse(data['closeAt']! as String);
     position = data['position']! as int;
     status = LotStatus.fromCode(data['status']! as String);

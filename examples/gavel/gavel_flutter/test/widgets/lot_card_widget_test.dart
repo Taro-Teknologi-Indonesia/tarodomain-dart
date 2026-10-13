@@ -99,6 +99,41 @@ void main() {
     expect(find.text('No bids — passed'), findsOneWidget);
   });
 
+  group('the BN tag', () {
+    testWidgets('shows while the price is below BN', (tester) async {
+      await tester.pumpWidget(_app(lotCard(buyNowPrice: 1500000)));
+
+      expect(find.text('BN Rp 1.500.000'), findsOneWidget);
+    });
+
+    testWidgets('is absent without a BN price', (tester) async {
+      await tester.pumpWidget(_app(lotCard()));
+
+      expect(find.byType(BuyNowTag), findsNothing);
+    });
+
+    testWidgets('goes once the price reaches BN', (tester) async {
+      final lot = lotCard(
+        version: 2,
+        currentPrice: 1500000,
+        leaderId: siti,
+        leaderName: 'Siti',
+        buyNowPrice: 1500000,
+      );
+      await tester.pumpWidget(_app(lot));
+
+      expect(find.byType(BuyNowTag), findsNothing);
+    });
+
+    testWidgets('goes once the lot closes', (tester) async {
+      await tester.pumpWidget(
+        _app(lotCard(version: 2, status: 'PASSED', buyNowPrice: 1500000)),
+      );
+
+      expect(find.byType(BuyNowTag), findsNothing);
+    });
+  });
+
   testWidgets('slides a new price in', (tester) async {
     await tester.pumpWidget(_app(lotCard()));
     await tester.pumpWidget(
@@ -130,7 +165,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: LotGrid(lots: [lotCard()], empty: 'No lots yet.'),
+          body: LotGrid(
+            lots: [lotCard(buyNowPrice: 1500000000)],
+            empty: 'No lots yet.',
+          ),
         ),
       ),
     );
@@ -141,7 +179,7 @@ void main() {
   testWidgets('a desktop grid does not overflow at any width', (tester) async {
     final lots = [
       for (var i = 0; i < 5; i++)
-        lotCard().copyWith(
+        lotCard(buyNowPrice: 1500000000).copyWith(
           lotId: UuidValue.fromString('00000000-0000-4000-8000-00000000000$i'),
           position: i,
         ),

@@ -34,6 +34,7 @@ class LotTableProjection extends Projection {
           tileColor: e.tileColor,
           openBid: e.openBid,
           increments: e.increments,
+          buyNowPrice: e.buyNowPrice,
           currentPrice: e.openBid,
           bidCount: 0,
           status: LotStatus.open.code,

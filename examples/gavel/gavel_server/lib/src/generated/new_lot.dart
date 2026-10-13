@@ -20,6 +20,7 @@ abstract class NewLot
     required this.name,
     required this.openBid,
     required this.increments,
+    this.buyNowPrice,
     required this.description,
     this.imageUrl,
     required this.tileEmoji,
@@ -30,6 +31,7 @@ abstract class NewLot
     required String name,
     required int openBid,
     required List<int> increments,
+    int? buyNowPrice,
     required String description,
     String? imageUrl,
     required String tileEmoji,
@@ -43,6 +45,7 @@ abstract class NewLot
       increments: _imkuj2yl.Protocol().deserialize<List<int>>(
         jsonSerialization['increments'],
       ),
+      buyNowPrice: jsonSerialization['buyNowPrice'] as int?,
       description: jsonSerialization['description'] as String,
       imageUrl: jsonSerialization['imageUrl'] as String?,
       tileEmoji: jsonSerialization['tileEmoji'] as String,
@@ -58,6 +61,9 @@ abstract class NewLot
 
   /// The allowed raises (kelipatan), in rupiah, in any order.
   List<int> increments;
+
+  /// The Buy Now (BN) price, in rupiah, or null for no BN.
+  int? buyNowPrice;
 
   /// The seller's description, at most 2000 characters.
   String description;
@@ -78,6 +84,7 @@ abstract class NewLot
     String? name,
     int? openBid,
     List<int>? increments,
+    int? buyNowPrice,
     String? description,
     String? imageUrl,
     String? tileEmoji,
@@ -90,6 +97,7 @@ abstract class NewLot
       'name': name,
       'openBid': openBid,
       'increments': increments.toJson(),
+      if (buyNowPrice != null) 'buyNowPrice': buyNowPrice,
       'description': description,
       if (imageUrl != null) 'imageUrl': imageUrl,
       'tileEmoji': tileEmoji,
@@ -104,6 +112,7 @@ abstract class NewLot
       'name': name,
       'openBid': openBid,
       'increments': increments.toJson(),
+      if (buyNowPrice != null) 'buyNowPrice': buyNowPrice,
       'description': description,
       if (imageUrl != null) 'imageUrl': imageUrl,
       'tileEmoji': tileEmoji,
@@ -124,6 +133,7 @@ class _NewLotImpl extends NewLot {
     required String name,
     required int openBid,
     required List<int> increments,
+    int? buyNowPrice,
     required String description,
     String? imageUrl,
     required String tileEmoji,
@@ -132,6 +142,7 @@ class _NewLotImpl extends NewLot {
          name: name,
          openBid: openBid,
          increments: increments,
+         buyNowPrice: buyNowPrice,
          description: description,
          imageUrl: imageUrl,
          tileEmoji: tileEmoji,
@@ -146,6 +157,7 @@ class _NewLotImpl extends NewLot {
     String? name,
     int? openBid,
     List<int>? increments,
+    Object? buyNowPrice = _Undefined,
     String? description,
     Object? imageUrl = _Undefined,
     String? tileEmoji,
@@ -155,6 +167,7 @@ class _NewLotImpl extends NewLot {
       name: name ?? this.name,
       openBid: openBid ?? this.openBid,
       increments: increments ?? this.increments.map((e0) => e0).toList(),
+      buyNowPrice: buyNowPrice is int? ? buyNowPrice : this.buyNowPrice,
       description: description ?? this.description,
       imageUrl: imageUrl is String? ? imageUrl : this.imageUrl,
       tileEmoji: tileEmoji ?? this.tileEmoji,

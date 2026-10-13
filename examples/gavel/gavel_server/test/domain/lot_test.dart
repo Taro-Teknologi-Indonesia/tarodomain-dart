@@ -40,6 +40,7 @@ void main() {
     String name = 'Natural Pirus Hubei',
     int openBid = 150000,
     List<int> increments = ladder,
+    int? buyNowPrice,
     String description = 'Berat: 2 kg\nAsal: Hubei',
     String? imageUrl,
     String tileEmoji = '💎',
@@ -52,6 +53,7 @@ void main() {
     name: name,
     openBid: openBid,
     increments: increments,
+    buyNowPrice: buyNowPrice,
     description: description,
     imageUrl: imageUrl,
     tileEmoji: tileEmoji,
@@ -134,6 +136,68 @@ void main() {
       await expectLater(
         gavel.dispatch(add(openBid: -25000)),
         throwsA(invalid('openBid', 'NOT_POSITIVE')),
+      );
+    });
+  });
+
+  group('the BN price', () {
+    Future<LotCreated> created(LotId id) async =>
+        (await gavel.eventStore.loadStream('Lot-${id.uuid}')).single
+            as LotCreated;
+
+    test('is optional', () async {
+      final command = add();
+      await gavel.dispatch(command);
+
+      expect((await created(command.lotId)).buyNowPrice, isNull);
+      expect((await loadLot(command.lotId)).buyNowPrice, isNull);
+    });
+
+    test('above the open bid is stored', () async {
+      final command = add(buyNowPrice: 1500000);
+      await gavel.dispatch(command);
+
+      expect((await created(command.lotId)).buyNowPrice, 1500000);
+      expect((await loadLot(command.lotId)).buyNowPrice, 1500000);
+    });
+
+    test('equal to the open bid is rejected', () async {
+      await expectLater(
+        gavel.dispatch(add(buyNowPrice: 150000)),
+        throwsA(invalid('buyNowPrice', 'NOT_ABOVE_OPEN_BID')),
+      );
+    });
+
+    test('below the open bid is rejected', () async {
+      await expectLater(
+        gavel.dispatch(add(buyNowPrice: 100000)),
+        throwsA(invalid('buyNowPrice', 'NOT_ABOVE_OPEN_BID')),
+      );
+    });
+
+    test('reads as none from an event stored before BN existed', () async {
+      final command = add(buyNowPrice: 1500000);
+      await gavel.dispatch(command);
+      final data = (await created(command.lotId)).toData()
+        ..remove('buyNowPrice');
+
+      expect(LotCreated.fromData(data).buyNowPrice, isNull);
+    });
+
+    test('survives a snapshot, and older snapshots restore as none', () async {
+      final command = add(buyNowPrice: 1500000);
+      await gavel.dispatch(command);
+      final snapshot = (await loadLot(command.lotId)).toSnapshot();
+
+      expect(
+        (Lot(command.lotId)..restoreSnapshotState(snapshot)).buyNowPrice,
+        1500000,
+      );
+      expect(
+        (Lot(command.lotId)
+              ..restoreSnapshotState({...snapshot}..remove('buyNowPrice')))
+            .buyNowPrice,
+        isNull,
       );
     });
   });

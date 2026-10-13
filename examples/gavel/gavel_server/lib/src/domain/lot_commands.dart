@@ -15,6 +15,7 @@ class AddLot extends Command {
     required this.name,
     required this.openBid,
     required this.increments,
+    required this.buyNowPrice,
     required this.description,
     required this.imageUrl,
     required this.tileEmoji,
@@ -40,6 +41,9 @@ class AddLot extends Command {
 
   /// The allowed raises, in rupiah, in any order.
   final List<int> increments;
+
+  /// The Buy Now (BN) price, in rupiah, or null for no BN.
+  final int? buyNowPrice;
 
   /// The seller's description.
   final String description;
@@ -91,6 +95,7 @@ class AddLotHandler extends CommandHandler<AddLot> {
       name: command.name,
       openBid: command.openBid,
       increments: command.increments,
+      buyNowPrice: command.buyNowPrice,
       description: command.description,
       imageUrl: command.imageUrl,
       tileEmoji: command.tileEmoji,

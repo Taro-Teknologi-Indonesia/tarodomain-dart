@@ -13,6 +13,7 @@ LotCard lotCard({
   UuidValue? leaderId,
   String? leaderName,
   String? winnerName,
+  int? buyNowPrice,
 }) => LotCard(
   lotId: lotId,
   auctionId: UuidValue.fromString('00000000-0000-4000-8000-0000000000a1'),
@@ -25,6 +26,7 @@ LotCard lotCard({
   tileColor: '#8D5524',
   openBid: 150000,
   increments: const [25000, 50000],
+  buyNowPrice: buyNowPrice,
   currentPrice: currentPrice ?? 150000,
   leaderId: leaderId,
   leaderName: leaderName,
