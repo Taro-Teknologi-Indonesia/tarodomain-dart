@@ -47,6 +47,23 @@ final class EventSequencer {
     }
   }
 
+  /// Like [run], but stops as soon as another run claims the counter first,
+  /// instead of retrying, and returns how many this call positioned.
+  ///
+  /// For reads: the other run is positioning the same events, and the claim
+  /// waited until it committed, so they are already visible. Retrying would
+  /// only make concurrent readers fight over the counter, and [run] throws
+  /// after losing [_attempts] times in a row.
+  Future<int> tryRun() async {
+    var total = 0;
+    while (true) {
+      final positioned = await _db.separately(_claimAndPosition);
+      if (positioned == null) return total;
+      total += positioned;
+      if (positioned < batchSize) return total;
+    }
+  }
+
   Future<int> _runBatch() async {
     for (var attempt = 1; ; attempt++) {
       final positioned = await _db.separately(_claimAndPosition);

@@ -270,6 +270,27 @@ void eventStoreAdapterContract(ContractFactory<EventStoreAdapter> create) {
         expect(idsOf(await store.loadAll()), [first, second]);
         expect(idsOf(await store.loadAll(afterEventId: first)), [second]);
       });
+
+      test('keeps append order across streams even when IDs from one '
+          'millisecond sort the other way', () async {
+        // A cause in one stream and its effect in another: the effect must
+        // not come first just because its ID sorts lower.
+        final correlationId = events.nextId();
+        final (first, second) = events.descendingIdsInOneMillisecond();
+        await store.appendToStream(events.streamId(), [
+          events.event(id: first, correlationId: correlationId),
+        ], 0);
+        await store.appendToStream(events.streamId('Other'), [
+          events.event(id: second, correlationId: correlationId),
+        ], 0);
+
+        expect(idsOf(await store.loadAll()), [first, second]);
+        expect(idsOf(await store.loadAll(afterEventId: first)), [second]);
+        expect(idsOf(await store.loadByCorrelationId(correlationId)), [
+          first,
+          second,
+        ]);
+      });
     });
 
     test('loadByCorrelationId returns the trace in order', () async {

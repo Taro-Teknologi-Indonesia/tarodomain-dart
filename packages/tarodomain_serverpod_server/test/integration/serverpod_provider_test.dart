@@ -132,6 +132,39 @@ void main() {
           },
         );
 
+        test('concurrent readers racing appenders never fail and together '
+            'position every event', () async {
+          final store = ServerpodEventStoreAdapter(session);
+          final appended = <UuidValue>[];
+          var appending = true;
+          final appenders = Future.wait([
+            for (var i = 0; i < 8; i++)
+              () async {
+                for (var j = 0; j < 5; j++) {
+                  final batch = events.events(2);
+                  appended.addAll(idsOf(batch));
+                  await store.appendToStream(events.streamId(), batch, 0);
+                }
+              }(),
+          ]).whenComplete(() => appending = false);
+
+          // Every read runs the sequencer, so these fight over the counter.
+          // A read that loses must read what the winner positioned instead
+          // of retrying until it throws.
+          final readers = Future.wait([
+            for (var i = 0; i < 16; i++)
+              () async {
+                while (appending) {
+                  await store.loadAll(maxCount: 1);
+                }
+              }(),
+          ]);
+          await appenders;
+          await readers;
+
+          expect(idsOf(await store.loadAll()).toSet(), appended.toSet());
+        });
+
         test('never reuses the position of a deleted event', () async {
           final store = ServerpodEventStoreAdapter(session);
           final kept = events.streamId();

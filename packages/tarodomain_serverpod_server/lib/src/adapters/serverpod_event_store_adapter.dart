@@ -14,7 +14,8 @@ import 'event_sequencer.dart';
 /// return only events with a global position, in position order. Positions
 /// are assigned after commit by [EventSequencer], which these reads run
 /// first when no unit of work is active, so a read right after an append
-/// sees it. Inside a unit of work they don't: on SQLite the sequencer's
+/// sees it. A read that finds another run positioning events doesn't wait
+/// to retry; it reads what that run positioned. Inside a unit of work they don't: on SQLite the sequencer's
 /// transaction would wait on the open one.
 final class ServerpodEventStoreAdapter implements EventStoreAdapter {
   /// Creates the adapter on [session].
@@ -109,7 +110,7 @@ final class ServerpodEventStoreAdapter implements EventStoreAdapter {
     UuidValue? afterEventId,
     int? maxCount,
   }) async {
-    if (!_db.inUnitOfWork) await _sequencer.run();
+    if (!_db.inUnitOfWork) await _sequencer.tryRun();
 
     Expression<Object?> where = _events.position.notEquals(null);
     if (streamId == StreamIds.all) {
