@@ -1,6 +1,6 @@
 ### One message on an auction's live channel, `auction:<CODE>`.
 ###
-### Lot and ledger payloads are added with their read models (UC-02, UC-05).
+### The ledger payload is added with its first writer (UC-06).
 class: LiveUpdate
 fields:
   ### What changed.
@@ -8,6 +8,9 @@ fields:
 
   ### The auction as it is now, when [kind] is `auctionChanged`.
   auction: AuctionView?
+
+  ### The lot as it is now, when [kind] is `lotChanged`.
+  lot: LotCard?
 
   ### The server's clock when it posted, for the client's clock offset.
   serverNow: DateTime

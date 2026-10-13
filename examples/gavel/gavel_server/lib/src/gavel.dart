@@ -3,6 +3,7 @@ import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart';
 
 import 'domain/gavel_domain.dart';
 import 'infra/auction_table_projection.dart';
+import 'infra/lot_table_projection.dart';
 
 /// Gavel's TaroDomain definition: the domain from [registerGavel] plus the
 /// table-backed read models.
@@ -20,6 +21,12 @@ FrameworkDefinition gavelServerDefinition() =>
         .catchUpMaxAttempts(20)
         .projection(
           (c) => AuctionTableProjection(
+            (c.provider as ServerpodProvider).session,
+            processedEvents: c.processedEvents,
+          ),
+        )
+        .projection(
+          (c) => LotTableProjection(
             (c.provider as ServerpodProvider).session,
             processedEvents: c.processedEvents,
           ),

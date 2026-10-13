@@ -1,0 +1,23 @@
+### A lot as the organizer fills it in, sent to `LotEndpoint.add`.
+class: NewLot
+fields:
+  ### The lot's name, 1 to 80 characters.
+  name: String
+
+  ### The first bid's minimum, in rupiah.
+  openBid: int
+
+  ### The allowed raises (kelipatan), in rupiah, in any order.
+  increments: List<int>
+
+  ### The seller's description, at most 2000 characters.
+  description: String
+
+  ### A photo of the lot, or null to show the tile.
+  imageUrl: String?
+
+  ### The tile's emoji.
+  tileEmoji: String
+
+  ### The tile's background, as `#RRGGBB`.
+  tileColor: String

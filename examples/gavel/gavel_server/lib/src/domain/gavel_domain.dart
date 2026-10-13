@@ -2,6 +2,8 @@ import 'package:tarodomain/tarodomain.dart';
 
 import 'auction.dart';
 import 'auction_commands.dart';
+import 'lot.dart';
+import 'lot_commands.dart';
 
 /// Registers Gavel's aggregates and commands on [builder], with no provider
 /// or read model, so the domain tests run it on `tarodomain_local`.
@@ -14,7 +16,18 @@ TaroDomainBuilder registerGavel(TaroDomainBuilder builder) {
         'Auction',
         (a) => a
             .factory(Auction.new)
-            .event<AuctionCreated>('AuctionCreated', AuctionCreated.fromData),
+            .event<AuctionCreated>('AuctionCreated', AuctionCreated.fromData)
+            .event<LotRegistered>('LotRegistered', LotRegistered.fromData),
       )
-      .command<CreateAuction>('CreateAuction', auction);
+      .aggregate<Lot, LotId>(
+        'Lot',
+        (a) => a
+            .factory(Lot.new)
+            .event<LotCreated>('LotCreated', LotCreated.fromData),
+      )
+      .command<CreateAuction>('CreateAuction', auction)
+      .command<AddLot>(
+        'AddLot',
+        (c) => AddLotHandler(c.repository(), c.repository()),
+      );
 }

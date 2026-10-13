@@ -13,14 +13,20 @@
 import 'package:gavel_server/src/generated/protocol.dart' as _imkuj2yl;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'auction_view.dart' as _iwrduo5z;
+import 'lot_card.dart' as _i7jzpqum;
 
-/// An auction as the board shows it. Lots are added in UC-02.
+/// An auction as the board shows it.
 abstract class BoardSnapshot
     implements _is.SerializableModel, _is.ProtocolSerialization {
-  BoardSnapshot._({required this.auction, required this.serverNow});
+  BoardSnapshot._({
+    required this.auction,
+    required this.lots,
+    required this.serverNow,
+  });
 
   factory BoardSnapshot({
     required _iwrduo5z.AuctionView auction,
+    required List<_i7jzpqum.LotCard> lots,
     required DateTime serverNow,
   }) = _BoardSnapshotImpl;
 
@@ -28,6 +34,9 @@ abstract class BoardSnapshot
     return BoardSnapshot(
       auction: _imkuj2yl.Protocol().deserialize<_iwrduo5z.AuctionView>(
         jsonSerialization['auction'],
+      ),
+      lots: _imkuj2yl.Protocol().deserialize<List<_i7jzpqum.LotCard>>(
+        jsonSerialization['lots'],
       ),
       serverNow: _is.DateTimeJsonExtension.fromJson(
         jsonSerialization['serverNow'],
@@ -38,18 +47,26 @@ abstract class BoardSnapshot
   /// The auction.
   _iwrduo5z.AuctionView auction;
 
+  /// The auction's lots, in the order they were added.
+  List<_i7jzpqum.LotCard> lots;
+
   /// The server's clock when it answered, for the client's clock offset.
   DateTime serverNow;
 
   /// Returns a shallow copy of this [BoardSnapshot]
   /// with some or all fields replaced by the given arguments.
   @_is.useResult
-  BoardSnapshot copyWith({_iwrduo5z.AuctionView? auction, DateTime? serverNow});
+  BoardSnapshot copyWith({
+    _iwrduo5z.AuctionView? auction,
+    List<_i7jzpqum.LotCard>? lots,
+    DateTime? serverNow,
+  });
   @override
   Map<String, dynamic> toJson() {
     return {
       '__className__': 'BoardSnapshot',
       'auction': auction.toJson(),
+      'lots': lots.toJson(valueToJson: (v) => v.toJson()),
       'serverNow': serverNow.toJson(),
     };
   }
@@ -59,6 +76,7 @@ abstract class BoardSnapshot
     return {
       '__className__': 'BoardSnapshot',
       'auction': auction.toJsonForProtocol(),
+      'lots': lots.toJson(valueToJson: (v) => v.toJsonForProtocol()),
       'serverNow': serverNow.toJson(),
     };
   }
@@ -72,8 +90,9 @@ abstract class BoardSnapshot
 class _BoardSnapshotImpl extends BoardSnapshot {
   _BoardSnapshotImpl({
     required _iwrduo5z.AuctionView auction,
+    required List<_i7jzpqum.LotCard> lots,
     required DateTime serverNow,
-  }) : super._(auction: auction, serverNow: serverNow);
+  }) : super._(auction: auction, lots: lots, serverNow: serverNow);
 
   /// Returns a shallow copy of this [BoardSnapshot]
   /// with some or all fields replaced by the given arguments.
@@ -81,10 +100,12 @@ class _BoardSnapshotImpl extends BoardSnapshot {
   @override
   BoardSnapshot copyWith({
     _iwrduo5z.AuctionView? auction,
+    List<_i7jzpqum.LotCard>? lots,
     DateTime? serverNow,
   }) {
     return BoardSnapshot(
       auction: auction ?? this.auction.copyWith(),
+      lots: lots ?? this.lots.map((e0) => e0.copyWith()).toList(),
       serverNow: serverNow ?? this.serverNow,
     );
   }

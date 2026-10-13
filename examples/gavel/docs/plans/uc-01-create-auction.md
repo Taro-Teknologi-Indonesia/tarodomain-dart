@@ -81,7 +81,7 @@ Future<CreatedAuction> create(Session s, String title, DateTime closeAt);
 
 - [ ] A close time in the past or < 5 min ahead shows a typed validation error and keeps the form state.
 - [ ] The dashboard shows a link, a working copy button and a live countdown.
-- [ ] Refreshing the dashboard keeps organizer rights (key in localStorage).
+- [x] Refreshing the dashboard keeps organizer rights (key in localStorage).
 - [ ] Closing the organizer tab doesn't affect the scheduled close (verified in UC-08).
 
 Estimate: 1.5 h.

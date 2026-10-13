@@ -29,7 +29,24 @@ class AuctionTableProjection extends Projection {
       );
       await _postAuction(view);
     });
+    on<LotRegistered>((e) async {
+      final view = await _find(e.auctionId);
+      await _postAuction(
+        await AuctionView.db.updateRow(
+          session,
+          view.copyWith(lotCount: view.lotCount + 1),
+          transaction: _transaction,
+        ),
+      );
+    });
   }
+
+  Future<AuctionView> _find(String auctionId) async =>
+      (await AuctionView.db.findFirstRow(
+        session,
+        where: (t) => t.auctionId.equals(UuidValue.fromString(auctionId)),
+        transaction: _transaction,
+      ))!;
 
   /// The request's session.
   final Session session;

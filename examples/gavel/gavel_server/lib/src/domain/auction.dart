@@ -1,5 +1,6 @@
 import 'package:tarodomain/tarodomain.dart';
 
+import 'errors.dart';
 import 'keys.dart';
 
 /// Identifies an [Auction].
@@ -86,6 +87,28 @@ class AuctionCreated extends AuctionEvent {
   };
 }
 
+/// A lot was added to an auction. Recorded on the auction so its close
+/// knows the lots without reading a projection.
+class LotRegistered extends AuctionEvent {
+  /// Creates the event.
+  LotRegistered(super.auctionId, {required this.lotId});
+
+  /// Rebuilds the event from [toData]'s output.
+  factory LotRegistered.fromData(Map<String, Object?> data) => LotRegistered(
+    data['auctionId']! as String,
+    lotId: data['lotId']! as String,
+  );
+
+  /// The new lot.
+  final String lotId;
+
+  @override
+  String get eventName => 'LotRegistered';
+
+  @override
+  Map<String, Object?> toData() => {'auctionId': auctionId, 'lotId': lotId};
+}
+
 /// An auction: a title, a join code and one close time for all its lots.
 class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
   /// An empty auction, before its events are applied.
@@ -138,6 +161,9 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
   /// How far ahead of creation the close time must be.
   static const minimumLeadTime = Duration(minutes: 5);
 
+  /// The most lots one auction takes: a sanity cap, not a business rule.
+  static const maxLots = 20;
+
   /// The auction's title.
   String title = '';
 
@@ -159,6 +185,24 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
   /// Whether [key] is this auction's organizer key.
   bool isOrganizer(String key) => keyMatches(key, organizerKeyHash);
 
+  /// Adds the lot [lotId] at [now].
+  ///
+  /// Throws [LotClosedError] if the auction is no longer open or [now] is at
+  /// or past [closeAt], and [CommandValidationError] if it already has
+  /// [maxLots] lots.
+  void registerLot(String lotId, DateTime now) {
+    if (status != AuctionStatus.open || !now.isBefore(closeAt)) {
+      throw LotClosedError(closedAt: closeAt);
+    }
+    if (lotIds.length >= maxLots) {
+      throw CommandValidationError(
+        'An auction takes at most $maxLots lots',
+        context: {'field': 'lots', 'reason': 'TOO_MANY'},
+      );
+    }
+    raise(LotRegistered(id.uuid, lotId: lotId));
+  }
+
   @override
   void apply(AuctionEvent event) {
     switch (event) {
@@ -167,6 +211,8 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
         code = event.code;
         closeAt = event.closeAt;
         organizerKeyHash = event.organizerKeyHash;
+      case LotRegistered():
+        lotIds = [...lotIds, event.lotId];
     }
   }
 

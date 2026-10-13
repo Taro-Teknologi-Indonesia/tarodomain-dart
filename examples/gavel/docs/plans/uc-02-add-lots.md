@@ -25,6 +25,7 @@ The organizer fills in the structured version of their `-----# LELANG #-----` te
   2. `auction.registerLot(lotId, cmd.timestamp)`.
   3. `Lot.create(... closeAt: auction.closeAt, position: auction.lotIds.length)`.
   4. `save(lot)`, then `save(auction)`. Under strong consistency both appends share one unit of work. **Check in the first test** that a conflict on the auction stream rolls back the lot append too. If it doesn't, flip the order (auction first) and accept that an orphan lot stream is harmless because the board reads `lotIds` from the auction.
+     - **Decided (step 3):** they share one. A failure after the lot append rolls the lot back, and parallel adds all land after retries, each at its own position.
 
 Ladder value: **rupiah, not ribu**. The default preset is `[25000, 50000, 100000, 150000, 200000, 300000]`, and the UI shows them as `+25k`.
 
@@ -82,7 +83,9 @@ indexes:
 - On `LotCreated`, insert a `LotCard` with `currentPrice = openBid`, `version = 1` (or the event's stream version if the envelope exposes it, which is better), and `status = OPEN`. Then post `LiveUpdate(lotChanged, lot: card)`.
 - `AuctionTableProjection` on `LotRegistered` increments `lotCount`.
 
-**Version source of truth:** take the lot's aggregate version from the event envelope/stream position if `tarodomain` exposes it to projections. Otherwise keep `version` as `card.version + 1` on every lot event. Both match `Lot.version` as long as every lot event goes through this projection. Add an integration assertion that `card.version == (await repo.load(lotId)).version`.
+**Decided (step 3):** `LotCreated` also carries the auction's `code`, so the projection can post to `auction:CODE` without reading `gavel_auctions` (which a rebuild may have truncated).
+
+**Version source of truth:** take the lot's aggregate version from the event envelope/stream position if `tarodomain` exposes it to projections. Otherwise keep `version` as `card.version + 1` on every lot event. **Decided (step 3):** projections don't see the stream position, so it's `+ 1`. Both match `Lot.version` as long as every lot event goes through this projection. Add an integration assertion that `card.version == (await repo.load(lotId)).version`.
 
 ## Endpoint (`LotEndpoint`)
 
@@ -114,9 +117,9 @@ Resolve `code` to `auctionId` via `AuctionView` (`AuctionNotFoundError` if missi
 
 ## Acceptance
 
-- [ ] An open bid ≤ 0 or an empty ladder gives an inline typed error.
-- [ ] A new lot appears on a second (bidder) window without refresh.
-- [ ] A broken image URL falls back to the emoji/color tile.
+- [x] An open bid ≤ 0 or an empty ladder gives an inline typed error.
+- [x] A new lot appears on a second (bidder) window without refresh.
+- [x] A broken image URL falls back to the emoji/color tile.
 - [ ] The write-up quotes the `-----# LELANG #-----` template next to a screenshot of this form.
 
 Estimate: 1.5 h.

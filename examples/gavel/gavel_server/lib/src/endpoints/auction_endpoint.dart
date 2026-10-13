@@ -67,7 +67,7 @@ class AuctionEndpoint extends Endpoint {
     );
   }
 
-  /// The auction with join [code], with the server's clock.
+  /// The auction with join [code] and its lots, with the server's clock.
   ///
   /// Throws `AUCTION_NOT_FOUND` if no auction has the code.
   Future<BoardSnapshot> board(Session session, String code) =>
@@ -78,8 +78,14 @@ class AuctionEndpoint extends Endpoint {
           where: (t) => t.code.equals(normalized),
         );
         if (auction == null) throw AuctionNotFoundError(normalized);
+        final lots = await LotCard.db.find(
+          session,
+          where: (t) => t.code.equals(normalized),
+          orderBy: (t) => t.position,
+        );
         return BoardSnapshot(
           auction: auction,
+          lots: lots,
           serverNow: DateTime.now().toUtc(),
         );
       });

@@ -19,6 +19,8 @@ import 'package:gavel_server/src/generated/future_calls.dart' as _ixqh6y26;
 import 'package:gavel_server/src/generated/future_calls_generated_models/auction_close_calls_close_model.dart'
     as _i9bis1h2;
 import 'package:gavel_server/src/generated/live_update.dart' as _isnlnvta;
+import 'package:gavel_server/src/generated/lot_card.dart' as _ibsll3cm;
+import 'package:gavel_server/src/generated/new_lot.dart' as _ipyv8n10;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_test/serverpod_test.dart' as _ist;
 import 'package:gavel_server/src/generated/protocol.dart';
@@ -159,6 +161,8 @@ class TestEndpoints {
   late final _AuctionEndpoint auction;
 
   late final _LiveEndpoint live;
+
+  late final _LotEndpoint lot;
 }
 
 class _InternalTestEndpoints extends TestEndpoints
@@ -170,6 +174,7 @@ class _InternalTestEndpoints extends TestEndpoints
   ) {
     auction = _AuctionEndpoint(endpoints, serializationManager);
     live = _LiveEndpoint(endpoints, serializationManager);
+    lot = _LotEndpoint(endpoints, serializationManager);
   }
 }
 
@@ -314,6 +319,51 @@ class _LiveEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<void>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _LotEndpoint {
+  _LotEndpoint(this._endpointDispatch, this._serializationManager);
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_ibsll3cm.LotCard> add(
+    _ist.TestSessionBuilder sessionBuilder,
+    String code,
+    String organizerKey,
+    _ipyv8n10.NewLot lot,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'lot',
+            method: 'add',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'lot',
+          methodName: 'add',
+          parameters: _ist.testObjectToJson({
+            'code': code,
+            'organizerKey': organizerKey,
+            'lot': lot,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ibsll3cm.LotCard>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

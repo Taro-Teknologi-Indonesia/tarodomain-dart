@@ -4,3 +4,5 @@ auction:
 live:
   - watch:
   - ping:
+lot:
+  - add:

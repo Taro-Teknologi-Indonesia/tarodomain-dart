@@ -48,6 +48,6 @@ Musts total about 18.5 h, including deploy, the demo auction, the race proof and
 
 1. ~~The Serverpod 4.0.4 web server's static route plus SPA fallback for `/a/*` (foundation).~~ Done: `FlutterRoute`.
 2. The future call builder for one-off delayed/absolute calls with an identifier (UC-01/08).
-3. That two repository saves in one handler share one unit of work (UC-02, UC-06).
+3. ~~That two repository saves in one handler share one unit of work (UC-02, UC-06).~~ Done: the strong pipeline runs the whole handler in one unit of work (`test/integration/lot_test.dart` proves the rollback).
 4. How the saga builder correlates `LotClosed` back to `AuctionCloseSaga` (UC-08).
 5. The public rehydration call on `AggregateRoot` for time travel (UC-10).

@@ -1,0 +1,72 @@
+### One lot as the board shows it: the read model of `LotTableProjection`.
+class: LotCard
+table: gavel_lot_cards
+fields:
+  ### The lot.
+  lotId: UuidValue
+
+  ### The auction the lot belongs to.
+  auctionId: UuidValue
+
+  ### The auction's join code.
+  code: String
+
+  ### The lot's place in the auction, from 0.
+  position: int
+
+  ### The lot's name.
+  name: String
+
+  ### The seller's description, newlines kept.
+  description: String
+
+  ### A photo of the lot, or null to show the tile.
+  imageUrl: String?
+
+  ### The tile's emoji, shown when there is no photo or it fails to load.
+  tileEmoji: String
+
+  ### The tile's background, as `#RRGGBB`.
+  tileColor: String
+
+  ### The first bid's minimum, in rupiah.
+  openBid: int
+
+  ### The allowed raises (kelipatan), in rupiah, ascending.
+  increments: List<int>
+
+  ### The leading bid, or the open bid while there is none.
+  currentPrice: int
+
+  ### The leading bidder, if any.
+  leaderId: UuidValue?
+
+  ### The leading bidder's display name, if any.
+  leaderName: String?
+
+  ### How many bids stand.
+  bidCount: int
+
+  ### OPEN, SOLD or PASSED.
+  status: String
+
+  ### The lot aggregate's version: the next bid's `expectedVersion`.
+  version: int
+
+  ### Who won, once SOLD.
+  winnerName: String?
+
+  ### The winning price, once SOLD.
+  finalPrice: int?
+
+  ### Why the lot closed: DEADLINE or SELL_NOW.
+  closeCause: String?
+
+  ### When the lot closed, in UTC.
+  closedAt: DateTime?
+indexes:
+  gavel_lot_cards_lot_idx:
+    fields: lotId
+    unique: true
+  gavel_lot_cards_code_idx:
+    fields: code, position

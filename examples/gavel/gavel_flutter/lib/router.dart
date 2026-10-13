@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import 'pages/board_page.dart';
+import 'pages/create_auction_page.dart';
 import 'pages/home_page.dart';
 import 'pages/lot_page.dart';
 import 'pages/organizer_page.dart';
@@ -9,6 +10,7 @@ import 'pages/organizer_page.dart';
 final router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
+    GoRoute(path: '/new', builder: (_, _) => const CreateAuctionPage()),
     GoRoute(
       path: '/a/:code',
       builder: (_, state) => BoardPage(

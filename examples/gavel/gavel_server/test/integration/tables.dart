@@ -22,5 +22,7 @@ Future<void> clearTables(Session session) async {
   await TaroLockRow.db.deleteWhere(session, where: (_) => everything);
   await TaroCounterRow.db.deleteWhere(session, where: (_) => everything);
   await AuctionView.db.deleteWhere(session, where: (_) => everything);
+  await LotCard.db.deleteWhere(session, where: (_) => everything);
+  await LedgerEntry.db.deleteWhere(session, where: (_) => everything);
   await FutureCallEntry.db.deleteWhere(session, where: (_) => everything);
 }

@@ -1,0 +1,31 @@
+### One bid in a lot's ledger. Written from UC-06 on.
+class: LedgerEntry
+table: gavel_ledger_entries
+fields:
+  ### The lot bid on.
+  lotId: UuidValue
+
+  ### The bid's place in the lot's ledger, from 1.
+  sequence: int
+
+  ### Who bid.
+  participantId: UuidValue
+
+  ### The bidder's display name.
+  bidderName: String
+
+  ### The bid, in rupiah.
+  amount: int
+
+  ### When the bid was placed, in UTC.
+  placedAt: DateTime
+
+  ### Whether the bidder took the bid back.
+  retracted: bool
+
+  ### When the bid was taken back, in UTC.
+  retractedAt: DateTime?
+indexes:
+  gavel_ledger_lot_seq_idx:
+    fields: lotId, sequence
+    unique: true

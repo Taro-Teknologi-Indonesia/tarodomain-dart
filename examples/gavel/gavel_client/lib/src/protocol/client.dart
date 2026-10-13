@@ -14,6 +14,8 @@ import 'dart:async' as _ida;
 import 'package:gavel_client/src/protocol/board_snapshot.dart' as _icq9digg;
 import 'package:gavel_client/src/protocol/created_auction.dart' as _ivm7o2d2;
 import 'package:gavel_client/src/protocol/live_update.dart' as _i9po14mf;
+import 'package:gavel_client/src/protocol/lot_card.dart' as _ik2e60uo;
+import 'package:gavel_client/src/protocol/new_lot.dart' as _iw77avg8;
 import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart'
@@ -41,7 +43,7 @@ class EndpointAuction extends _isc.EndpointRef {
     {'title': title, 'closeAt': closeAt},
   );
 
-  /// The auction with join [code], with the server's clock.
+  /// The auction with join [code] and its lots, with the server's clock.
   ///
   /// Throws `AUCTION_NOT_FOUND` if no auction has the code.
   _ida.Future<_icq9digg.BoardSnapshot> board(String code) =>
@@ -70,6 +72,30 @@ class EndpointLive extends _isc.EndpointRef {
   /// watcher gets it. Development mode only.
   _ida.Future<void> ping(String code) =>
       caller.callServerEndpoint<void>('live', 'ping', {'code': code});
+}
+
+/// Adding lots and, from UC-06 on, bidding on them.
+/// {@category Endpoint}
+class EndpointLot extends _isc.EndpointRef {
+  EndpointLot(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'lot';
+
+  /// Adds [lot] to the auction with join [code] and returns its card.
+  ///
+  /// Throws `AUCTION_NOT_FOUND` for an unknown code, `NOT_ORGANIZER` for a
+  /// wrong [organizerKey], `LOT_CLOSED` once the auction has closed, and
+  /// `COMMAND_VALIDATION` with the offending `field` for a bad lot.
+  _ida.Future<_ik2e60uo.LotCard> add(
+    String code,
+    String organizerKey,
+    _iw77avg8.NewLot lot,
+  ) => caller.callServerEndpoint<_ik2e60uo.LotCard>('lot', 'add', {
+    'code': code,
+    'organizerKey': organizerKey,
+    'lot': lot,
+  });
 }
 
 class Modules {
@@ -104,6 +130,7 @@ class Client extends _isc.ServerpodClientShared {
        ) {
     auction = EndpointAuction(this);
     live = EndpointLive(this);
+    lot = EndpointLot(this);
     modules = Modules(this);
   }
 
@@ -111,12 +138,15 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointLive live;
 
+  late final EndpointLot lot;
+
   late final Modules modules;
 
   @override
   Map<String, _isc.EndpointRef> get endpointRefLookup => {
     'auction': auction,
     'live': live,
+    'lot': lot,
   };
 
   @override

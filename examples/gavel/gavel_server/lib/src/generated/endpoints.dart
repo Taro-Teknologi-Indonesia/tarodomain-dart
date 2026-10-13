@@ -11,11 +11,13 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:gavel_server/src/generated/future_calls.dart' as _ixqh6y26;
+import 'package:gavel_server/src/generated/new_lot.dart' as _ipyv8n10;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
     as _i13if8es;
 import '../endpoints/auction_endpoint.dart' as _iyn8i9y2;
 import '../endpoints/live_endpoint.dart' as _ixgr9pqx;
+import '../endpoints/lot_endpoint.dart' as _i6hhfich;
 export 'future_calls.dart' show ServerpodFutureCallsGetter;
 
 class Endpoints extends _is.EndpointDispatch {
@@ -25,6 +27,7 @@ class Endpoints extends _is.EndpointDispatch {
       'auction': _iyn8i9y2.AuctionEndpoint()
         ..initialize(server, 'auction', null),
       'live': _ixgr9pqx.LiveEndpoint()..initialize(server, 'live', null),
+      'lot': _i6hhfich.LotEndpoint()..initialize(server, 'lot', null),
     };
     connectors['auction'] = _is.EndpointConnector(
       name: 'auction',
@@ -106,6 +109,39 @@ class Endpoints extends _is.EndpointDispatch {
               ) => (endpoints['live'] as _ixgr9pqx.LiveEndpoint).watch(
                 session,
                 params['code'],
+              ),
+        ),
+      },
+    );
+    connectors['lot'] = _is.EndpointConnector(
+      name: 'lot',
+      endpoint: endpoints['lot']!,
+      methodConnectors: {
+        'add': _is.MethodConnector(
+          name: 'add',
+          params: {
+            'code': _is.ParameterDescription(
+              name: 'code',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'organizerKey': _is.ParameterDescription(
+              name: 'organizerKey',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'lot': _is.ParameterDescription(
+              name: 'lot',
+              type: _is.getType<_ipyv8n10.NewLot>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['lot'] as _i6hhfich.LotEndpoint).add(
+                session,
+                params['code'],
+                params['organizerKey'],
+                params['lot'],
               ),
         ),
       },
