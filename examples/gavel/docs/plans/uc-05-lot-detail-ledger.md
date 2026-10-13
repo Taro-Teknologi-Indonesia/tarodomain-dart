@@ -52,6 +52,17 @@ The layout is one scroll view on phones, with chips in a pinned bottom bar:
 - Widget test: RETRACT is visible only for the latest valid bid owner.
 - Manual: open the detail in two windows, bid in one, and watch the ledger row appear in the other.
 
+## As built
+
+- `LotEndpoint.detail` returns `LotDetail { lot, ledger, closeAt, serverNow }`. `closeAt` is the auction's. An unknown lot is `AGGREGATE_NOT_FOUND`. `LotDetail` has no table, so there's no migration.
+- `AuctionController.ledgerFor(lotId)` returns null until the first fetch answers. It holds entries by sequence, so a bid pushed during the fetch is kept. A held retraction wins over an unretracted copy, so a stale fetch can't unstrike a row. Every snapshot (so every reconnect) fetches the opened ledgers again, because missed pushes aren't replayed. Pushes for lots nobody opened are ignored.
+- `core/ledger.dart` has `lastValid`, `hasValidBidBy` (for "Outbid — … leads at …") and `canRetract`. **RETRACT itself ships with UC-07**, with its endpoint and dialog. The "RETRACT only for the latest valid bid owner" test covers `canRetract` for now.
+- `LedgerList` (`widgets/ledger_list.dart`) is a shrink-wrapped `SliverAnimatedList` with the newest row on top. The closing line sits above it, using `closedAt`, or the auction's `closeAt` until UC-08 sets `closedAt`. "Bought now by …" is shown when `closeCause == 'BUY_NOW'`.
+- The app bar shows the countdown and a share icon that copies `/a/:code/lot/:lotId` with a "Link copied" snackbar. UC-09 adds the proof wording and `share_plus`.
+- The broken-image fallback was already covered by `lot_card_widget_test` (UC-04).
+- Late joiner: `test/integration/lot_detail_test.dart` rebuilds the `lots` projection with `ProjectionRebuilder` and compares the ledger and card rows.
+- **Not done yet:** the manual two-window check.
+
 ## Acceptance
 
 - [ ] A broken image URL falls back to the tile without a broken-image icon.

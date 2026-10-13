@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gavel_client/gavel_client.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,16 +9,19 @@ import '../core/api.dart';
 import '../core/auction_controller.dart';
 import '../core/auction_scope.dart';
 import '../core/bidding.dart';
+import '../core/clock.dart';
 import '../core/identity.dart';
+import '../core/ledger.dart';
 import '../core/live.dart';
 import '../core/money.dart';
 import '../core/organizer_keys.dart';
 import '../widgets/bid_bar.dart';
 import '../widgets/join_sheet.dart';
+import '../widgets/ledger_list.dart';
 import '../widgets/lot_visual.dart';
 
-/// One lot: its visual, price and status, with the kelipatan chips in a
-/// bottom bar the thumb reaches (UC-06). The ledger comes with UC-05.
+/// One lot (UC-05): its visual, price and status, and the full ledger, with
+/// the kelipatan chips in a bottom bar the thumb reaches (UC-06).
 class LotPage extends StatefulWidget {
   const LotPage({required this.code, required this.lotId, super.key});
 
@@ -92,25 +96,53 @@ class _LotPageState extends State<LotPage> {
     }
   }
 
+  /// Copies the lot's URL, the receipt a winner pastes back (UC-09).
+  Future<void> _share() async {
+    final url = Uri.base.resolve('/a/${widget.code}/lot/${widget.lotId}');
+    await Clipboard.setData(ClipboardData(text: url.toString()));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Link copied')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final auction = AuctionScope.of(context);
     final lotId = _lotId;
     final lot = lotId == null ? null : auction.lot(lotId);
     final loading = auction.auction == null && auction.failure == null;
+    final closeAt = auction.auction?.closeAt;
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.go('/a/${widget.code}')),
         title: Text(lot?.name ?? 'Lot', overflow: TextOverflow.ellipsis),
         actions: [
+          if (closeAt != null)
+            Center(
+              child: CountdownText(
+                closeAt: closeAt,
+                offset: auction.clockOffset,
+              ),
+            ),
+          IconButton(
+            tooltip: 'Copy link',
+            icon: const Icon(Icons.share),
+            onPressed: _share,
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.only(right: 16),
             child: LiveDot(auction.status),
           ),
         ],
       ),
-      body: lot != null
-          ? _LotBody(lot: lot, me: _identity?.participantId)
+      body: lot != null && closeAt != null
+          ? LotDetailBody(
+              lot: lot,
+              ledger: auction.ledgerFor(lot.lotId),
+              closeAt: closeAt,
+              me: _identity?.participantId,
+            )
           : Center(
               child: loading
                   ? const CircularProgressIndicator()
@@ -155,11 +187,25 @@ class _LotPageState extends State<LotPage> {
   }
 }
 
-/// The lot's visual, name, price block and description.
-class _LotBody extends StatelessWidget {
-  const _LotBody({required this.lot, required this.me});
+/// The lot's visual, name, description, price block and ledger.
+class LotDetailBody extends StatelessWidget {
+  const LotDetailBody({
+    required this.lot,
+    required this.ledger,
+    required this.closeAt,
+    this.me,
+    super.key,
+  });
 
   final LotCard lot;
+
+  /// Every bid, in ledger order, or null while it loads.
+  final List<LedgerEntry>? ledger;
+
+  /// When the auction closes, in UTC.
+  final DateTime closeAt;
+
+  /// Who this browser bids as, if it joined.
   final UuidValue? me;
 
   @override
@@ -167,7 +213,9 @@ class _LotBody extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final steps = lot.increments;
+    final ledger = this.ledger;
     final leading = me != null && lot.leaderId == me;
+    final outbid = !leading && (ledger?.hasValidBidBy(me) ?? false);
     final (status, color) = switch (lot) {
       LotCard(status: 'SOLD', :final winnerName, :final finalPrice) => (
         'SOLD to $winnerName — ${formatRupiah(finalPrice ?? lot.currentPrice)}',
@@ -178,6 +226,10 @@ class _LotBody extends StatelessWidget {
         "You're the high bidder — ${formatRupiah(lot.currentPrice)}",
         Colors.green.shade700,
       ),
+      LotCard(:final leaderName?) when outbid => (
+        'Outbid — $leaderName leads at ${formatRupiah(lot.currentPrice)}',
+        Colors.amber.shade900,
+      ),
       LotCard(:final leaderName?) => ('$leaderName leads', scheme.onSurface),
       _ => ('No bids yet', scheme.onSurfaceVariant),
     };
@@ -185,51 +237,119 @@ class _LotBody extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * 0.5,
-              ),
-              child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: LotVisual(
-                    imageUrl: lot.imageUrl,
-                    emoji: lot.tileEmoji,
-                    color: lot.tileColor,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: 4 / 3,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: LotVisual(
+                          imageUrl: lot.imageUrl,
+                          emoji: lot.tileEmoji,
+                          color: lot.tileColor,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  Text(lot.name, style: theme.textTheme.headlineSmall),
+                  if (lot.description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _Description(lot.description),
+                  ],
+                  const SizedBox(height: 16),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      formatRupiah(lot.currentPrice),
+                      style: theme.textTheme.displayLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                  if (lot.status == 'OPEN' && steps.isNotEmpty)
+                    Text(
+                      'Next bid from '
+                      '${formatRupiah(lot.currentPrice + steps.first)}',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    status,
+                    style: theme.textTheme.titleMedium?.copyWith(color: color),
+                  ),
+                  const SizedBox(height: 24),
+                  Text('Bids', style: theme.textTheme.titleMedium),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text(lot.name, style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              formatRupiah(lot.currentPrice),
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            if (lot.status == 'OPEN' && steps.isNotEmpty)
-              Text(
-                'Next bid from ${formatRupiah(lot.currentPrice + steps.first)}',
-                style: theme.textTheme.bodyMedium,
-              ),
             const SizedBox(height: 4),
-            Text(
-              status,
-              style: theme.textTheme.titleMedium?.copyWith(color: color),
-            ),
-            if (lot.description.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              SelectableText(lot.description),
-            ],
+            if (ledger == null)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              LedgerList(lot: lot, entries: ledger, closeAt: closeAt, me: me),
           ],
         ),
       ),
     );
   }
+}
+
+/// The seller's description, newlines kept, cut to 4 lines with "more".
+class _Description extends StatefulWidget {
+  const _Description(this.text);
+
+  final String text;
+
+  @override
+  State<_Description> createState() => _DescriptionState();
+}
+
+class _DescriptionState extends State<_Description> {
+  static const _lines = 4;
+  var _expanded = false;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final style = DefaultTextStyle.of(context).style;
+      final painter = TextPainter(
+        text: TextSpan(text: widget.text, style: style),
+        maxLines: _lines,
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout(maxWidth: constraints.maxWidth);
+      final long = painter.didExceedMaxLines;
+      painter.dispose();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SelectableText(
+            widget.text,
+            maxLines: _expanded || !long ? null : _lines,
+          ),
+          if (long)
+            TextButton(
+              style: TextButton.styleFrom(padding: EdgeInsets.zero),
+              onPressed: () => setState(() => _expanded = !_expanded),
+              child: Text(_expanded ? 'less' : 'more'),
+            ),
+        ],
+      );
+    },
+  );
 }

@@ -21,6 +21,7 @@ import 'package:gavel_server/src/generated/future_calls_generated_models/auction
 import 'package:gavel_server/src/generated/join_result.dart' as _i9wld784;
 import 'package:gavel_server/src/generated/live_update.dart' as _isnlnvta;
 import 'package:gavel_server/src/generated/lot_card.dart' as _ibsll3cm;
+import 'package:gavel_server/src/generated/lot_detail.dart' as _i9io6m2h;
 import 'package:gavel_server/src/generated/new_lot.dart' as _ipyv8n10;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_test/serverpod_test.dart' as _ist;
@@ -480,6 +481,37 @@ class _LotEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_ibsll3cm.LotCard>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_i9io6m2h.LotDetail> detail(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue lotId,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'lot',
+            method: 'detail',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'lot',
+          methodName: 'detail',
+          parameters: _ist.testObjectToJson({'lotId': lotId}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i9io6m2h.LotDetail>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

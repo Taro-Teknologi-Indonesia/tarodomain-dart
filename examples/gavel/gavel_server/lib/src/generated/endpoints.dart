@@ -238,6 +238,21 @@ class Endpoints extends _is.EndpointDispatch {
                 params['commandId'],
               ),
         ),
+        'detail': _is.MethodConnector(
+          name: 'detail',
+          params: {
+            'lotId': _is.ParameterDescription(
+              name: 'lotId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['lot'] as _i6hhfich.LotEndpoint).detail(
+                session,
+                params['lotId'],
+              ),
+        ),
       },
     );
     modules['tarodomain_serverpod'] = _i13if8es.Endpoints()

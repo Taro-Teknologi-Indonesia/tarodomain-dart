@@ -16,6 +16,7 @@ import 'package:gavel_client/src/protocol/created_auction.dart' as _ivm7o2d2;
 import 'package:gavel_client/src/protocol/join_result.dart' as _igr184mp;
 import 'package:gavel_client/src/protocol/live_update.dart' as _i9po14mf;
 import 'package:gavel_client/src/protocol/lot_card.dart' as _ik2e60uo;
+import 'package:gavel_client/src/protocol/lot_detail.dart' as _izswfryi;
 import 'package:gavel_client/src/protocol/new_lot.dart' as _iw77avg8;
 import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
@@ -152,6 +153,15 @@ class EndpointLot extends _isc.EndpointRef {
     'expectedVersion': expectedVersion,
     'commandId': commandId,
   });
+
+  /// The lot [lotId] with every bid on it, retracted ones included, in
+  /// ledger order.
+  ///
+  /// Throws `AGGREGATE_NOT_FOUND` for an unknown lot.
+  _ida.Future<_izswfryi.LotDetail> detail(_isc.UuidValue lotId) =>
+      caller.callServerEndpoint<_izswfryi.LotDetail>('lot', 'detail', {
+        'lotId': lotId,
+      });
 }
 
 class Modules {

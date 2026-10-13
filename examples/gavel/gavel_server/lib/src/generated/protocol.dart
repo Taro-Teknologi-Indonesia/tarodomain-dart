@@ -25,6 +25,7 @@ import 'ledger_entry.dart' as _ivha9tke;
 import 'live_update.dart' as _irca74ja;
 import 'live_update_kind.dart' as _i6d34ixx;
 import 'lot_card.dart' as _i7jzpqum;
+import 'lot_detail.dart' as _ivoeyyyp;
 import 'new_lot.dart' as _i7vyupo4;
 import 'participant_row.dart' as _ioa4m2zs;
 export 'auction_view.dart';
@@ -35,6 +36,7 @@ export 'ledger_entry.dart';
 export 'live_update.dart';
 export 'live_update_kind.dart';
 export 'lot_card.dart';
+export 'lot_detail.dart';
 export 'new_lot.dart';
 export 'participant_row.dart';
 
@@ -520,6 +522,9 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _i7jzpqum.LotCard) {
       return _i7jzpqum.LotCard.fromJson(data) as T;
     }
+    if (t == _ivoeyyyp.LotDetail) {
+      return _ivoeyyyp.LotDetail.fromJson(data) as T;
+    }
     if (t == _i7vyupo4.NewLot) {
       return _i7vyupo4.NewLot.fromJson(data) as T;
     }
@@ -559,6 +564,9 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _is.getType<_i7jzpqum.LotCard?>()) {
       return (data != null ? _i7jzpqum.LotCard.fromJson(data) : null) as T;
     }
+    if (t == _is.getType<_ivoeyyyp.LotDetail?>()) {
+      return (data != null ? _ivoeyyyp.LotDetail.fromJson(data) : null) as T;
+    }
     if (t == _is.getType<_i7vyupo4.NewLot?>()) {
       return (data != null ? _i7vyupo4.NewLot.fromJson(data) : null) as T;
     }
@@ -574,6 +582,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (t == List<int>) {
       return (data as List).map((e) => deserialize<int>(e)).toList() as T;
+    }
+    if (t == List<_ivha9tke.LedgerEntry>) {
+      return (data as List)
+              .map((e) => deserialize<_ivha9tke.LedgerEntry>(e))
+              .toList()
+          as T;
     }
     try {
       return _i13if8es.Protocol().deserialize<T>(data, t);
@@ -595,6 +609,7 @@ class Protocol extends _is.DatabaseSerializationManager {
       _irca74ja.LiveUpdate => 'LiveUpdate',
       _i6d34ixx.LiveUpdateKind => 'LiveUpdateKind',
       _i7jzpqum.LotCard => 'LotCard',
+      _ivoeyyyp.LotDetail => 'LotDetail',
       _i7vyupo4.NewLot => 'NewLot',
       _ioa4m2zs.ParticipantRow => 'ParticipantRow',
       _ => null,
@@ -629,6 +644,8 @@ class Protocol extends _is.DatabaseSerializationManager {
         return 'LiveUpdateKind';
       case _i7jzpqum.LotCard():
         return 'LotCard';
+      case _ivoeyyyp.LotDetail():
+        return 'LotDetail';
       case _i7vyupo4.NewLot():
         return 'NewLot';
       case _ioa4m2zs.ParticipantRow():
@@ -679,6 +696,9 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (dataClassName == 'LotCard') {
       return deserialize<_i7jzpqum.LotCard>(data['data']);
+    }
+    if (dataClassName == 'LotDetail') {
+      return deserialize<_ivoeyyyp.LotDetail>(data['data']);
     }
     if (dataClassName == 'NewLot') {
       return deserialize<_i7vyupo4.NewLot>(data['data']);

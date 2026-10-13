@@ -1,0 +1,14 @@
+### One lot with its whole ledger, for the lot page.
+class: LotDetail
+fields:
+  ### The lot.
+  lot: LotCard
+
+  ### Every bid on the lot, retracted ones too, by sequence.
+  ledger: List<LedgerEntry>
+
+  ### When the lot's auction closes, in UTC.
+  closeAt: DateTime
+
+  ### The server's clock when it answered, for the client's clock offset.
+  serverNow: DateTime

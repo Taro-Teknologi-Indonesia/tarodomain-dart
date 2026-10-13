@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gavel_client/gavel_client.dart';
 import 'package:gavel_flutter/core/auction_controller.dart';
@@ -22,13 +24,15 @@ void main() {
     BoardSnapshot(auction: auction, lots: lots, serverNow: DateTime.now()),
   );
 
-  UpdateArrived lotChanged(LotCard lot) => UpdateArrived(
-    LiveUpdate(
-      kind: LiveUpdateKind.lotChanged,
-      lot: lot,
-      serverNow: DateTime.now(),
-    ),
-  );
+  UpdateArrived lotChanged(LotCard lot, {LedgerEntry? ledgerEntry}) =>
+      UpdateArrived(
+        LiveUpdate(
+          kind: LiveUpdateKind.lotChanged,
+          lot: lot,
+          ledgerEntry: ledgerEntry,
+          serverNow: DateTime.now(),
+        ),
+      );
 
   setUp(() {
     // Never started, so it never connects.
@@ -89,5 +93,106 @@ void main() {
 
     expect(controller.lot(lotId)?.version, 2);
     expect(notified, 0);
+  });
+
+  group('ledgerFor', () {
+    late List<Completer<LotDetail>> fetches;
+
+    LotDetail detail(List<LedgerEntry> ledger, {LotCard? lot}) => LotDetail(
+      lot: lot ?? lotCard(version: ledger.length + 1),
+      ledger: ledger,
+      closeAt: auction.closeAt,
+      serverNow: DateTime.now(),
+    );
+
+    List<int>? sequences() =>
+        controller.ledgerFor(lotId)?.map((e) => e.sequence).toList();
+
+    setUp(() {
+      controller.dispose();
+      fetches = [];
+      controller = AuctionController(
+        Client('http://localhost:8080/'),
+        'ABC234',
+        detail: (_) {
+          final fetch = Completer<LotDetail>();
+          fetches.add(fetch);
+          return fetch.future;
+        },
+      )..apply(snapshot([lotCard()]));
+    });
+
+    test('fetches once and is null until the answer', () async {
+      expect(controller.ledgerFor(lotId), isNull);
+      expect(controller.ledgerFor(lotId), isNull);
+      expect(fetches, hasLength(1));
+
+      fetches.single.complete(detail([ledgerEntry(1), ledgerEntry(2)]));
+      await pumpEventQueue();
+
+      expect(sequences(), [1, 2]);
+      expect(fetches, hasLength(1));
+    });
+
+    test('takes the card the fetch brought if it is newer', () async {
+      controller.ledgerFor(lotId);
+      fetches.single.complete(
+        detail([ledgerEntry(1)], lot: lotCard(version: 2, currentPrice: 1)),
+      );
+      await pumpEventQueue();
+
+      expect(controller.lot(lotId)?.currentPrice, 1);
+    });
+
+    test('adds pushed bids, even those that arrive during the '
+        'fetch', () async {
+      controller
+        ..ledgerFor(lotId)
+        ..apply(lotChanged(lotCard(version: 3), ledgerEntry: ledgerEntry(2)));
+      fetches.single.complete(detail([ledgerEntry(1)]));
+      await pumpEventQueue();
+      controller.apply(
+        lotChanged(lotCard(version: 4), ledgerEntry: ledgerEntry(3)),
+      );
+
+      expect(sequences(), [1, 2, 3]);
+    });
+
+    test('a stale fetch never unstrikes a retracted row', () async {
+      controller
+        ..ledgerFor(lotId)
+        ..apply(
+          lotChanged(
+            lotCard(version: 3),
+            ledgerEntry: ledgerEntry(1, retracted: true),
+          ),
+        );
+      fetches.single.complete(detail([ledgerEntry(1)]));
+      await pumpEventQueue();
+
+      expect(controller.ledgerFor(lotId)?.single.retracted, isTrue);
+    });
+
+    test('a reconnect snapshot fetches it again', () async {
+      controller.ledgerFor(lotId);
+      fetches.single.complete(detail([ledgerEntry(1)]));
+      await pumpEventQueue();
+
+      controller.apply(snapshot([lotCard(version: 3)]));
+      expect(fetches, hasLength(2));
+      fetches.last.complete(detail([ledgerEntry(1), ledgerEntry(2)]));
+      await pumpEventQueue();
+
+      expect(sequences(), [1, 2]);
+    });
+
+    test('ignores pushed bids of lots nobody opened', () {
+      controller.apply(
+        lotChanged(lotCard(version: 2), ledgerEntry: ledgerEntry(1)),
+      );
+
+      expect(fetches, isEmpty);
+      expect(controller.ledgerFor(lotId), isNull);
+    });
   });
 }

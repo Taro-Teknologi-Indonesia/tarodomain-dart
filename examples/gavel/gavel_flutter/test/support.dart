@@ -17,6 +17,8 @@ LotCard lotCard({
   String? leaderName,
   String? winnerName,
   int? buyNowPrice,
+  String? closeCause,
+  DateTime? closedAt,
 }) => LotCard(
   lotId: lotId,
   auctionId: UuidValue.fromString('00000000-0000-4000-8000-0000000000a1'),
@@ -37,6 +39,8 @@ LotCard lotCard({
   status: status,
   version: version,
   winnerName: winnerName,
+  closeCause: closeCause,
+  closedAt: closedAt,
 );
 
 /// The exception the server sends for a domain error [code] with
@@ -50,3 +54,24 @@ TaroDomainException domainError(String code, [Map<String, Object?>? context]) =>
       message: code,
       context: context == null ? null : jsonEncode(context),
     );
+
+/// Bid [sequence] on the lot, placed at 22:01:00 UTC plus [sequence]
+/// seconds.
+LedgerEntry ledgerEntry(
+  int sequence, {
+  UuidValue? by,
+  String name = 'Budi',
+  int? amount,
+  bool retracted = false,
+}) => LedgerEntry(
+  lotId: lotId,
+  sequence: sequence,
+  participantId: by ?? budi,
+  bidderName: name,
+  amount: amount ?? 150000 + 25000 * sequence,
+  placedAt: DateTime.utc(2026, 10, 14, 22, 1, sequence),
+  retracted: retracted,
+  retractedAt: retracted
+      ? DateTime.utc(2026, 10, 14, 22, 1, sequence + 5)
+      : null,
+);

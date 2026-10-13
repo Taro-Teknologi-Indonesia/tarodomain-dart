@@ -90,6 +90,30 @@ class LotEndpoint extends Endpoint {
     return _card(session, lotId);
   });
 
+  /// The lot [lotId] with every bid on it, retracted ones included, in
+  /// ledger order.
+  ///
+  /// Throws `AGGREGATE_NOT_FOUND` for an unknown lot.
+  Future<LotDetail> detail(Session session, UuidValue lotId) =>
+      rethrowAsTaroDomainException(() async {
+        final card = await _card(session, lotId);
+        final auction = await AuctionView.db.findFirstRow(
+          session,
+          where: (t) => t.auctionId.equals(card.auctionId),
+        );
+        final ledger = await LedgerEntry.db.find(
+          session,
+          where: (t) => t.lotId.equals(lotId),
+          orderBy: (t) => t.sequence,
+        );
+        return LotDetail(
+          lot: card,
+          ledger: ledger,
+          closeAt: auction!.closeAt,
+          serverNow: DateTime.now().toUtc(),
+        );
+      });
+
   Future<LotCard> _card(Session session, UuidValue lotId) async =>
       await LotCard.db.findFirstRow(
         session,
