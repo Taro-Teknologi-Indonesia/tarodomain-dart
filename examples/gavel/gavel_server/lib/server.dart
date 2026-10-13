@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:serverpod_auth_idp_server/core.dart';
+import 'package:serverpod_auth_idp_server/providers/email.dart';
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
     hide Endpoints, Protocol;
 
@@ -25,6 +27,15 @@ Future<void> run(List<String> args) async {
               pod.futureCalls.callWithDelay(delay).taroDomainCalls.catchUp()
         : null,
   )..install();
+
+  // Organizers sign in with email before creating an auction (X6); bidders
+  // never do. Outside production the verification codes go to the log.
+  pod.initializeAuthServices(
+    tokenManagerBuilders: [JwtConfigFromPasswords()],
+    identityProviderBuilders: [
+      ServerpodCloudEmailIdpConfig(appDisplayName: 'Gavel'),
+    ],
+  );
 
   // Static files with a fallback to index.html, so deep links such as
   // `/a/<CODE>` load the app. The build is plain JS, not WASM.

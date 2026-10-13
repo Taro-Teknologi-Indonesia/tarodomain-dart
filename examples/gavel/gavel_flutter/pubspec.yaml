@@ -12,9 +12,12 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
+  # The sign-in widget's icons (X6).
+  cupertino_icons: ^1.0.8
   gavel_client: any
   go_router: ^17.0.0
   intl: any
+  serverpod_auth_idp_flutter: 4.0.4
   serverpod_flutter: 4.0.4
   shared_preferences: ^2.5.0
   tarodomain_serverpod_client: ^0.0.1

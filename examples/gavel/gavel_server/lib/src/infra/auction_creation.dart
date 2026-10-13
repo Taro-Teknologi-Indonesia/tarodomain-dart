@@ -19,13 +19,15 @@ const _codeAttempts = 3;
 /// to the second, through `CreateAuction`, and schedules its close.
 ///
 /// [now] is the command's timestamp, for the close-time check; tests pin
-/// it. Only the demo job sets [isDemo]. The returned organizer key is
-/// sent only this once.
+/// it. Only the demo job sets [isDemo]. [organizerUserId] is the signed-in
+/// creator (X6), null for the demo. The returned organizer key is sent
+/// only this once.
 Future<CreatedAuction> createAuction(
   Session session, {
   required String title,
   required DateTime closeAt,
   bool isDemo = false,
+  String? organizerUserId,
   DateTime? now,
 }) async {
   final auctionId = AuctionId.generate();
@@ -43,6 +45,7 @@ Future<CreatedAuction> createAuction(
       code: code,
       organizerKeyHash: hashKey(organizerKey),
       isDemo: isDemo,
+      organizerUserId: organizerUserId,
       timestamp: now,
     ),
   );

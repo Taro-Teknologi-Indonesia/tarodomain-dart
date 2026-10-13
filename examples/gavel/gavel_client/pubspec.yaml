@@ -7,6 +7,7 @@ environment:
   sdk: ^3.12.2
 
 dependencies:
+  serverpod_auth_idp_client: 4.0.4
   serverpod_client: 4.0.4
   tarodomain_serverpod_client: ^0.0.1
 

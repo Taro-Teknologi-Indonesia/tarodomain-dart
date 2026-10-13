@@ -21,12 +21,14 @@ void main() {
     AuctionId? id,
     String title = 'Bonsai night',
     required DateTime closeAt,
+    String? organizerUserId,
   }) => CreateAuction(
     id ?? AuctionId.generate(),
     title: title,
     closeAt: closeAt,
     code: 'ABC234',
     organizerKeyHash: hashKey(organizerKey),
+    organizerUserId: organizerUserId,
     timestamp: now,
   );
 
@@ -125,6 +127,43 @@ void main() {
     expect(data.values, isNot(contains(organizerKey)));
   });
 
+  test('the auction records who created it (X6)', () async {
+    final command = create(
+      closeAt: now.add(const Duration(hours: 1)),
+      organizerUserId: 'organizer-1',
+    );
+    await gavel.dispatch(command);
+
+    expect((await load(command.auctionId)).organizerUserId, 'organizer-1');
+  });
+
+  test('AuctionCreated round-trips organizerUserId', () {
+    final event = AuctionCreated(
+      'auction-1',
+      code: 'ABC234',
+      title: 'Bonsai night',
+      closeAt: now,
+      organizerKeyHash: 'hash',
+      organizerUserId: 'organizer-1',
+    );
+
+    final restored = AuctionCreated.fromData(event.toData());
+
+    expect(restored.organizerUserId, 'organizer-1');
+  });
+
+  test('AuctionCreated from before X6 has no creator', () {
+    final data = AuctionCreated(
+      'auction-1',
+      code: 'ABC234',
+      title: 'Bonsai night',
+      closeAt: now,
+      organizerKeyHash: 'hash',
+    ).toData()..remove('organizerUserId');
+
+    expect(AuctionCreated.fromData(data).organizerUserId, isNull);
+  });
+
   test('only the organizer key matches', () async {
     final command = create(closeAt: now.add(const Duration(hours: 1)));
     await gavel.dispatch(command);
@@ -147,7 +186,10 @@ void main() {
   });
 
   test('a snapshot restores the state', () async {
-    final command = create(closeAt: now.add(const Duration(hours: 1)));
+    final command = create(
+      closeAt: now.add(const Duration(hours: 1)),
+      organizerUserId: 'organizer-1',
+    );
     await gavel.dispatch(command);
     final original = await load(command.auctionId);
 

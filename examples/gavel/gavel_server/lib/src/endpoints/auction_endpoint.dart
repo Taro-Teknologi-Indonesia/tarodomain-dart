@@ -11,19 +11,10 @@ import '../generated/protocol.dart';
 import '../infra/auction_creation.dart';
 import '../infra/participant_guard.dart';
 
-/// Creating, reading and joining auctions.
+/// Reading and joining auctions. Creating one needs a signed-in organizer,
+/// so it lives on `OrganizerEndpoint` (X6).
 class AuctionEndpoint extends Endpoint {
   TaroDomainServerpod get _taro => TaroDomainServerpod.instance;
-
-  /// Creates an auction called [title] that closes at [closeAt], truncated
-  /// to the second, and schedules its close.
-  ///
-  /// The returned organizer key is sent only this once.
-  Future<CreatedAuction> create(
-    Session session,
-    String title,
-    DateTime closeAt,
-  ) => createAuction(session, title: title, closeAt: closeAt);
 
   /// The join code of the open public demo auction (X2), opening one first
   /// if the demo job hasn't yet.

@@ -153,7 +153,7 @@ void main() {
 
       // 18 letters and a seven-rune family: 19 graphemes, 25 runes.
       await tester.enterText(find.byType(TextField), '${'a' * 18}👨‍👩‍👧‍👦');
-      await tester.tap(find.text('Join'));
+      await tester.tap(find.text('Join and start bidding'));
       await tester.pump();
 
       expect(find.text('Use 1 to 24 characters'), findsOneWidget);
@@ -170,10 +170,10 @@ void main() {
 
     testWidgets('the code field drops O and Open stays disabled at 5 '
         'characters', (tester) async {
-      await pumpPage(tester, const HomePage());
+      await pumpPage(tester, HomePage(session: ValueNotifier(null)));
       final field = find.widgetWithText(TextField, 'Join code');
-      OutlinedButton open() =>
-          tester.widget(find.widgetWithText(OutlinedButton, 'Open the board'));
+      FilledButton open() =>
+          tester.widget(find.widgetWithText(FilledButton, 'Open the board'));
 
       await tester.enterText(field, 'abco23');
       await tester.pump();

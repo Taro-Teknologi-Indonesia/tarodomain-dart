@@ -36,6 +36,22 @@ Widget _app(
 );
 
 void main() {
+  // Tall enough that the lazily built list builds the ledger under the
+  // price panel too.
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized()
+          .platformDispatcher
+          .implicitView!
+      ..physicalSize = const Size(800, 1600)
+      ..devicePixelRatio = 1;
+  });
+  tearDown(
+    () => TestWidgetsFlutterBinding.ensureInitialized()
+        .platformDispatcher
+        .implicitView!
+        .reset(),
+  );
+
   final sitiLeads = lotCard(
     version: 3,
     currentPrice: 200000,

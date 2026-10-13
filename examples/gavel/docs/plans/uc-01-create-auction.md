@@ -47,6 +47,8 @@ indexes:
 
 ## Endpoint (`AuctionEndpoint`)
 
+> **Moved (X6):** `create` now lives on `OrganizerEndpoint`, which has `requireLogin`, and records the signed-in user as `organizerUserId`. `AuctionEndpoint.create` is gone. Tapping **Create an auction** signs the organizer in first. See [x6-organizer-sign-in.md](x6-organizer-sign-in.md).
+
 ```dart
 Future<CreatedAuction> create(Session s, String title, DateTime closeAt);
 // CreatedAuction { code, auctionId, organizerKey, closeAt, serverNow }

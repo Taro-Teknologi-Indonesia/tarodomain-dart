@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gavel_client/rules.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/api.dart';
 import '../core/input_formatters.dart';
 import '../core/money.dart';
 import '../theme.dart';
@@ -12,7 +14,11 @@ import '../widgets/brand.dart';
 /// The front door: what Gavel is, the live demo, creating an auction, and
 /// entering a join code (UC-01, UC-03, X2).
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({@visibleForTesting this.session, super.key});
+
+  /// The organizer's session, signed in when its value isn't null (X6);
+  /// the app's client unless a test passes one.
+  final ValueListenable<Object?>? session;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -47,6 +53,7 @@ class _HomePageState extends State<HomePage> {
                 gutter: gutter,
                 onDemo: () => context.go('/demo'),
                 onCreate: () => context.go('/new'),
+                session: widget.session ?? client.auth.authInfoListenable,
               ),
               _Section(
                 gutter: gutter,
@@ -102,12 +109,14 @@ class _Hero extends StatelessWidget {
     required this.gutter,
     required this.onDemo,
     required this.onCreate,
+    required this.session,
   });
 
   final bool wide;
   final double gutter;
   final VoidCallback onDemo;
   final VoidCallback onCreate;
+  final ValueListenable<Object?> session;
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +220,20 @@ class _Hero extends StatelessWidget {
                     children: [
                       const GavelLogo(),
                       const Spacer(),
+                      // Only a signed-in organizer has anything to sign
+                      // out of (X6). From here no redirect follows.
+                      ValueListenableBuilder(
+                        valueListenable: session,
+                        builder: (_, signedIn, _) => signedIn != null
+                            ? TextButton(
+                                onPressed: client.auth.signOutDevice,
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Sign out'),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
                       TextButton(
                         onPressed: onCreate,
                         style: TextButton.styleFrom(

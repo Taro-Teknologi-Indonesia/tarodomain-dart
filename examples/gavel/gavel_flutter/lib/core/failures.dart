@@ -10,6 +10,7 @@ sealed class GavelFailure {
 
   /// Turns any error thrown by a [client] call into a failure.
   factory GavelFailure.from(Object error) {
+    if (error is ServerpodClientUnauthorized) return const SignedOut();
     if (error is! TaroDomainException) return Unexpected(error.toString());
     final context = _decode(error.context);
     return switch (error.code) {
@@ -103,6 +104,11 @@ final class NotOrganizer extends GavelFailure {
 /// The stored identity isn't a participant of this auction.
 final class NotParticipant extends GavelFailure {
   const NotParticipant();
+}
+
+/// The call needs a signed-in organizer and the session is gone (X6).
+final class SignedOut extends GavelFailure {
+  const SignedOut();
 }
 
 /// The lot doesn't exist, or didn't yet at the moment asked about (UC-10).

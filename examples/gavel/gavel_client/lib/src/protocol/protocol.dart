@@ -11,6 +11,10 @@
 // ignore_for_file: dead_code, unnecessary_type_check
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
+    as _iacc;
+import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
+    as _iaic;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart'
     as _ispsicqs;
@@ -160,7 +164,13 @@ class Protocol extends _isc.SerializationManager {
           as T;
     }
     try {
+      return _iaic.Protocol().deserialize<T>(data, t);
+    } on _isc.DeserializationTypeNotFoundException catch (_) {}
+    try {
       return _ispsicqs.Protocol().deserialize<T>(data, t);
+    } on _isc.DeserializationTypeNotFoundException catch (_) {}
+    try {
+      return _iacc.Protocol().deserialize<T>(data, t);
     } on _isc.DeserializationTypeNotFoundException catch (_) {}
     return super.deserialize<T>(data, t);
   }
@@ -215,11 +225,23 @@ class Protocol extends _isc.SerializationManager {
       case _i7vyupo4.NewLot():
         return 'NewLot';
     }
+    className = _iaic.Protocol().getClassNameForObject(data);
+    if (className != null) {
+      return className.contains('.')
+          ? className
+          : 'serverpod_auth_idp.$className';
+    }
     className = _ispsicqs.Protocol().getClassNameForObject(data);
     if (className != null) {
       return className.contains('.')
           ? className
           : 'tarodomain_serverpod.$className';
+    }
+    className = _iacc.Protocol().getClassNameForObject(data);
+    if (className != null) {
+      return className.contains('.')
+          ? className
+          : 'serverpod_auth_core.$className';
     }
     return null;
   }
@@ -263,15 +285,25 @@ class Protocol extends _isc.SerializationManager {
     if (dataClassName == 'NewLot') {
       return deserialize<_i7vyupo4.NewLot>(data['data']);
     }
+    if (dataClassName.startsWith('serverpod_auth_idp.')) {
+      data['className'] = dataClassName.substring(19);
+      return _iaic.Protocol().deserializeByClassName(data);
+    }
     if (dataClassName.startsWith('tarodomain_serverpod.')) {
       data['className'] = dataClassName.substring(21);
       return _ispsicqs.Protocol().deserializeByClassName(data);
+    }
+    if (dataClassName.startsWith('serverpod_auth_core.')) {
+      data['className'] = dataClassName.substring(20);
+      return _iacc.Protocol().deserializeByClassName(data);
     }
     return super.deserializeByClassName(data);
   }
 
   void _registerHostProtocols() {
+    _iaic.Protocol().registerHostProtocol('gavel', this);
     _ispsicqs.Protocol().registerHostProtocol('gavel', this);
+    _iacc.Protocol().registerHostProtocol('gavel', this);
   }
 
   @override
@@ -287,7 +319,13 @@ class Protocol extends _isc.SerializationManager {
       return null;
     }
     try {
+      return _iaic.Protocol().mapRecordToJson(record);
+    } catch (_) {}
+    try {
       return _ispsicqs.Protocol().mapRecordToJson(record);
+    } catch (_) {}
+    try {
+      return _iacc.Protocol().mapRecordToJson(record);
     } catch (_) {}
     throw Exception('Unsupported record type ${record.runtimeType}');
   }

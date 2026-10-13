@@ -22,6 +22,7 @@ Build in this order. The numbers are steps, not UC IDs. Plans prefixed `x` aren'
 | 11 | [x2-rolling-demo-auction.md](x2-rolling-demo-auction.md): `/demo` always open for judges | Must | 0.75h |
 | 12 | [x3-race-proof.md](x3-race-proof.md): real parallel bids against production | Must | 0.75h |
 | 12b | [x5-client-validation.md](x5-client-validation.md): every server rule on user input also checked in the app before the call | Should | 1.5h |
+| 12c | [x6-organizer-sign-in.md](x6-organizer-sign-in.md): organizers sign in with Serverpod auth (email) before creating an auction; bidders stay account-free | Should | 2h |
 | — | **Record the video** | | |
 | 13 | [uc-11-big-screen.md](uc-11-big-screen.md) | Should | 0.5h |
 | 14 | [uc-14-mark-unpaid.md](uc-14-mark-unpaid.md): non-payment made visible | Could | 0.5h |
@@ -43,7 +44,7 @@ Musts total about 19.5 h, including deploy, the demo auction, the race proof and
 - **`Auction` records `LotRegistered`**, so the close saga knows its lots without reading a projection.
 - **Participant key:** `join` returns a random secret next to the public `participantId`. Only its hash is stored, and bidding or retracting requires it, so an ID copied from the ledger can't be used to act as someone else.
 - **Claiming a win with a shared name:** the receipt tags the winner (`Budi · #3f9c`, the last 4 hex chars of the participantId), and a winner code, an HMAC of the lot ID keyed with the participant's stored key hash, is shown only to the winner's browser and the organizer. It's computed on request and never stored or published (UC-09).
-- **Organizer key:** a random secret returned by `create`, kept in localStorage, with only its hash stored. It guards AddLot and MarkUnpaid. This isn't auth.
+- **Organizer key:** a random secret returned by `create`, kept in localStorage, with only its hash stored. It guards AddLot and MarkUnpaid. This isn't auth. X6 adds organizer accounts (Serverpod auth) for *creating* an auction only. The key keeps guarding the per-auction actions, so the demo and older auctions work unchanged.
 - **Every command is strong**, so projections and the live push happen in or after the same transaction.
 - **Server clock offset** drives all countdowns.
 - **Client validation mirrors the server, never replaces it.** Limits live once in `gavel_client/lib/rules.dart`, a server parity test fails if they drift from the domain, and every server check and `GavelFailure` mapping stays (X5).

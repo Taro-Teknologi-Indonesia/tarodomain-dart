@@ -54,8 +54,8 @@ void main() {
     await tester.pumpWidget(_app(lotCard()));
 
     expect(find.text('Rp 150.000'), findsOneWidget);
-    expect(find.text('No bids — opens at Rp 150.000'), findsOneWidget);
-    expect(find.text('OPEN'), findsOneWidget);
+    expect(find.text('No bids yet — be the first'), findsOneWidget);
+    expect(find.text('LIVE'), findsOneWidget);
   });
 
   testWidgets('names someone else who leads', (tester) async {

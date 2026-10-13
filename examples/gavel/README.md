@@ -14,6 +14,8 @@ Built with Flutter web and Serverpod 4, on [TaroDomain](../../README.md) (event 
 4. Retract the leading bid in one window. The bid gets struck through in the other window's ledger, and the previous bid leads again.
 5. Wait for the close (the demo closes every 15 minutes, and a fresh one opens), or browse an earlier closed demo auction to see the outcome and receipts.
 
+`/demo` needs no account. To run your own auction, tap **Create an auction** on the home page: organizers sign up with an email address and a verification code first. Bidders never do.
+
 Also try: add `?screen=board` to an auction link for the projector view, and pick a past moment on a lot to replay its price "as of" then. On a lot with a BN price, **Buy Now** closes it at once for that price. After the close, the organizer can mark a SOLD lot **unpaid**. "Winner did not pay" then shows on the board and the lot page next to the sale, which stays in the record.
 
 ## The problem
@@ -40,6 +42,7 @@ With Gavel the crowd stays on Facebook. The seller pastes one link under the pho
 | The auction closes at 22:03 with every laptop closed | Future calls: a one-off at `closeAt`, plus a sweep |
 | Rolling demo auction | Recurring future call (`gavel-demo`, every 60 s) |
 | The app itself | Serverpod web server hosting the Flutter web build, with a fallback route for deep links (`/a/<CODE>`) |
+| Organizer sign-in before creating an auction | Auth module: email sign-in with a verification code, JWT, `requireLogin` on `OrganizerEndpoint` |
 | Hosting | Serverpod Cloud with managed PostgreSQL |
 
 On Serverpod Cloud, future calls are off for this plan, so the server runs the same jobs from in-process timers every 5 s ([`timer_jobs.dart`](gavel_server/lib/src/infra/timer_jobs.dart)). Locally and in the tests, future calls are on.
@@ -123,7 +126,7 @@ It exits non-zero if any check fails. Its bidders are real participants named `r
 
 ## Honest limits
 
-- **No accounts.** A bidder is a name plus a random key kept in that browser. The server stores only the key's hash, so a participant ID copied from the ledger can't be used to bid. Two people can share a name; the receipt tags the winner (`Budi · #3f9c`) and shows a winner code only to the winner and the organizer.
+- **No bidder accounts.** Only organizers sign in, and only to create an auction; the organizer key from that browser still guards adding lots and marking unpaid. A bidder is a name plus a random key kept in that browser. The server stores only the key's hash, so a participant ID copied from the ledger can't be used to bid. Two people can share a name; the receipt tags the winner (`Budi · #3f9c`) and shows a winner code only to the winner and the organizer.
 - **One server instance.** The live push uses `session.messages` locally, so running several instances would need Serverpod's Redis-backed messages.
 - **Images by URL only.** There's no upload; the demo lots use emoji tiles.
 - **Roadmap:** relist an unpaid lot to the runner-up (today it's only marked unpaid, with no undo), native iOS/Android builds, web push when you're outbid, and an Open Graph preview for the shared link.

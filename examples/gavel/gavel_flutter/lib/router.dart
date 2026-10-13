@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/api.dart';
 import 'core/auction_scope.dart';
+import 'core/auth_redirects.dart';
 import 'pages/big_screen_board.dart';
 import 'pages/board_page.dart';
 import 'pages/create_auction_page.dart';
@@ -9,12 +11,27 @@ import 'pages/demo_page.dart';
 import 'pages/home_page.dart';
 import 'pages/lot_page.dart';
 import 'pages/organizer_page.dart';
+import 'pages/sign_in_page.dart';
 
 /// The app's routes. The join link `/a/<CODE>` is the whole funnel.
 final router = GoRouter(
+  // Runs the redirects again on sign-in and sign-out (X6).
+  refreshListenable: client.auth.authInfoListenable,
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
-    GoRoute(path: '/new', builder: (_, _) => const CreateAuctionPage()),
+    // Only creating an auction needs an account; bidders never sign in.
+    GoRoute(
+      path: '/new',
+      redirect: (_, state) =>
+          requireSignIn(client.auth.isAuthenticated, state.uri),
+      builder: (_, _) => const CreateAuctionPage(),
+    ),
+    GoRoute(
+      path: '/sign-in',
+      redirect: (_, state) =>
+          leaveSignIn(client.auth.isAuthenticated, state.uri),
+      builder: (_, _) => const SignInPage(),
+    ),
     // Always an open auction to try (X2).
     GoRoute(path: '/demo', builder: (_, _) => const DemoPage()),
     // Every page of one auction shares its controller, and so one live

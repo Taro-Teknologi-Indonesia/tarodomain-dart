@@ -12,6 +12,7 @@ import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
 import 'package:test/test.dart';
 
 import 'tables.dart';
+import 'organizer_session.dart';
 import 'test_tools/serverpod_test_tools.dart';
 
 void main() {
@@ -89,8 +90,8 @@ void main() {
       });
 
       test('a regular auction is not a demo', () async {
-        final created = await endpoints.auction.create(
-          sessionBuilder,
+        final created = await endpoints.organizer.create(
+          signedIn(sessionBuilder),
           'Bonsai night',
           DateTime.now().toUtc().add(const Duration(minutes: 30)),
         );

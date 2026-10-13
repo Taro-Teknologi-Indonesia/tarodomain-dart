@@ -234,7 +234,8 @@ class _BidBarState extends State<BidBar> {
       case RetractNotAllowed() ||
           AuctionNotFound() ||
           NotOrganizer() ||
-          NotFound():
+          NotFound() ||
+          SignedOut():
         _show('Something went wrong — try again', _Tone.bad);
     }
   }

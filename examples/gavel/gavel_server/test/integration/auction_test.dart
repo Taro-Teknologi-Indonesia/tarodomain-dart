@@ -10,6 +10,7 @@ import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
 import 'package:test/test.dart';
 
 import 'tables.dart';
+import 'organizer_session.dart';
 import 'test_tools/serverpod_test_tools.dart';
 
 void main() {
@@ -38,8 +39,8 @@ void main() {
           Duration(microseconds: requested.microsecondsSinceEpoch % 1000000),
         );
 
-        final created = await auctions.create(
-          sessionBuilder,
+        final created = await endpoints.organizer.create(
+          signedIn(sessionBuilder),
           'Bonsai night',
           requested,
         );
@@ -76,8 +77,8 @@ void main() {
 
       test('a close time too soon is a typed validation error', () async {
         await expectLater(
-          auctions.create(
-            sessionBuilder,
+          endpoints.organizer.create(
+            signedIn(sessionBuilder),
             'Bonsai night',
             DateTime.now().toUtc().add(const Duration(minutes: 2)),
           ),
@@ -125,8 +126,8 @@ void main() {
       });
 
       test('board finds the auction by code, in any case', () async {
-        final created = await auctions.create(
-          sessionBuilder,
+        final created = await endpoints.organizer.create(
+          signedIn(sessionBuilder),
           'Bonsai night',
           inAnHour(),
         );

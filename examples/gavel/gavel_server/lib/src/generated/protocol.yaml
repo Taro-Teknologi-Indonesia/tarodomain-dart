@@ -1,5 +1,15 @@
+emailIdp:
+  - login:
+  - startRegistration:
+  - verifyRegistrationCode:
+  - finishRegistration:
+  - startPasswordReset:
+  - verifyPasswordResetCode:
+  - finishPasswordReset:
+  - hasAccount:
+refreshJwtTokens:
+  - refreshAccessToken:
 auction:
-  - create:
   - currentDemo:
   - board:
   - join:
@@ -17,3 +27,5 @@ lot:
   - detail:
   - winnerCode:
   - asOf:
+organizer:
+  - create:

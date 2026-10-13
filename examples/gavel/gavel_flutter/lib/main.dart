@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
+import 'core/api.dart';
 import 'router.dart';
 import 'theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
+  // Restores the organizer's session before the first redirect, so
+  // reloading /new doesn't send a signed-in organizer to /sign-in.
+  await client.auth.initialize();
   runApp(const GavelApp());
 }
 

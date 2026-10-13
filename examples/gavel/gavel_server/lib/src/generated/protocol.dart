@@ -13,6 +13,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/protocol.dart' as _isp;
 import 'package:serverpod/serverpod.dart' as _is;
+import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
+    as _iacs;
+import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
+    as _iais;
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
     as _i13if8es;
 import 'auction_view.dart' as _iwrduo5z;
@@ -502,7 +506,9 @@ class Protocol extends _is.DatabaseSerializationManager {
       ],
       managed: true,
     ),
+    ..._iais.Protocol.targetTableDefinitions,
     ..._i13if8es.Protocol.targetTableDefinitions,
+    ..._iacs.Protocol.targetTableDefinitions,
     ..._isp.Protocol.targetTableDefinitions,
   ];
 
@@ -637,7 +643,13 @@ class Protocol extends _is.DatabaseSerializationManager {
           as T;
     }
     try {
+      return _iais.Protocol().deserialize<T>(data, t);
+    } on _is.DeserializationTypeNotFoundException catch (_) {}
+    try {
       return _i13if8es.Protocol().deserialize<T>(data, t);
+    } on _is.DeserializationTypeNotFoundException catch (_) {}
+    try {
+      return _iacs.Protocol().deserialize<T>(data, t);
     } on _is.DeserializationTypeNotFoundException catch (_) {}
     try {
       return _isp.Protocol().deserialize<T>(data, t);
@@ -701,11 +713,23 @@ class Protocol extends _is.DatabaseSerializationManager {
       case _ioa4m2zs.ParticipantRow():
         return 'ParticipantRow';
     }
+    className = _iais.Protocol().getClassNameForObject(data);
+    if (className != null) {
+      return className.contains('.')
+          ? className
+          : 'serverpod_auth_idp.$className';
+    }
     className = _i13if8es.Protocol().getClassNameForObject(data);
     if (className != null) {
       return className.contains('.')
           ? className
           : 'tarodomain_serverpod.$className';
+    }
+    className = _iacs.Protocol().getClassNameForObject(data);
+    if (className != null) {
+      return className.contains('.')
+          ? className
+          : 'serverpod_auth_core.$className';
     }
     className = _isp.Protocol().getClassNameForObject(data);
     if (className != null) {
@@ -759,9 +783,17 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (dataClassName == 'ParticipantRow') {
       return deserialize<_ioa4m2zs.ParticipantRow>(data['data']);
     }
+    if (dataClassName.startsWith('serverpod_auth_idp.')) {
+      data['className'] = dataClassName.substring(19);
+      return _iais.Protocol().deserializeByClassName(data);
+    }
     if (dataClassName.startsWith('tarodomain_serverpod.')) {
       data['className'] = dataClassName.substring(21);
       return _i13if8es.Protocol().deserializeByClassName(data);
+    }
+    if (dataClassName.startsWith('serverpod_auth_core.')) {
+      data['className'] = dataClassName.substring(20);
+      return _iacs.Protocol().deserializeByClassName(data);
     }
     if (dataClassName.startsWith('serverpod.')) {
       data['className'] = dataClassName.substring(10);
@@ -771,13 +803,27 @@ class Protocol extends _is.DatabaseSerializationManager {
   }
 
   void _registerHostProtocols() {
+    _iais.Protocol().registerHostProtocol('gavel', this);
     _i13if8es.Protocol().registerHostProtocol('gavel', this);
+    _iacs.Protocol().registerHostProtocol('gavel', this);
   }
 
   @override
   _is.Table? getTableForType(Type t) {
     {
+      var table = _iais.Protocol().getTableForType(t);
+      if (table != null) {
+        return table;
+      }
+    }
+    {
       var table = _i13if8es.Protocol().getTableForType(t);
+      if (table != null) {
+        return table;
+      }
+    }
+    {
+      var table = _iacs.Protocol().getTableForType(t);
       if (table != null) {
         return table;
       }
@@ -818,7 +864,13 @@ class Protocol extends _is.DatabaseSerializationManager {
       return null;
     }
     try {
+      return _iais.Protocol().mapRecordToJson(record);
+    } catch (_) {}
+    try {
       return _i13if8es.Protocol().mapRecordToJson(record);
+    } catch (_) {}
+    try {
+      return _iacs.Protocol().mapRecordToJson(record);
     } catch (_) {}
     throw Exception('Unsupported record type ${record.runtimeType}');
   }

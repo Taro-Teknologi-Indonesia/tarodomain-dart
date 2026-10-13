@@ -7,6 +7,7 @@ import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
 import 'package:test/test.dart';
 
 import 'tables.dart';
+import 'organizer_session.dart';
 import 'test_tools/serverpod_test_tools.dart';
 
 void main() {
@@ -24,8 +25,8 @@ void main() {
         TaroDomainServerpod(gavelServerDefinition()).install();
       });
 
-      Future<CreatedAuction> createAuction() => endpoints.auction.create(
-        sessionBuilder,
+      Future<CreatedAuction> createAuction() => endpoints.organizer.create(
+        signedIn(sessionBuilder),
         'Bonsai night',
         DateTime.now().toUtc().add(const Duration(hours: 1)),
       );

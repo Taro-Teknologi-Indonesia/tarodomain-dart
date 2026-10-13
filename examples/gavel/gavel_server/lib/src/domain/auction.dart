@@ -52,6 +52,7 @@ class AuctionCreated extends AuctionEvent {
     required this.closeAt,
     required this.organizerKeyHash,
     this.isDemo = false,
+    this.organizerUserId,
   });
 
   /// Rebuilds the event from [toData]'s output.
@@ -63,6 +64,8 @@ class AuctionCreated extends AuctionEvent {
     organizerKeyHash: data['organizerKeyHash']! as String,
     // Events from before X2 have no flag.
     isDemo: data['isDemo'] as bool? ?? false,
+    // Events from before X6, and the demo's, have no creator.
+    organizerUserId: data['organizerUserId'] as String?,
   );
 
   /// The join code in the share link.
@@ -80,6 +83,10 @@ class AuctionCreated extends AuctionEvent {
   /// Whether this is the rolling public demo (X2).
   final bool isDemo;
 
+  /// The signed-in organizer's auth user identifier (X6), or null for the
+  /// demo and auctions created before X6.
+  final String? organizerUserId;
+
   @override
   String get eventName => 'AuctionCreated';
 
@@ -91,6 +98,7 @@ class AuctionCreated extends AuctionEvent {
     'closeAt': closeAt.toUtc().toIso8601String(),
     'organizerKeyHash': organizerKeyHash,
     'isDemo': isDemo,
+    'organizerUserId': organizerUserId,
   };
 }
 
@@ -171,6 +179,7 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
     required String organizerKeyHash,
     required DateTime now,
     bool isDemo = false,
+    String? organizerUserId,
   }) {
     final trimmed = title.trim();
     if (trimmed.isEmpty || trimmed.length > maxTitleLength) {
@@ -197,6 +206,7 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
         closeAt: closeAt.toUtc(),
         organizerKeyHash: organizerKeyHash,
         isDemo: isDemo,
+        organizerUserId: organizerUserId,
       ),
     );
   }
@@ -227,6 +237,10 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
 
   /// The SHA-256 of the organizer key.
   String organizerKeyHash = '';
+
+  /// Who created the auction (X6): an auth user identifier, or null for the
+  /// demo and auctions created before X6.
+  String? organizerUserId;
 
   /// The auction's lots, in the order they were added.
   List<String> lotIds = [];
@@ -287,6 +301,7 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
         code = event.code;
         closeAt = event.closeAt;
         organizerKeyHash = event.organizerKeyHash;
+        organizerUserId = event.organizerUserId;
       case LotRegistered():
         lotIds = [...lotIds, event.lotId];
       case AuctionClosed():
@@ -302,6 +317,7 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
     'code': code,
     'closeAt': closeAt.toIso8601String(),
     'organizerKeyHash': organizerKeyHash,
+    'organizerUserId': organizerUserId,
     'lotIds': lotIds,
     'status': status.code,
   };
@@ -312,6 +328,7 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
     code = data['code']! as String;
     closeAt = DateTime.parse(data['closeAt']! as String);
     organizerKeyHash = data['organizerKeyHash']! as String;
+    organizerUserId = data['organizerUserId'] as String?;
     lotIds = [for (final id in data['lotIds']! as List) id as String];
     status = AuctionStatus.fromCode(data['status']! as String);
   }

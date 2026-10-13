@@ -18,7 +18,8 @@ import '../widgets/brand.dart';
 class CreateAuctionPage extends StatefulWidget {
   const CreateAuctionPage({@visibleForTesting this.create, super.key});
 
-  /// Sends `auction.create`; the app's client unless a test passes one.
+  /// Sends `organizer.create`; the app's client unless a test passes one,
+  /// which keeps the widget tests free of sign-in (X6).
   final Future<CreatedAuction> Function(String title, DateTime closeAt)? create;
 
   @override
@@ -127,7 +128,7 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
     final router = GoRouter.of(context);
     setState(() => _submitting = true);
     try {
-      final created = await (widget.create ?? client.auction.create)(
+      final created = await (widget.create ?? client.organizer.create)(
         _title.text,
         _closeAt.toUtc(),
       );
@@ -139,6 +140,10 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
         case Invalid(:final message, :final context)
             when context['field'] is String:
           setState(() => _errors = {context['field']! as String: message});
+        case SignedOut():
+          // Only if the session was revoked while the form was open. The
+          // router then sends the organizer to sign in again.
+          await client.auth.signOutDevice();
         default:
           messenger.showSnackBar(
             const SnackBar(

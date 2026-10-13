@@ -9,6 +9,7 @@ import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
 import 'package:test/test.dart';
 
 import 'tables.dart';
+import 'organizer_session.dart';
 import 'test_tools/serverpod_test_tools.dart';
 
 void main() {
@@ -30,8 +31,8 @@ void main() {
         session = sessionBuilder.build();
         await clearTables(session);
         taro = TaroDomainServerpod(gavelServerDefinition())..install();
-        created = await endpoints.auction.create(
-          sessionBuilder,
+        created = await endpoints.organizer.create(
+          signedIn(sessionBuilder),
           'Bonsai night',
           DateTime.now().toUtc().add(const Duration(hours: 1)),
         );
@@ -179,8 +180,8 @@ void main() {
       });
 
       test('a valid key from another auction is NOT_PARTICIPANT', () async {
-        final other = await endpoints.auction.create(
-          sessionBuilder,
+        final other = await endpoints.organizer.create(
+          signedIn(sessionBuilder),
           'Batik night',
           DateTime.now().toUtc().add(const Duration(hours: 1)),
         );
