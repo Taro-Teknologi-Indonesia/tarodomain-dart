@@ -5,6 +5,8 @@ import 'package:gavel_client/gavel_client.dart';
 
 import '../core/money.dart';
 import '../core/names.dart';
+import '../theme.dart';
+import 'brand.dart';
 import 'lot_visual.dart';
 import 'unpaid.dart';
 
@@ -82,23 +84,30 @@ class _LotCardWidgetState extends State<LotCardWidget>
         text.titleSmall,
         text.titleLarge,
         text.bodySmall,
-        8.0,
+        12.0,
       ),
       LotCardSize.regular => (
         text.titleMedium,
-        text.headlineSmall,
-        text.bodySmall,
-        12.0,
+        text.headlineMedium,
+        text.bodyMedium,
+        16.0,
       ),
       // Readable from the back of the room.
       LotCardSize.large => (
         text.headlineMedium,
         text.displayLarge?.copyWith(fontSize: 72),
         text.headlineSmall,
-        20.0,
+        24.0,
       ),
     };
-    final flash = _large ? Colors.amber : theme.colorScheme.primaryContainer;
+    final flash = _large ? Brand.gold : Brand.goldTint;
+    final mine = widget.me != null && lot.leaderId == widget.me;
+    // A lead of yours glows green, a lot you won gold.
+    final accent = switch (lot.status) {
+      'OPEN' when mine => Brand.lead,
+      'SOLD' when mine => Brand.gold,
+      _ => null,
+    };
     final details = Column(
       // Keys the flip on the big screen from the open card to the closed one.
       key: ValueKey(_large && lot.status != 'OPEN'),
@@ -116,30 +125,42 @@ class _LotCardWidgetState extends State<LotCardWidget>
               ),
             ),
             const SizedBox(width: 8),
-            StatusBadge(lot.status),
+            StatusBadge(lot.status, large: _large),
             if (lot.unpaid) ...[const SizedBox(width: 4), const UnpaidTag()],
           ],
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: _large ? 12 : 8),
         if (_large && lot.status != 'OPEN')
           _Hammered(lot: lot, sharedNames: widget.sharedNames, style: title)
         else ...[
-          Row(
+          Eyebrow(switch (lot) {
+            LotCard(status: 'OPEN', leaderId: null) => 'Opening bid',
+            LotCard(status: 'OPEN') => 'Current bid',
+            LotCard(status: 'SOLD') => 'Sold for',
+            _ => 'Opened at',
+          }, size: _large ? 18 : null),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Flexible(child: _price(lot, price)),
+              _price(lot, price),
               if (lot.buyNowPrice case final bn?
-                  when lot.status == 'OPEN' && lot.currentPrice < bn) ...[
-                const SizedBox(width: 8),
-                BuyNowTag(bn),
-              ],
+                  when lot.status == 'OPEN' && lot.currentPrice < bn)
+                BuyNowTag(bn, large: _large),
             ],
           ),
+          const SizedBox(height: 6),
           _leader(lot, detail),
         ],
       ],
     );
+    final cardShape = theme.cardTheme.shape as RoundedRectangleBorder?;
     return Card(
       clipBehavior: Clip.antiAlias,
+      shape: accent == null
+          ? null
+          : cardShape?.copyWith(side: BorderSide(color: accent, width: 2)),
       child: InkWell(
         onTap: widget.onTap,
         child: Column(
@@ -149,10 +170,41 @@ class _LotCardWidgetState extends State<LotCardWidget>
             AspectRatio(
               // A wider visual leaves the price room on a projector.
               aspectRatio: _large ? 16 / 9 : 4 / 3,
-              child: LotVisual(
-                imageUrl: lot.imageUrl,
-                emoji: lot.tileEmoji,
-                color: lot.tileColor,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  LotVisual(
+                    imageUrl: lot.imageUrl,
+                    emoji: lot.tileEmoji,
+                    color: lot.tileColor,
+                  ),
+                  if (widget.size != LotCardSize.dense && lot.bidCount > 0)
+                    Positioned(
+                      right: padding * 0.75,
+                      top: padding * 0.75,
+                      child: _Overlay(
+                        large: _large,
+                        child: Text(
+                          lot.bidCount == 1 ? '1 bid' : '${lot.bidCount} bids',
+                        ),
+                      ),
+                    ),
+                  if (accent != null)
+                    Positioned(
+                      left: padding * 0.75,
+                      top: padding * 0.75,
+                      child: _Overlay(
+                        large: _large,
+                        color: accent,
+                        foreground: lot.status == 'SOLD'
+                            ? Brand.ink
+                            : Colors.white,
+                        child: Text(
+                          lot.status == 'SOLD' ? '🏆 YOU WON' : '★ YOU LEAD',
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             AnimatedBuilder(
@@ -228,7 +280,14 @@ class _LotCardWidgetState extends State<LotCardWidget>
   );
 
   /// [lot]'s price, the new one sliding in over the old.
-  Widget _price(LotCard lot, TextStyle? style) => AnimatedSwitcher(
+  Widget _price(LotCard lot, TextStyle? style) => FittedBox(
+    // Shrinks rather than breaking a big price across two lines.
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerLeft,
+    child: _priceSwitcher(lot, style),
+  );
+
+  Widget _priceSwitcher(LotCard lot, TextStyle? style) => AnimatedSwitcher(
     duration: const Duration(milliseconds: 300),
     transitionBuilder: (child, animation) => FadeTransition(
       opacity: animation,
@@ -248,35 +307,81 @@ class _LotCardWidgetState extends State<LotCardWidget>
       formatRupiah(lot.currentPrice),
       key: ValueKey(lot.currentPrice),
       style: style?.copyWith(
-        fontWeight: FontWeight.bold,
-        fontFeatures: const [FontFeature.tabularFigures()],
+        fontWeight: FontWeight.w800,
+        fontFeatures: Brand.tabular,
+        height: 1.15,
       ),
+    ),
+  );
+}
+
+/// A small pill over a lot's picture: its bid count, or YOU LEAD.
+class _Overlay extends StatelessWidget {
+  const _Overlay({
+    required this.child,
+    required this.large,
+    this.color,
+    this.foreground = Colors.white,
+  });
+
+  final Widget child;
+  final bool large;
+  final Color? color;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: EdgeInsets.symmetric(
+      horizontal: large ? 16 : 10,
+      vertical: large ? 8 : 4,
+    ),
+    decoration: BoxDecoration(
+      color: color ?? Colors.black.withValues(alpha: 0.6),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: DefaultTextStyle.merge(
+      style: TextStyle(
+        color: foreground,
+        fontSize: large ? 22 : 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.3,
+        fontFeatures: Brand.tabular,
+      ),
+      child: child,
     ),
   );
 }
 
 /// The lot's Buy Now price, as `BN Rp 1.500.000`.
 class BuyNowTag extends StatelessWidget {
-  const BuyNowTag(this.price, {super.key});
+  const BuyNowTag(this.price, {this.large = false, super.key});
 
   final int price;
+
+  /// Sized for the back of the room.
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: EdgeInsets.symmetric(
+        horizontal: large ? 16 : 8,
+        vertical: large ? 6 : 3,
+      ),
       decoration: BoxDecoration(
-        border: Border.all(color: colors.secondary),
-        borderRadius: BorderRadius.circular(4),
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         'BN ${formatRupiah(price)}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: colors.secondary),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: colors.onSecondaryContainer,
+          fontWeight: FontWeight.w800,
+          fontSize: large ? 22 : null,
+        ),
       ),
     );
   }
@@ -307,38 +412,50 @@ class _Leader extends StatelessWidget {
       null => null,
     };
     final isMe = me != null && lot.leaderId == me;
+    final colors = Theme.of(context).colorScheme;
+    final muted = style?.copyWith(
+      color: colors.onSurfaceVariant,
+      fontWeight: FontWeight.w600,
+    );
     if (name == null) {
       return Text(
-        open
-            ? 'No bids — opens at ${formatRupiah(lot.openBid)}'
-            : 'No bids — passed',
-        style: style,
+        open ? 'No bids yet — be the first' : 'No bids — passed',
+        style: muted,
       );
     }
-    if (!isMe) {
-      return Text(
-        open ? '$name leads' : '$name won',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: style,
-      );
-    }
-    final colors = Theme.of(context).colorScheme;
-    return Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: 'You',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: colors.onTertiaryContainer,
-              backgroundColor: colors.tertiaryContainer,
+    final avatar = BidderAvatar(
+      name,
+      size: (style?.fontSize ?? 14) * 1.5,
+      highlight: isMe ? Brand.lead : null,
+    );
+    final label = !isMe
+        ? Text(
+            open ? '$name leads' : '$name won',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          )
+        : Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(
+                  text: 'You',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: Brand.lead,
+                  ),
+                ),
+                TextSpan(text: open ? ' lead' : ' won'),
+              ],
             ),
-          ),
-          TextSpan(text: open ? ' lead' : ' won'),
-        ],
-      ),
-      style: style,
+            style: muted,
+          );
+    return Row(
+      children: [
+        avatar,
+        const SizedBox(width: 8),
+        Flexible(child: label),
+      ],
     );
   }
 }
@@ -385,7 +502,7 @@ class _Hammered extends StatelessWidget {
             'SOLD — $name — $price',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: bold?.copyWith(color: Colors.amber),
+            style: bold?.copyWith(color: Brand.goldBright),
           ),
         ),
       ],
@@ -393,30 +510,53 @@ class _Hammered extends StatelessWidget {
   }
 }
 
-/// OPEN in green, SOLD in gold, PASSED in grey.
+/// An open lot as a red LIVE pill, SOLD in gold, PASSED in grey.
 class StatusBadge extends StatelessWidget {
-  const StatusBadge(this.status, {super.key});
+  const StatusBadge(this.status, {this.large = false, super.key});
 
   final String status;
 
+  /// Sized for the back of the room.
+  final bool large;
+
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      'OPEN' => Colors.green.shade700,
-      'SOLD' => Colors.amber.shade800,
-      _ => Colors.grey.shade600,
+    final (background, foreground) = switch (status) {
+      'OPEN' => (Brand.live.withValues(alpha: 0.1), Brand.live),
+      'SOLD' => (Brand.gold, Brand.ink),
+      _ => (Colors.grey.shade200, Colors.grey.shade700),
     };
+    final scale = large ? 2.0 : 1.0;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 3 * scale),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(4),
+        color: background,
+        borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        status,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: Colors.white),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (status == 'OPEN') ...[
+            Container(
+              width: 6 * scale,
+              height: 6 * scale,
+              decoration: BoxDecoration(
+                color: foreground,
+                shape: BoxShape.circle,
+              ),
+            ),
+            SizedBox(width: 5 * scale),
+          ],
+          Text(
+            status == 'OPEN' ? 'LIVE' : status,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+              fontSize: 11 * scale,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -460,54 +600,93 @@ class LotGrid extends StatelessWidget {
   );
 
   @override
-  Widget build(BuildContext context) {
-    if (lots.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(empty, textAlign: TextAlign.center),
-        ),
-      );
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const padding = EdgeInsets.fromLTRB(16, 8, 16, 96);
-        if (this.columns == null && constraints.maxWidth < 600) {
-          return ListView.separated(
-            padding: padding,
-            itemCount: lots.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (_, i) => _card(lots[i]),
-          );
-        }
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final large = size == LotCardSize.large;
+      // The projector's wider margins, only once there's room for them.
+      final roomy = large && constraints.maxWidth >= 900;
+      final side = roomy ? 32.0 : 16.0;
+      final spacing = roomy ? 24.0 : 16.0;
+      final List<Widget> body;
+      if (lots.isEmpty) {
+        body = [_Empty(empty)];
+      } else if (columns == null && constraints.maxWidth < 600) {
+        body = [
+          for (final (i, lot) in lots.indexed) ...[
+            if (i > 0) SizedBox(height: spacing),
+            _card(lot),
+          ],
+        ];
+      } else {
         // A grid of cards at most 360 px wide. Rows rather than a GridView,
         // so a card is as tall as its content needs at any width.
-        const spacing = 8.0;
-        final width = constraints.maxWidth - padding.horizontal;
+        final width = constraints.maxWidth - 2 * side;
         final columns =
             this.columns ?? ((width + spacing) / (360 + spacing)).ceil();
         final rows = (lots.length / columns).ceil();
-        return ListView.separated(
-          padding: padding,
-          itemCount: rows,
-          separatorBuilder: (_, _) => const SizedBox(height: spacing),
-          itemBuilder: (_, row) => IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var col = 0; col < columns; col++) ...[
-                  if (col > 0) const SizedBox(width: spacing),
-                  Expanded(
-                    child: row * columns + col < lots.length
-                        ? _card(lots[row * columns + col])
-                        : const SizedBox.shrink(),
-                  ),
+        body = [
+          for (var row = 0; row < rows; row++) ...[
+            if (row > 0) SizedBox(height: spacing),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var col = 0; col < columns; col++) ...[
+                    if (col > 0) SizedBox(width: spacing),
+                    Expanded(
+                      child: row * columns + col < lots.length
+                          ? _card(lots[row * columns + col])
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
                 ],
-              ],
+              ),
+            ),
+          ],
+        ];
+      }
+      return ListView(
+        padding: EdgeInsets.fromLTRB(side, large ? 8 : 20, side, 96),
+        children: body,
+      );
+    },
+  );
+}
+
+/// What shows where the lots will be.
+class _Empty extends StatelessWidget {
+  const _Empty(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.gavel_rounded,
+              size: 30,
+              color: theme.colorScheme.onPrimaryContainer,
             ),
           ),
-        );
-      },
+          const SizedBox(height: 16),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium,
+          ),
+        ],
+      ),
     );
   }
 }

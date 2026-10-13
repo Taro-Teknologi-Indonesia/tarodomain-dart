@@ -18,22 +18,30 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Live silent auctions for collectors. Join from one link, tap to bid, and watch every bid land in real time. The hammer falls exactly on time.">
+  <meta name="theme-color" content="#17130F">
+
+  <!-- The preview a join link shows when pasted in a Facebook group. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Gavel">
+  <meta property="og:title" content="Gavel: every bid live, every close on time">
+  <meta property="og:description" content="Join the auction with just a name, tap to bid, and watch every bid land live. The hammer falls exactly at the deadline.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="gavel_flutter">
+  <meta name="apple-mobile-web-app-title" content="Gavel">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Gavel</title>
+  <title>Gavel · Live auctions</title>
   <link rel="manifest" href="manifest.json">
 
   <!-- Splash shown while Flutter downloads and boots; removed on first frame. -->
   <style>
+    html, body { background: #17130F; }
     #gavel-loading {
       position: fixed;
       inset: 0;
@@ -42,30 +50,51 @@
       align-items: center;
       justify-content: center;
       gap: 20px;
-      background: #fffbff;
+      background: radial-gradient(circle at 80% 0%, #3d2e17 0%, #17130F 70%);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      color: #8d5524;
+      color: #ffffff;
       transition: opacity 250ms ease-out;
     }
     #gavel-loading.done { opacity: 0; pointer-events: none; }
+    #gavel-loading .brand { display: flex; align-items: center; gap: 14px; }
+    #gavel-loading .tile {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #f2c66d, #e0a93b 55%, #b9821f);
+      box-shadow: 0 8px 28px rgba(224, 169, 59, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #gavel-loading .title {
+      font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+      font-size: 36px;
+      font-weight: 700;
+    }
     #gavel-loading .spinner {
-      width: 44px;
-      height: 44px;
-      border: 4px solid rgba(141, 85, 36, 0.2);
-      border-top-color: #8d5524;
+      width: 28px;
+      height: 28px;
+      margin-top: 16px;
+      border: 3px solid rgba(224, 169, 59, 0.2);
+      border-top-color: #e0a93b;
       border-radius: 50%;
       animation: gavel-spin 0.9s linear infinite;
     }
-    #gavel-loading .title { font-size: 22px; font-weight: 600; letter-spacing: 0.02em; }
-    #gavel-loading .hint { font-size: 14px; opacity: 0.7; }
+    #gavel-loading .hint { font-size: 14px; color: #b5a994; }
     @keyframes gavel-spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div id="gavel-loading" role="status" aria-live="polite">
+    <div class="brand">
+      <div class="tile">
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="#17130F" d="M1 21h12v2H1v-2zM5.245 8.07l2.83-2.827 14.14 14.142-2.828 2.828L5.245 8.07zM12.317 1l5.657 5.656-2.83 2.83-5.654-5.66L12.317 1zM3.825 9.485l5.657 5.657-2.828 2.828-5.657-5.657 2.828-2.828z"/></svg>
+      </div>
+      <div class="title">Gavel</div>
+    </div>
     <div class="spinner"></div>
-    <div class="title">Gavel</div>
-    <div class="hint">Loading auction&hellip;</div>
+    <div class="hint">Opening the auction room&hellip;</div>
   </div>
   <script>
     window.addEventListener('flutter-first-frame', function () {

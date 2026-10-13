@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'router.dart';
+import 'theme.dart';
 
 void main() {
   usePathUrlStrategy();
@@ -15,7 +16,8 @@ class GavelApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp.router(
     title: 'Gavel',
-    theme: ThemeData(colorSchemeSeed: const Color(0xFF8D5524)),
+    theme: gavelTheme(),
+    debugShowCheckedModeBanner: false,
     routerConfig: router,
   );
 }

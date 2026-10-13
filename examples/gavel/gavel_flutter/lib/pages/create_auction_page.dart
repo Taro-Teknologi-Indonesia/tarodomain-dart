@@ -10,6 +10,8 @@ import '../core/api.dart';
 import '../core/clock.dart';
 import '../core/failures.dart';
 import '../core/organizer_keys.dart';
+import '../theme.dart';
+import '../widgets/brand.dart';
 
 /// The organizer's first step: a title and one close time for every lot
 /// (UC-01).
@@ -163,80 +165,155 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
         '${_closeAt.timeZoneName}'
         '${remaining.isNegative ? ' (in the past)' : ' (in ${formatRemaining(remaining)})'}'
         '${tooSoon ? ' — at least ${AuctionRules.minimumLeadTime.inMinutes} minutes from now' : ''}';
+    final closeColor = tooSoon ? theme.colorScheme.error : Brand.lead;
     return Scaffold(
       appBar: AppBar(title: const Text('New auction')),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 560),
             child: Form(
               key: _form,
               autovalidateMode: _autovalidate,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    controller: _title,
-                    autofocus: true,
-                    maxLength: AuctionRules.maxTitleLength,
-                    validator: (title) =>
-                        AuctionRules.title(title ?? '')?.message,
-                    onChanged: (_) => _clearError('title'),
-                    decoration: InputDecoration(
-                      labelText: 'Title',
-                      hintText: 'Lelang batu malam Jumat',
-                      errorText: _errors['title'],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Close time', style: theme.textTheme.titleSmall),
+                  const Eyebrow('Step 1 of 2', color: Brand.goldDeep),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _pickDate,
-                          icon: const Icon(Icons.calendar_today),
-                          label: Text(DateFormat.yMMMEd().format(_closeAt)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _pickTime,
-                          icon: const Icon(Icons.schedule),
-                          label: Text(DateFormat.Hm().format(_closeAt)),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'Set up your auction',
+                    style: Brand.display.copyWith(
+                      fontSize: 34,
+                      color: Brand.ink,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    closeText,
-                    style: tooSoon
-                        ? TextStyle(color: theme.colorScheme.error)
-                        : null,
+                    'Name it and pick one close time. Every lot closes '
+                    'together, on the second, so nobody argues about who '
+                    'was first.',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: Brand.muted,
+                    ),
                   ),
-                  if (_errors['closeAt'] case final error?)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        error,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.error,
-                        ),
+                  const SizedBox(height: 24),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: _title,
+                            autofocus: true,
+                            maxLength: AuctionRules.maxTitleLength,
+                            validator: (title) =>
+                                AuctionRules.title(title ?? '')?.message,
+                            onChanged: (_) => _clearError('title'),
+                            decoration: InputDecoration(
+                              labelText: 'Title',
+                              hintText: 'Lelang batu malam Jumat',
+                              prefixIcon: const Icon(Icons.edit_outlined),
+                              errorText: _errors['title'],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text('Close time', style: theme.textTheme.titleSmall),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _PickerTile(
+                                  icon: Icons.calendar_today_outlined,
+                                  label: 'Date',
+                                  value: DateFormat.yMMMEd().format(_closeAt),
+                                  onTap: _pickDate,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _PickerTile(
+                                  icon: Icons.schedule_rounded,
+                                  label: 'Time',
+                                  value: DateFormat.Hm().format(_closeAt),
+                                  onTap: _pickTime,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: closeColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  tooSoon
+                                      ? Icons.error_outline_rounded
+                                      : Icons.timer_outlined,
+                                  size: 18,
+                                  color: closeColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    closeText,
+                                    style: TextStyle(
+                                      color: closeColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_errors['closeAt'] case final error?)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                error,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.error,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  const SizedBox(height: 32),
+                  ),
+                  const SizedBox(height: 24),
                   FilledButton(
                     onPressed: _submitting ? null : _submit,
+                    style: Brand.goldButton.copyWith(
+                      minimumSize: const WidgetStatePropertyAll(
+                        Size.fromHeight(56),
+                      ),
+                    ),
                     child: _submitting
                         ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            dimension: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Brand.ink,
+                            ),
                           )
                         : const Text('Create auction'),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Next: add your lots, then share one link with your '
+                    'group.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Brand.muted,
+                    ),
                   ),
                 ],
               ),
@@ -246,4 +323,61 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
       ),
     );
   }
+}
+
+/// A labelled value that opens a picker, such as the close date.
+class _PickerTile extends StatelessWidget {
+  const _PickerTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Brand.ivory,
+    borderRadius: BorderRadius.circular(12),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Brand.line),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: Brand.goldDeep),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Eyebrow(label),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      fontFeatures: Brand.tabular,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }

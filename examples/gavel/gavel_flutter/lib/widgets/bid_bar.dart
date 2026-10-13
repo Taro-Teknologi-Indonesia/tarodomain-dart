@@ -10,6 +10,7 @@ import '../core/bidding.dart';
 import '../core/failures.dart';
 import '../core/identity.dart';
 import '../core/money.dart';
+import '../theme.dart';
 
 /// The kelipatan chips of an open lot (UC-06), over a banner that says what
 /// the last tap came to.
@@ -256,24 +257,65 @@ class _BidBarState extends State<BidBar> {
                 ),
         ),
         if (closed)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text('Bidding closed', textAlign: TextAlign.center),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.gavel_rounded, size: 18, color: Brand.muted),
+                const SizedBox(width: 8),
+                Text(
+                  'Bidding closed',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: Brand.muted),
+                ),
+              ],
+            ),
           )
         else ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final step in widget.lot.increments)
-                _BidChip(
-                  step: step,
-                  amount: widget.lot.currentPrice + step,
-                  busy: _pending == step,
-                  onPressed: _busy ? null : () => _bid(step),
-                ),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Tap to bid — one tap, no confirm',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: Brand.muted),
+            ),
+          ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = 8.0;
+              final steps = widget.lot.increments;
+              // Three across on a phone, the whole ladder on one row wider.
+              final across = steps.length.clamp(
+                1,
+                constraints.maxWidth >= 560 ? 6 : 3,
+              );
+              final width =
+                  (constraints.maxWidth - spacing * (across - 1)) / across;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (final (i, step) in steps.indexed)
+                    SizedBox(
+                      width: width,
+                      child: _BidChip(
+                        step: step,
+                        amount: widget.lot.currentPrice + step,
+                        busy: _pending == step,
+                        // The smallest raise, the one most tapped, in gold.
+                        primary: i == 0,
+                        onPressed: _busy ? null : () => _bid(step),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           if (widget.bidder.canBuyNow &&
               !_buyNowPassed &&
@@ -368,6 +410,7 @@ class _BidChip extends StatelessWidget {
     required this.amount,
     required this.busy,
     required this.onPressed,
+    this.primary = false,
   });
 
   final int step;
@@ -375,25 +418,50 @@ class _BidChip extends StatelessWidget {
   final bool busy;
   final VoidCallback? onPressed;
 
+  /// Solid gold rather than a gold tint.
+  final bool primary;
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 48, minWidth: 96),
-      child: ActionChip(
-        onPressed: onPressed,
-        tooltip: 'Bid ${formatRupiah(amount)}',
-        avatar: busy
-            ? const SizedBox.square(
-                dimension: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : null,
-        label: Column(
+    return ActionChip(
+      onPressed: onPressed,
+      tooltip: 'Bid ${formatRupiah(amount)}',
+      backgroundColor: primary ? Brand.gold : Brand.goldTint,
+      disabledColor: Brand.goldTint.withValues(alpha: 0.6),
+      side: BorderSide(color: primary ? Brand.gold : const Color(0xFFEBD9B4)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      labelPadding: EdgeInsets.zero,
+      avatar: busy
+          ? const SizedBox.square(
+              dimension: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Brand.ink,
+              ),
+            )
+          : null,
+      label: SizedBox(
+        width: double.infinity,
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(formatStep(step), style: text.titleMedium),
-            Text(formatRupiah(amount), style: text.bodySmall),
+            Text(
+              formatStep(step),
+              style: text.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: Brand.ink,
+              ),
+            ),
+            Text(
+              formatRupiah(amount),
+              style: text.bodySmall?.copyWith(
+                color: Brand.ink.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w600,
+                fontFeatures: Brand.tabular,
+              ),
+            ),
           ],
         ),
       ),

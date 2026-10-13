@@ -6,6 +6,7 @@ import 'package:gavel_client/gavel_client.dart';
 
 import '../core/money.dart';
 import '../core/names.dart';
+import '../theme.dart';
 
 /// Whether [me] won [lot]: it is SOLD and its last leader is [me].
 bool wonBy(LotCard lot, UuidValue? me) =>
@@ -71,72 +72,105 @@ class _WonBannerState extends State<WonBanner> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lot = widget.lot;
-    final ink = Colors.brown.shade900;
+    const ink = Brand.ink;
     final price = formatRupiah(lot.finalPrice ?? lot.currentPrice);
     final code = _code;
-    return Material(
-      color: Colors.amber.shade100,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '🔨 You won ${lot.name} — $price',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: ink,
-                      fontWeight: FontWeight.bold,
-                    ),
+    final narrow = MediaQuery.sizeOf(context).width < 600;
+    final share = TextButton.icon(
+      onPressed: widget.onShare,
+      style: TextButton.styleFrom(foregroundColor: ink),
+      icon: const Icon(Icons.share),
+      label: const Text('Share result'),
+    );
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Brand.goldBright, Brand.gold],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Brand.gold.withValues(alpha: 0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🏆', style: TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '🔨 You won ${lot.name} — $price',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: ink,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: widget.onShare,
-                  icon: const Icon(Icons.share),
-                  label: const Text('Share result'),
-                ),
+              ),
+              if (!narrow) share,
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if ((lot.winnerName, lot.leaderId) case (
+                  final name?,
+                  final id?,
+                ))
+                  Text(
+                    "You're ${tagged(name, id)} on the receipt",
+                    style: theme.textTheme.bodyMedium?.copyWith(color: ink),
+                  ),
+                if (code != null)
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              const TextSpan(text: 'Your winner code: '),
+                              TextSpan(
+                                text: code,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1,
+                                  fontFeatures: Brand.tabular,
+                                ),
+                              ),
+                              const TextSpan(
+                                text: ' · send it to the seller to claim',
+                              ),
+                            ],
+                          ),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: ink,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Copy code',
+                        icon: const Icon(Icons.copy, size: 18),
+                        color: ink,
+                        onPressed: () => _copy(code),
+                      ),
+                    ],
+                  ),
+                if (narrow) share,
               ],
             ),
-            if ((lot.winnerName, lot.leaderId) case (final name?, final id?))
-              Text(
-                "You're ${tagged(name, id)} on the receipt",
-                style: theme.textTheme.bodyMedium?.copyWith(color: ink),
-              ),
-            if (code != null)
-              Row(
-                children: [
-                  Flexible(
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          const TextSpan(text: 'Your winner code: '),
-                          TextSpan(
-                            text: code,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontFeatures: [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                          const TextSpan(
-                            text: ' · send it to the seller to claim',
-                          ),
-                        ],
-                      ),
-                      style: theme.textTheme.bodyMedium?.copyWith(color: ink),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Copy code',
-                    icon: const Icon(Icons.copy, size: 18),
-                    color: ink,
-                    onPressed: () => _copy(code),
-                  ),
-                ],
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

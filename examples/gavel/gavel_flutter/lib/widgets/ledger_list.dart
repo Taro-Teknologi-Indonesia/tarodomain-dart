@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../core/money.dart';
 import '../core/names.dart';
 import '../core/time_travel.dart';
+import '../theme.dart';
+import 'brand.dart';
 import 'unpaid.dart';
 
 final _clock = DateFormat('HH:mm:ss');
@@ -99,15 +101,20 @@ class _LedgerListState extends State<LedgerList> {
           SliverToBoxAdapter(
             child: ListTile(
               dense: true,
+              tileColor: Brand.goldTint,
               title: Text(
                 closing,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           ),
         if (widget.entries.isEmpty && closing == null)
           const SliverToBoxAdapter(
-            child: ListTile(dense: true, title: Text('No bids yet')),
+            child: ListTile(
+              leading: Icon(Icons.hourglass_empty_rounded),
+              title: Text('No bids yet'),
+              subtitle: Text('The first bid sets the pace.'),
+            ),
           ),
         SliverAnimatedList(
           key: _list,
@@ -183,9 +190,16 @@ class LedgerRow extends StatelessWidget {
       opacity: asOf != null && entry.placedAfter(asOf) ? 0.3 : 1,
       child: ListTile(
         dense: true,
-        tileColor: mine
-            ? scheme.primaryContainer.withValues(alpha: 0.35)
-            : null,
+        tileColor: mine ? Brand.leadTint.withValues(alpha: 0.5) : null,
+        leading: Opacity(
+          opacity: retracted ? 0.4 : 1,
+          child: BidderAvatar(
+            entry.bidderName,
+            size: 28,
+            highlight: mine ? Brand.lead : null,
+          ),
+        ),
+        minLeadingWidth: 28,
         title: AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 300),
           style: DefaultTextStyle.of(context).style.merge(

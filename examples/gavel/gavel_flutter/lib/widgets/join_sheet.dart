@@ -6,6 +6,7 @@ import '../core/api.dart';
 import '../core/failures.dart';
 import '../core/identity.dart';
 import '../core/input_formatters.dart';
+import '../theme.dart';
 
 /// Asks for a display name and joins the auction with join [code].
 ///
@@ -98,21 +99,46 @@ class _JoinSheetState extends State<JoinSheet> {
     return Padding(
       // Keeps the field above the phone's keyboard.
       padding: EdgeInsets.fromLTRB(
-        16,
+        24,
         0,
-        16,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
+        24,
+        24 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Join to bid', style: theme.textTheme.titleLarge),
-          if (widget.message case final message?) ...[
-            const SizedBox(height: 4),
-            Text(message),
-          ],
-          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Brand.goldTint,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.gavel_rounded, color: Brand.goldDeep),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Join to bid', style: theme.textTheme.titleLarge),
+                    Text(
+                      widget.message ??
+                          'No account, no password. Just the name others '
+                              'will see on your bids.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Brand.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
           TextField(
             controller: _name,
             autofocus: true,
@@ -125,6 +151,7 @@ class _JoinSheetState extends State<JoinSheet> {
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               labelText: 'Your name as shown to others',
+              prefixIcon: const Icon(Icons.person_outline_rounded),
               errorText: _error,
             ),
             onSubmitted: (_) => _join(),
@@ -132,15 +159,38 @@ class _JoinSheetState extends State<JoinSheet> {
           const SizedBox(height: 8),
           FilledButton(
             onPressed: _busy ? null : _join,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
+            style: Brand.goldButton.copyWith(
+              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(56)),
             ),
             child: _busy
                 ? const SizedBox.square(
                     dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Brand.ink,
+                    ),
                   )
-                : const Text('Join'),
+                : const Text('Join and start bidding'),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.lock_outline_rounded,
+                size: 14,
+                color: Brand.muted,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  'Every bid is recorded publicly and permanently.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Brand.muted,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

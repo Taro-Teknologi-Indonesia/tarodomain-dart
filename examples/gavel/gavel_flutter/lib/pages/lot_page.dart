@@ -18,8 +18,10 @@ import '../core/names.dart';
 import '../core/organizer_keys.dart';
 import '../core/retracting.dart';
 import '../core/share.dart';
+import '../theme.dart';
 import '../widgets/as_of_sheet.dart';
 import '../widgets/bid_bar.dart';
+import '../widgets/brand.dart';
 import '../widgets/join_sheet.dart';
 import '../widgets/ledger_list.dart';
 import '../widgets/lot_visual.dart';
@@ -193,10 +195,36 @@ class _LotPageState extends State<LotPage> {
         actions: [
           if (closeAt != null)
             Center(
-              child: CountdownText(
-                closeAt: closeAt,
-                offset: auction.clockOffset,
-                closed: auction.auction?.status == 'CLOSED',
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.timer_outlined,
+                      size: 16,
+                      color: Brand.gold,
+                    ),
+                    const SizedBox(width: 6),
+                    CountdownText(
+                      closeAt: closeAt,
+                      offset: auction.clockOffset,
+                      closed: auction.auction?.status == 'CLOSED',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           IconButton(
@@ -206,7 +234,10 @@ class _LotPageState extends State<LotPage> {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: LiveDot(auction.status),
+            child: LiveDot(
+              auction.status,
+              compact: MediaQuery.sizeOf(context).width < 600,
+            ),
           ),
         ],
       ),
@@ -244,51 +275,46 @@ class _LotPageState extends State<LotPage> {
     if (lot.status != 'OPEN') return ShareResultBar(onShare: _share);
     if (!_identityLoaded || _isOrganizer || closeAt == null) return null;
     final identity = _identity;
-    return SafeArea(
-      child: Material(
-        elevation: 8,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: identity == null
-              ? FilledButton(
-                  onPressed: _join,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
+    return ActionBar(
+      child: identity == null
+          ? FilledButton.icon(
+              onPressed: _join,
+              style: Brand.goldButton.copyWith(
+                minimumSize: const WidgetStatePropertyAll(Size.fromHeight(56)),
+              ),
+              icon: const Icon(Icons.gavel_rounded),
+              label: const Text('Join to bid'),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_retractable(auction, lot, identity, closeAt)
+                    case final bid?)
+                  RetractButton(
+                    lot: lot,
+                    bid: bid,
+                    identity: identity,
+                    closeAt: closeAt,
+                    offset: auction.clockOffset,
+                    send: _sendRetract,
+                    onRetracted: auction.merge,
+                    onStale: _refresh,
+                    onNotParticipant: _rejoin,
+                    padding: const EdgeInsets.only(bottom: 8),
                   ),
-                  child: const Text('Join to bid'),
-                )
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_retractable(auction, lot, identity, closeAt)
-                        case final bid?)
-                      RetractButton(
-                        lot: lot,
-                        bid: bid,
-                        identity: identity,
-                        closeAt: closeAt,
-                        offset: auction.clockOffset,
-                        send: _sendRetract,
-                        onRetracted: auction.merge,
-                        onStale: _refresh,
-                        onNotParticipant: _rejoin,
-                        padding: const EdgeInsets.only(bottom: 8),
-                      ),
-                    BidBar(
-                      lot: lot,
-                      identity: identity,
-                      closeAt: closeAt,
-                      offset: auction.clockOffset,
-                      bidder: _bidder,
-                      onAccepted: auction.merge,
-                      onStale: _refresh,
-                      onNotParticipant: _rejoin,
-                    ),
-                  ],
+                BidBar(
+                  lot: lot,
+                  identity: identity,
+                  closeAt: closeAt,
+                  offset: auction.clockOffset,
+                  bidder: _bidder,
+                  onAccepted: auction.merge,
+                  onStale: _refresh,
+                  onNotParticipant: _rejoin,
                 ),
-        ),
-      ),
+              ],
+            ),
     );
   }
 
@@ -322,16 +348,42 @@ class ShareResultBar extends StatelessWidget {
   final VoidCallback onShare;
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    child: Material(
-      elevation: 8,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: FilledButton.icon(
-          onPressed: onShare,
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          icon: const Icon(Icons.share),
-          label: const Text('Share result'),
+  Widget build(BuildContext context) => ActionBar(
+    child: FilledButton.icon(
+      onPressed: onShare,
+      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+      icon: const Icon(Icons.share),
+      label: const Text('Share result'),
+    ),
+  );
+}
+
+/// The white bar pinned under a lot that holds its one action: the chips,
+/// Join to bid, or Share result.
+class ActionBar extends StatelessWidget {
+  const ActionBar({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: const Border(top: BorderSide(color: Brand.line)),
+      boxShadow: [
+        BoxShadow(
+          color: Brand.ink.withValues(alpha: 0.08),
+          blurRadius: 20,
+          offset: const Offset(0, -6),
+        ),
+      ],
+    ),
+    child: SafeArea(
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Padding(padding: const EdgeInsets.all(12), child: child),
         ),
       ),
     ),
@@ -402,11 +454,11 @@ class LotDetailBody extends StatelessWidget {
     final (status, color) = switch (lot) {
       _ when leading => (
         "You're the high bidder — ${formatRupiah(lot.currentPrice)}",
-        Colors.green.shade700,
+        Brand.lead,
       ),
       _ when leader != null && outbid => (
         'Outbid — $leader leads at ${formatRupiah(lot.currentPrice)}',
-        Colors.amber.shade900,
+        Brand.outbid,
       ),
       _ when leader != null => ('$leader leads', scheme.onSurface),
       _ => ('No bids yet', scheme.onSurfaceVariant),
@@ -438,7 +490,7 @@ class LotDetailBody extends StatelessWidget {
                     child: AspectRatio(
                       aspectRatio: 4 / 3,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(20),
                         child: LotVisual(
                           imageUrl: lot.imageUrl,
                           emoji: lot.tileEmoji,
@@ -448,40 +500,91 @@ class LotDetailBody extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text(lot.name, style: theme.textTheme.headlineSmall),
+                  Text(
+                    lot.name,
+                    style: Brand.display.copyWith(
+                      fontSize: 30,
+                      color: scheme.onSurface,
+                    ),
+                  ),
                   if (lot.description.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     _Description(lot.description),
                   ],
                   const SizedBox(height: 16),
-                  if (asOf != null && asOf.status == 'OPEN')
-                    _PriceAsOf(asOf, sharedNames)
-                  else if (lot.status == 'OPEN') ...[
-                    _Price(lot.currentPrice),
-                    if (steps.isNotEmpty)
-                      Text(
-                        'Next bid from '
-                        '${formatRupiah(lot.currentPrice + steps.first)}',
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    const SizedBox(height: 4),
-                    Text(
-                      status,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: color,
+                  Card(
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (asOf != null && asOf.status == 'OPEN')
+                            _PriceAsOf(asOf, sharedNames)
+                          else if (lot.status == 'OPEN') ...[
+                            Eyebrow(
+                              lot.leaderId == null
+                                  ? 'Opening bid'
+                                  : 'Current bid',
+                            ),
+                            _Price(lot.currentPrice),
+                            if (steps.isNotEmpty)
+                              Text(
+                                'Next bid from '
+                                '${formatRupiah(lot.currentPrice + steps.first)}',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (leader case final leader?) ...[
+                                    BidderAvatar(
+                                      leader,
+                                      size: 22,
+                                      highlight: leading ? Brand.lead : null,
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Flexible(
+                                    child: Text(
+                                      status,
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(color: color),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else
+                            ResultBlock(
+                              lot: lot,
+                              closeAt: closeAt,
+                              organizerCode: organizerCode,
+                            ),
+                        ],
                       ),
                     ),
-                  ] else
-                    ResultBlock(
-                      lot: lot,
-                      closeAt: closeAt,
-                      organizerCode: organizerCode,
-                    ),
-                  const SizedBox(height: 24),
+                  ),
+                  const SizedBox(height: 28),
                   Row(
                     children: [
                       Expanded(
-                        child: Text('Bids', style: theme.textTheme.titleMedium),
+                        child: Text(
+                          'Bid history',
+                          style: theme.textTheme.titleLarge,
+                        ),
                       ),
                       if (onAsOf case final onAsOf?
                           when ledger?.isNotEmpty ?? false)
@@ -495,30 +598,48 @@ class LotDetailBody extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 4),
-            if (ledger == null)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else
-              LedgerList(
-                lot: lot,
-                entries: ledger,
-                closeAt: closeAt,
-                me: me,
-                sharedNames: sharedNames,
-                asOf: asOf,
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: ledger == null
+                    ? const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : LedgerList(
+                        lot: lot,
+                        entries: ledger,
+                        closeAt: closeAt,
+                        me: me,
+                        sharedNames: sharedNames,
+                        asOf: asOf,
+                      ),
               ),
+            ),
             if (lot.status != 'OPEN')
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Text(
-                  "This record is append-only. Bids can't be edited or "
-                  'deleted — retractions stay visible.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.verified_outlined,
+                      size: 16,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "This record is append-only. Bids can't be edited or "
+                        'deleted — retractions stay visible.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -540,9 +661,10 @@ class _Price extends StatelessWidget {
     alignment: Alignment.centerLeft,
     child: Text(
       formatRupiah(price),
-      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-        fontWeight: FontWeight.bold,
-        fontFeatures: const [FontFeature.tabularFigures()],
+      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        fontFeatures: Brand.tabular,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     ),
   );

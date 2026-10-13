@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/api.dart';
+import '../theme.dart';
+import '../widgets/brand.dart';
 
 /// `/demo`: finds the open public demo auction and goes to its board (X2).
 class DemoPage extends StatefulWidget {
@@ -34,24 +36,62 @@ class _DemoPageState extends State<DemoPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: Center(
-      child: _failed
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('The demo auction could not be opened.'),
-                const SizedBox(height: 16),
-                FilledButton(onPressed: _open, child: const Text('Try again')),
+    body: DecoratedBox(
+      decoration: Brand.band,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const GavelLogo(size: 44),
+              const SizedBox(height: 40),
+              if (_failed) ...[
+                const Text(
+                  'The demo auction could not be opened.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Check your connection, then try again.',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _open,
+                  style: Brand.goldButton,
+                  child: const Text('Try again'),
+                ),
+              ] else ...[
+                const SizedBox.square(
+                  dimension: 36,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Finding the live demo auction…',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Taking you to the room where bids are landing now.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                ),
               ],
-            )
-          : const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Finding the live demo auction…'),
-              ],
-            ),
+            ],
+          ),
+        ),
+      ),
     ),
   );
 }

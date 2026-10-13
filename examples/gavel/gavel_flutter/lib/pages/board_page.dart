@@ -2,19 +2,21 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:gavel_client/gavel_client.dart';
 import 'package:gavel_client/rules.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/api.dart';
 import '../core/auction_controller.dart';
 import '../core/auction_scope.dart';
-import '../core/clock.dart';
 import '../core/failures.dart';
 import '../core/identity.dart';
 import '../core/input_formatters.dart';
 import '../core/live.dart';
 import '../core/organizer_keys.dart';
 import '../core/share.dart';
+import '../theme.dart';
+import '../widgets/brand.dart';
 import '../widgets/demo_banner.dart';
 import '../widgets/join_sheet.dart';
 import '../widgets/lot_card_widget.dart';
@@ -132,28 +134,43 @@ class _BoardPageState extends State<BoardPage> {
     listenable: _auction,
     builder: (context, _) {
       final auction = _auction.auction;
+      final joinable =
+          auction != null &&
+          _identityLoaded &&
+          _identity == null &&
+          !_isOrganizer &&
+          _isOpen;
       return Scaffold(
         appBar: AppBar(
-          title: _Title(
-            title: auction?.title ?? 'Auction ${widget.code}',
-            closeAt: auction?.closeAt,
-            closed: auction?.status == 'CLOSED',
-            offset: _auction.clockOffset,
+          titleSpacing: 16,
+          title: InkWell(
+            onTap: () => context.go('/'),
+            child: const GavelLogo(size: 26),
           ),
           actions: [
             if (auction != null) ..._identityActions(),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.only(left: 8, right: 16),
               child: LiveDot(_auction.status),
             ),
           ],
         ),
+        bottomNavigationBar: joinable ? _JoinBar(onJoin: _promptJoin) : null,
         body: switch ((_auction.failure, auction)) {
           (AuctionNotFound(), _) => _NotFound(code: widget.code),
           (final GavelFailure failure, _) => Center(child: Text('$failure')),
           (_, null) => const Center(child: CircularProgressIndicator()),
           (_, final auction?) => Column(
             children: [
+              _Header(
+                code: widget.code,
+                title: auction.title,
+                closeAt: auction.closeAt,
+                closed: auction.status == 'CLOSED',
+                offset: _auction.clockOffset,
+                lots: _auction.lots,
+                me: _identity?.participantId,
+              ),
               if (auction.isDemo) const DemoBanner(),
               for (final lot in _auction.lots)
                 if ((_identity, wonBy(lot, _identity?.participantId)) case (
@@ -199,64 +216,211 @@ class _BoardPageState extends State<BoardPage> {
               child: const Text('Not you? Switch name'),
             ),
           ],
-          child: Chip(
-            avatar: const Icon(Icons.person, size: 18),
-            label: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 120),
-              child: Text(
-                'You: ${identity.displayName}',
-                overflow: TextOverflow.ellipsis,
-              ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BidderAvatar(identity.displayName, size: 26),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 110),
+                  child: Text(
+                    'You: ${identity.displayName}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ];
     }
     if (_identityLoaded && !_isOrganizer && _isOpen) {
-      return [TextButton(onPressed: _promptJoin, child: const Text('Join'))];
+      return [
+        TextButton(
+          onPressed: _promptJoin,
+          style: TextButton.styleFrom(foregroundColor: Brand.gold),
+          child: const Text('Join'),
+        ),
+      ];
     }
     return const [];
   }
 }
 
-/// The auction's title over the countdown to its close.
-class _Title extends StatelessWidget {
-  const _Title({
+/// The sticky invitation for a visitor who hasn't joined an open auction.
+class _JoinBar extends StatelessWidget {
+  const _JoinBar({required this.onJoin});
+
+  final VoidCallback onJoin;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(top: BorderSide(color: Brand.line)),
+        boxShadow: [
+          BoxShadow(
+            color: Brand.ink.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Ready to bid?', style: theme.textTheme.titleMedium),
+                    Text(
+                      'Join with just a name. No sign-up.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Brand.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed: onJoin,
+                style: Brand.goldButton,
+                icon: const Icon(Icons.gavel_rounded, size: 18),
+                label: const Text('Join to bid'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The auction's dark header: its title, code and tallies beside the
+/// countdown to its close.
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.code,
     required this.title,
     required this.closeAt,
     required this.closed,
     required this.offset,
+    required this.lots,
+    required this.me,
   });
 
+  final String code;
   final String title;
-  final DateTime? closeAt;
+  final DateTime closeAt;
   final bool closed;
   final ValueListenable<Duration> offset;
+  final List<LotCard> lots;
+
+  /// Who this browser bids as, whose leads are counted.
+  final UuidValue? me;
 
   @override
   Widget build(BuildContext context) {
-    final closeAt = this.closeAt;
-    final small = Theme.of(context).textTheme.bodySmall;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(title, overflow: TextOverflow.ellipsis),
-        if (closeAt != null)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.timer_outlined, size: 14, color: small?.color),
-              const SizedBox(width: 4),
-              CountdownText(
-                closeAt: closeAt,
-                offset: offset,
-                closed: closed,
-                style: small,
+    final narrow = MediaQuery.sizeOf(context).width < 600;
+    final bids = lots.fold(0, (sum, lot) => sum + lot.bidCount);
+    final leading = me == null
+        ? 0
+        : lots.where((l) => l.status == 'OPEN' && l.leaderId == me).length;
+    final tallies = [
+      lots.length == 1 ? '1 lot' : '${lots.length} lots',
+      bids == 1 ? '1 bid' : '$bids bids',
+    ].join(' · ');
+    return DecoratedBox(
+      decoration: Brand.band,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, narrow ? 4 : 12, 16, 20),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Eyebrow(
+                    closed ? 'Auction closed · $code' : 'Live auction · $code',
+                    color: Brand.gold,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Brand.display.copyWith(
+                      color: Colors.white,
+                      fontSize: narrow ? 24 : 32,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        tallies,
+                        style: const TextStyle(
+                          color: Brand.mutedOnInk,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (leading > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Brand.lead,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'You lead $leading',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-      ],
+            ),
+            const SizedBox(width: 16),
+            CountdownPanel(
+              closeAt: closeAt,
+              offset: offset,
+              closed: closed,
+              size: narrow ? 28 : 40,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -297,6 +461,22 @@ class _NotFoundState extends State<_NotFound> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: const BoxDecoration(
+                    color: Brand.goldTint,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.search_off_rounded,
+                    size: 30,
+                    color: Brand.goldDeep,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 'Auction not found — check the link',
                 textAlign: TextAlign.center,
@@ -329,6 +509,11 @@ class _NotFoundState extends State<_NotFound> {
                       : null,
                   child: const Text('Open'),
                 ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => context.go('/demo'),
+                child: const Text('Or try the live demo'),
               ),
             ],
           ),

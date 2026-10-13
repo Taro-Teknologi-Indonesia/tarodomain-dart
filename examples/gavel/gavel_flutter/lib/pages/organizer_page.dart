@@ -13,6 +13,8 @@ import '../core/failures.dart';
 import '../core/live.dart';
 import '../core/names.dart';
 import '../core/organizer_keys.dart';
+import '../theme.dart';
+import '../widgets/brand.dart';
 import '../widgets/lot_card_widget.dart';
 import '../widgets/unpaid.dart';
 import 'lot_form_sheet.dart';
@@ -145,11 +147,12 @@ class _OrganizerPageState extends State<OrganizerPage> {
               onPressed: () => openInNewTab(
                 '${Uri.base.origin}/a/${widget.code}?screen=board',
               ),
+              style: TextButton.styleFrom(foregroundColor: Brand.gold),
               icon: const Icon(Icons.tv),
               label: const Text('Open big screen'),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.only(left: 8, right: 16),
               child: LiveDot(_auction.status),
             ),
           ],
@@ -181,6 +184,7 @@ class _OrganizerPageState extends State<OrganizerPage> {
             children: [
               _ShareHeader(
                 code: widget.code,
+                title: auction.title,
                 closeAt: auction.closeAt,
                 closed: auction.status == 'CLOSED',
                 offset: _auction.clockOffset,
@@ -196,7 +200,7 @@ class _OrganizerPageState extends State<OrganizerPage> {
                 ),
               if (canAdd && full != null)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Text(full.message, style: theme.textTheme.bodySmall),
                 ),
               if ((_winnerCodes, key) case (
@@ -276,7 +280,7 @@ class _Winners extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Card(
         child: ConstrainedBox(
           // Many winners scroll inside the card, leaving room for the grid.
@@ -284,11 +288,21 @@ class _Winners extends StatelessWidget {
             maxHeight: MediaQuery.sizeOf(context).height * 0.3,
           ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Winners', style: theme.textTheme.titleMedium),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.emoji_events_outlined,
+                      color: Brand.goldDeep,
+                    ),
+                    const SizedBox(width: 8),
+                    Text('Winners', style: theme.textTheme.titleMedium),
+                  ],
+                ),
+                const SizedBox(height: 4),
                 Text(
                   'Ask the buyer for their code and hand the lot over only '
                   'if it matches.',
@@ -326,16 +340,19 @@ class _Winners extends StatelessWidget {
   }
 }
 
-/// The join link with a copy button, and the countdown to the close.
+/// The auction's dark header: its title, the join link with a copy
+/// button, and the countdown to the close.
 class _ShareHeader extends StatelessWidget {
   const _ShareHeader({
     required this.code,
+    required this.title,
     required this.closeAt,
     required this.closed,
     required this.offset,
   });
 
   final String code;
+  final String title;
   final DateTime closeAt;
   final bool closed;
   final ValueListenable<Duration> offset;
@@ -354,59 +371,115 @@ class _ShareHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final link = Row(
-      children: [
-        Expanded(
-          child: InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Join link',
-              isDense: true,
-              border: OutlineInputBorder(),
+    final link = Container(
+      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.link_rounded, color: Brand.gold, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SelectableText(
+              _link,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            child: SelectableText(_link, maxLines: 1),
           ),
-        ),
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: () => _copy(context),
-          icon: const Icon(Icons.copy),
-          label: const Text('Copy'),
-        ),
-      ],
+          const SizedBox(width: 8),
+          FilledButton.icon(
+            onPressed: () => _copy(context),
+            style: Brand.goldButton,
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Copy'),
+          ),
+        ],
+      ),
     );
-    final countdown = Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('Closes in', style: theme.textTheme.labelSmall),
-        CountdownText(
-          closeAt: closeAt,
-          offset: offset,
-          closed: closed,
-          style: theme.textTheme.titleLarge,
-        ),
-      ],
+    final countdown = CountdownPanel(
+      closeAt: closeAt,
+      offset: offset,
+      closed: closed,
+      size: 32,
     );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: LayoutBuilder(
-        builder: (context, constraints) => constraints.maxWidth < 600
-            ? Column(
+    return DecoratedBox(
+      decoration: Brand.band,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final narrow = constraints.maxWidth < 600;
+            final heading = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Eyebrow('Organizer dashboard · $code', color: Brand.gold),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Brand.display.copyWith(
+                    color: Colors.white,
+                    fontSize: narrow ? 24 : 30,
+                  ),
+                ),
+              ],
+            );
+            if (narrow) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(child: heading),
+                      const SizedBox(width: 12),
+                      countdown,
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Eyebrow(
+                    'Share this link in your post',
+                    color: Brand.mutedOnInk,
+                  ),
+                  const SizedBox(height: 6),
                   link,
-                  const SizedBox(height: 8),
-                  Align(alignment: Alignment.centerRight, child: countdown),
                 ],
-              )
-            : Row(
-                children: [
-                  Expanded(child: link),
-                  const SizedBox(width: 24),
-                  countdown,
-                ],
-              ),
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      heading,
+                      const SizedBox(height: 14),
+                      const Eyebrow(
+                        'Share this link in your post',
+                        color: Brand.mutedOnInk,
+                      ),
+                      const SizedBox(height: 6),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 620),
+                        child: link,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                countdown,
+              ],
+            );
+          },
+        ),
       ),
     );
   }
