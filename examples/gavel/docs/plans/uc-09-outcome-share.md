@@ -43,4 +43,4 @@ Mostly done by earlier UCs (cards and ledger hold the outcome). The extras are:
 - [ ] The share button copies the canonical lot URL.
 - [ ] (Stretch) The Facebook preview shows "SOLD — {lot} · Rp …".
 
-Estimate: 0.75 h (+0.5 h OG stretch).
+Estimate: 0.75 h (+0.5 h OG stretch). The OG stretch is the lowest-priority item in the whole plan; do it only after UC-10.

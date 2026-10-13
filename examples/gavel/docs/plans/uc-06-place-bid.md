@@ -87,7 +87,7 @@ Integration (`serverpod_test`, SQLite):
 - The same race through the endpoint: one `LotCard`, one ledger row, one `TaroDomainException(code: OUTBID)`.
 - Bid vs close: dispatch `CloseLot` and `PlaceBid` concurrently 20 times. Each run ends either as (bid counted, then closed with that bid as the winner) or as (`LOT_CLOSED`, winner = previous leader). Never a bid after `LotClosed` in the stream.
 
-Manual (video rehearsal): two windows side by side, the second in incognito, and tap +100k in both within about 200 ms. Repeat until it's reliable on camera. A tiny server-side delay, used only with `--dev-delay-bid-ms=300`, makes collisions easy to film. Say so honestly in the write-up if it's used.
+Manual (video rehearsal): two windows side by side, the second in incognito, and tap +100k in both within about 200 ms. Repeat until it's reliable on camera. **No artificial server delay**: if a two-person collision is hard to film, film [X3 `tool/race.dart`](x3-race-proof.md) hitting the deployed server instead.
 
 ## Acceptance
 

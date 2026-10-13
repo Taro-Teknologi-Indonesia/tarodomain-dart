@@ -132,25 +132,9 @@ All live in `domain/errors.dart` as `final class … extends DomainError` with a
 - **Integration tests** (`test/integration/`, `serverpod_test`): one happy path per endpoint, plus the concurrency test for UC-06 (two parallel `placeBid` calls with the same `expectedVersion` give exactly one success and one `OUTBID`).
 - **Manual web check** for each UC: two browser windows, one of them incognito.
 
-## 8. Build order and budget (≈ 20 working hours)
+## 8. Build order and budget
 
-| # | Plan | Est. | Cumulative | Gate |
-|---|---|---|---|---|
-| 0 | Foundation: scaffold, workspace, web serving, empty board | 1.5h | 1.5h | Flutter web page served by Serverpod |
-| 1 | [UC-12 live push](uc-12-live-update-push.md) spike | 1h | 2.5h | **Hour-2 risk gate: two windows see a ping** |
-| 2 | [UC-01 create auction](uc-01-create-auction.md) | 1.5h | 4h | |
-| 3 | [UC-02 add lots](uc-02-add-lots.md) | 1.5h | 5.5h | |
-| 4 | [UC-03 join](uc-03-join-via-link.md) | 1h | 6.5h | |
-| 5 | [UC-04 board](uc-04-live-board.md) | 1.5h | 8h | |
-| 6 | [UC-06 bid](uc-06-place-bid.md) ⭐ | 2.5h | 10.5h | |
-| 7 | [UC-05 lot detail](uc-05-lot-detail-ledger.md) | 1.5h | 12h | |
-| 8 | [UC-07 retract](uc-07-retract-bid.md) | 1h | 13h | |
-| 9 | [UC-08 auto-close](uc-08-auto-close.md) | 2h | 15h | |
-| 10 | [UC-09 outcome](uc-09-outcome-share.md) | 0.75h | 15.75h | **All Musts done → record video** |
-| 11 | [UC-11 big screen](uc-11-big-screen.md) | 0.5h | 16.25h | Should |
-| 12 | [UC-10 time travel](uc-10-time-travel.md) | 1.5h | 17.75h | Should, so cut if past hour 12 at step 9 |
-| 13 | [UC-13 sell now](uc-13-sell-now.md) | 0.75h | 18.5h | Should, only if ahead |
-| — | Deploy, seed demo data, record, write-up | 2h+ | | |
+The build order and estimates are in the [plans README](README.md), the single source of truth.
 
 ## 9. Foundation step checklist (step 0)
 

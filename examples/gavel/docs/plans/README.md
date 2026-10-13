@@ -2,12 +2,13 @@
 
 There's one plan per use case from [../use-cases.md](../use-cases.md), plus a foundation plan for the shared architecture. The MVP is a **Flutter web** app served by the Serverpod server, built on TaroDomain (`tarodomain_serverpod_server`).
 
-Build in this order. The numbers are steps, not UC IDs.
+Build in this order. The numbers are steps, not UC IDs. Plans prefixed `x` aren't use cases; they come from the judging criteria (works 30%, Serverpod stack 25%, craft 25%, usefulness 20%).
 
 | Step | Plan | Priority | Est. |
 |---|---|---|---|
 | 0 | [00-foundation.md](00-foundation.md): layout, shared domain model, errors, read models, web serving | — | 1.5h |
 | 1 | [uc-12-live-update-push.md](uc-12-live-update-push.md): **hour-2 risk gate** | Must | 1h |
+| 1b | [x1-deploy-early.md](x1-deploy-early.md): public HTTPS URL, then redeploy after every step | Must | 1h |
 | 2 | [uc-01-create-auction.md](uc-01-create-auction.md) | Must | 1.5h |
 | 3 | [uc-02-add-lots.md](uc-02-add-lots.md) | Must | 1.5h |
 | 4 | [uc-03-join-via-link.md](uc-03-join-via-link.md) | Must | 1h |
@@ -16,12 +17,20 @@ Build in this order. The numbers are steps, not UC IDs.
 | 7 | [uc-05-lot-detail-ledger.md](uc-05-lot-detail-ledger.md) | Must | 1.5h |
 | 8 | [uc-07-retract-bid.md](uc-07-retract-bid.md) | Must | 1h |
 | 9 | [uc-08-auto-close.md](uc-08-auto-close.md) | Must | 2h |
-| 10 | [uc-09-outcome-share.md](uc-09-outcome-share.md): **then record the video** | Must | 0.75h |
-| 11 | [uc-11-big-screen.md](uc-11-big-screen.md) | Should | 0.5h |
-| 12 | [uc-10-time-travel.md](uc-10-time-travel.md): cut if past hour 12 | Should | 1.5h |
-| 13 | [uc-13-sell-now.md](uc-13-sell-now.md): only if ahead | Should | 0.75h |
+| 10 | [uc-09-outcome-share.md](uc-09-outcome-share.md) (without the OG stretch) | Must | 0.75h |
+| 11 | [x2-rolling-demo-auction.md](x2-rolling-demo-auction.md): `/demo` always open for judges | Must | 0.75h |
+| 12 | [x3-race-proof.md](x3-race-proof.md): real parallel bids against production | Must | 0.75h |
+| — | **Record the video** | | |
+| 13 | [uc-11-big-screen.md](uc-11-big-screen.md) | Should | 0.5h |
+| 14 | [uc-14-mark-unpaid.md](uc-14-mark-unpaid.md): non-payment made visible | Could | 0.5h |
+| 15 | [uc-10-time-travel.md](uc-10-time-travel.md): cut if past hour 12 at step 9 | Should | 1.5h |
+| 16 | [uc-13-sell-now.md](uc-13-sell-now.md): only if ahead | Should | 0.75h |
+| 17 | UC-09 Open Graph preview stretch | Stretch | 0.5h |
+| last | [x4-judges-readme.md](x4-judges-readme.md): live link, 2-minute try-it, Serverpod mapping, proof | Must | 0.5h |
 
-Musts total about 14.5 h. Add about 2 h for deploy, seed data and recording.
+Musts total about 18.5 h, including deploy, the demo auction, the race proof and the README. Add about 1.5 h for recording and the submission form.
+
+**Nothing faked:** no artificial server delays, no bot bidders, and the demo auction is created through the normal commands.
 
 ## Decisions made in these plans that the use cases don't spell out
 

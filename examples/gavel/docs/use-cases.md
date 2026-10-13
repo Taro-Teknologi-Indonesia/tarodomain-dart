@@ -58,6 +58,7 @@ Join link — URL containing the auction code; the only distribution mechanism.
 | UC-11 | Big-screen mode | Viewer | Should | Trivial on web |
 | UC-12 | Live update push | System | Must | WebSocket on web |
 | UC-13 | Sell Now ("BN") | Organizer | Should | New |
+| UC-14 | Mark unpaid | Organizer | Could | New — non-payment made visible |
 
 
 ```
@@ -196,6 +197,13 @@ Main flow: Emits LotClosed(SOLD, winner = current leader, finalPrice = current p
 Roadmap (cut): buyer-initiated BN at a fixed price.
 TaroDomain: one command, two triggers (deadline saga and organizer) — command reuse, not a second code path. ~45 min.
 
+UC-14 Mark unpaid — Organizer (Could — after the Musts; ~30 min)
+Trigger: The winner of a SOLD lot doesn't pay. The organizer taps "Mark unpaid" on the lot, with an optional short note.
+Main flow: Emits LotMarkedUnpaid(winnerId, winnerName, markedAt, note?) on the Lot. Board and lot page show "UNPAID" / "Winner did not pay" permanently, live, including on the shared result URL (UC-09).
+Extensions: 1a. Lot not SOLD → typed validation error (NOT_SOLD). 1b. Already marked → idempotent no-op. 1c. Not the organizer → NotOrganizerError.
+Why: winners who don't pay are the community's biggest pain, even with real Facebook accounts. Gavel can't force payment, but it puts non-payment on the same public, append-only record the winner would have used as proof. Relisting stays on the roadmap.
+TaroDomain: another appended event — the sale is never overwritten.
+
 5. Consistency model
 
 ```
@@ -220,6 +228,7 @@ ParticipantJoined	Participant (state-based)	displayName
 BidPlaced	Lot	participantId, amount, sequence
 BidRetracted	Lot	participantId, reference to voided bid
 LotClosed	Lot	outcome, winnerId?, finalPrice?, cause (DEADLINE | SELL_NOW)
+LotMarkedUnpaid	Lot	winnerId, winnerName, markedAt, note?
 
 Error
 Raised when
