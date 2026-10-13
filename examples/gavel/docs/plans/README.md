@@ -12,6 +12,7 @@ Build in this order. The numbers are steps, not UC IDs. Plans prefixed `x` aren'
 | 2 | [uc-01-create-auction.md](uc-01-create-auction.md) | Must | 1.5h |
 | 3 | [uc-02-add-lots.md](uc-02-add-lots.md) | Must | 1.5h |
 | 4 | [uc-03-join-via-link.md](uc-03-join-via-link.md) | Must | 1h |
+| 4b | [uc-02b-buy-now-price.md](uc-02b-buy-now-price.md): optional BN price on lots, before the board and lot detail render cards | Should | 0.5h |
 | 5 | [uc-04-live-board.md](uc-04-live-board.md) | Must | 1.5h |
 | 6 | [uc-06-place-bid.md](uc-06-place-bid.md) ⭐ | Must | 2.5h |
 | 7 | [uc-05-lot-detail-ledger.md](uc-05-lot-detail-ledger.md) | Must | 1.5h |
@@ -24,7 +25,7 @@ Build in this order. The numbers are steps, not UC IDs. Plans prefixed `x` aren'
 | 13 | [uc-11-big-screen.md](uc-11-big-screen.md) | Should | 0.5h |
 | 14 | [uc-14-mark-unpaid.md](uc-14-mark-unpaid.md): non-payment made visible | Could | 0.5h |
 | 15 | [uc-10-time-travel.md](uc-10-time-travel.md): cut if past hour 12 at step 9 | Should | 1.5h |
-| 16 | [uc-13-sell-now.md](uc-13-sell-now.md): only if ahead | Should | 0.75h |
+| 16 | [uc-13-buy-now.md](uc-13-buy-now.md): bidder BN at a fixed price, only if ahead | Should | 0.75h |
 | 17 | UC-09 Open Graph preview stretch | Stretch | 0.5h |
 | last | [x4-judges-readme.md](x4-judges-readme.md): live link, 2-minute try-it, Serverpod mapping, proof | Must | 0.5h |
 
@@ -40,7 +41,7 @@ Musts total about 18.5 h, including deploy, the demo auction, the race proof and
 - **`BidPlaced` carries `bidderName`**, so `OutbidError.leaderName` and the ledger need no join.
 - **`Auction` records `LotRegistered`**, so the close saga knows its lots without reading a projection.
 - **Participant key:** `join` returns a random secret next to the public `participantId`. Only its hash is stored, and bidding or retracting requires it, so an ID copied from the ledger can't be used to act as someone else.
-- **Organizer key:** a random secret returned by `create`, kept in localStorage, with only its hash stored. It guards AddLot and SellNow. This isn't auth.
+- **Organizer key:** a random secret returned by `create`, kept in localStorage, with only its hash stored. It guards AddLot and MarkUnpaid. This isn't auth.
 - **Every command is strong**, so projections and the live push happen in or after the same transaction.
 - **Server clock offset** drives all countdowns.
 

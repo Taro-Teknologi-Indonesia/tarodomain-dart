@@ -123,3 +123,5 @@ Resolve `code` to `auctionId` via `AuctionView` (`AuctionNotFoundError` if missi
 - [ ] The write-up quotes the `-----# LELANG #-----` template next to a screenshot of this form.
 
 Estimate: 1.5 h.
+
+> **Follow-up:** the optional BN price (`buyNowPrice`) for UC-13 Buy Now was added after this plan shipped. See [uc-02b-buy-now-price.md](uc-02b-buy-now-price.md).

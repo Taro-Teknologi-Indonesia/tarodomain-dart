@@ -27,17 +27,17 @@ Why the deadline isn't a `SagaTimeout`: TaroDomain's `SagaTimeout` fires after a
 
 - `Auction.close(now)`:
   - Already `closing` or `closed` → **no-op, no event** (ext. 2a). The handler then saves nothing.
-  - `now < closeAt` → `CommandValidationError('TOO_EARLY')`. That guards against a sweep bug, and `SellNow` doesn't go through here.
+  - `now < closeAt` → `CommandValidationError('TOO_EARLY')`. That guards against a sweep bug, and `BuyNow` doesn't go through here.
   - Otherwise raises `AuctionClosed(lotIds, cause: DEADLINE)` → status `closing`.
 - `Auction.finalize()` raises `AuctionFinalized` once → `closed`, and is a no-op after that.
 - `Lot.close(cause, now)`:
-  - Already SOLD or PASSED → **no-op** (idempotent: the saga retry, a double fire, or a race with SellNow).
+  - Already SOLD or PASSED → **no-op** (idempotent: the saga retry, a double fire, or a lot already bought via Buy Now).
   - `lastValidBid != null` → `LotClosed(SOLD, winnerId, winnerName, finalPrice = amount, cause, closedAt = now)`.
   - Else → `LotClosed(PASSED, cause, closedAt = now)`.
   - **closedAt for DEADLINE is `closeAt`, not `now`**, so the record reads "closed 22:03:00" even if the call fired at 22:03:02.
 - Commands `CloseAuction(auctionId)`, `CloseLot(lotId, cause)` and `FinalizeAuction(auctionId)`, all strong.
 - `AuctionCloseSaga extends ProcessManager<AuctionCloseState>` with state `{auctionId, remaining: Set<String>}`. Register it in the builder like `TransferSaga`, with a saga timeout of 30 s.
-  - Check how the builder correlates `LotClosed` to this saga instance (correlation ID = the causing command's correlation). Commands issued by the saga carry the saga's correlation ID, so `LotClosed` from a saga-issued `CloseLot` routes back to it. A **SellNow** `LotClosed` (UC-13) has a different correlation, so the saga won't see it. That's fine, because its `CloseLot` for that lot is then a no-op that emits nothing. In that case `remaining` would never shrink for that lot, so `continueWhen` won't fire and the timeout path must handle "already closed". Fix: in the timeout handler, after re-issuing, also issue `FinalizeAuction` when every remaining lot is terminal, checked by reading `LotCard` statuses via an injected query. If that gets fiddly, make `CloseLot` on an already-closed lot raise nothing and have the saga treat a `SagaTimeout` as "finalize". Keep it simple, and don't let this eat more than 20 min.
+  - Check how the builder correlates `LotClosed` to this saga instance (correlation ID = the causing command's correlation). Commands issued by the saga carry the saga's correlation ID, so `LotClosed` from a saga-issued `CloseLot` routes back to it. A **BuyNow** `LotClosed` (UC-13) has a different correlation, so the saga won't see it. That's fine, because its `CloseLot` for that lot is then a no-op that emits nothing. In that case `remaining` would never shrink for that lot, so `continueWhen` won't fire and the timeout path must handle "already closed". Fix: in the timeout handler, after re-issuing, also issue `FinalizeAuction` when every remaining lot is terminal, checked by reading `LotCard` statuses via an injected query. If that gets fiddly, make `CloseLot` on an already-closed lot raise nothing and have the saga treat a `SagaTimeout` as "finalize". Keep it simple, and don't let this eat more than 20 min.
 
 ### Trigger: future calls (`lib/src/future_calls/auction_close_calls.dart`)
 

@@ -18,7 +18,7 @@ void markUnpaid({required DateTime now, String? note}) {
 
 - `note` is optional, max 140 chars (e.g. "no reply after 24 h").
 - There's no undo event in the MVP. The organizer confirms in a dialog first. If an undo is needed later, it would be another compensating event (`LotPaymentConfirmed`), never a delete, the same model as UC-07.
-- Command `MarkUnpaid(lotId, organizerKey)`. The endpoint verifies the organizer key against the Auction (`NotOrganizerError`), like UC-13.
+- Command `MarkUnpaid(lotId, organizerKey)`. The endpoint verifies the organizer key against the Auction (`NotOrganizerError`), like UC-02.
 
 ## Projection
 

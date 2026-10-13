@@ -42,7 +42,7 @@ The layout is one scroll view on phones, with chips in a pinned bottom bar:
    - Each row: `#12 · Budi · Rp 250.000 · 22:01:47`.
    - My rows get a subtle highlight.
    - **Retracted rows:** `TextDecoration.lineThrough`, muted color, plus a "retracted 22:01:52" caption. Never removed.
-   - The top row is the closing event when closed: "🔨 Closed 22:03:00 — SOLD to Sari" (or "SELL NOW by organizer").
+   - The top row is the closing event when closed: "🔨 Closed 22:03:00 — SOLD to Sari" (or "Bought now by Sari").
    - New rows slide in (`AnimatedList`).
 6. **App bar:** back to the board, auction countdown, and a share icon (UC-09) that copies the lot URL.
 

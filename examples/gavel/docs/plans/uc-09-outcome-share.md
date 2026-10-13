@@ -23,7 +23,7 @@ Mostly done by earlier UCs (cards and ledger hold the outcome). The extras are:
 
 - **Board, closed state:** cards show the SOLD badge (gold) with "Sari · Rp 450.000", or PASSED (grey) with "No bids". The header reads "Closed 22:03 WITA" in place of the countdown.
 - **Lot detail, closed state:**
-  - The price block becomes the **result block**: "🔨 SOLD to Sari", "Rp 450.000", and "Closed 22:03:00 WITA · by deadline" (or "· Sell Now by organizer").
+  - The price block becomes the **result block**: "🔨 SOLD to Sari", "Rp 450.000", and "Closed 22:03:00 WITA · by deadline" (or "· Buy Now by Sari").
   - The action bar is replaced by a **Share result** button, which copies the lot URL and shows a "Link copied — paste it in the Facebook thread as proof" snackbar. Use `navigator.share` through `share_plus` on phones if it's quick, otherwise clipboard only.
   - Ledger: the closing row on top, then every bid including retractions. The same view for everyone, forever.
   - Footer note in small text: "This record is append-only. Bids can't be edited or deleted — retractions stay visible."

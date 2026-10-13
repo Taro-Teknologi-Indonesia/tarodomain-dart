@@ -11,7 +11,7 @@ Changed in this revision (v2):
 Web-first delivery — join-by-link replaces app install; big-screen mode becomes trivial; native mobile and PWA are roadmap.
 Kelipatan ladder replaces fixed increment (UC-02, UC-06) — matches the community-standard +25 +50 +100 +150 +200 +300 practice; InvalidIncrementError becomes reachable and meaningful.
 Lot fields extended — description + optional image URL (parity with the seller's Facebook template); emoji/color tile as fallback.
-UC-13 Sell Now (BN) added — reuses the close command; Should-have, not in the video.
+UC-13 Buy Now (BN) added — a bidder takes the lot at the seller's fixed BN price; reuses the close logic; Should-have, not in the video.
 UC-09 strengthened — the closed lot's URL is a shareable receipt (the "certificate of result," nearly free on web).
 UC-03 persists identity in browser localStorage — refresh-safe, no accounts.
 Demo plan re-blocked for browser recording.
@@ -57,7 +57,7 @@ Join link — URL containing the auction code; the only distribution mechanism.
 | UC-10 | Time-travel view | Participant | Should | — |
 | UC-11 | Big-screen mode | Viewer | Should | Trivial on web |
 | UC-12 | Live update push | System | Must | WebSocket on web |
-| UC-13 | Sell Now ("BN") | Organizer | Should | New |
+| UC-13 | Buy Now ("BN") | Bidder | Should | New |
 | UC-14 | Mark unpaid | Organizer | Could | New — non-payment made visible |
 
 
@@ -98,10 +98,10 @@ UC-02 Add lots — Organizer (Must)
 Trigger: Organizer taps "Add lot" on the dashboard.
 Main flow:
 
-Form fields: title ("Natural Pirus Hubei"), open bid (int rupiah), kelipatan ladder (preset +25 +50 +100 +150 +200 +300 ribu, editable), description (multi-line: weight, dimensions, origin, setting, condition), optional image URL (paste a link to the existing Facebook photo), emoji + color tile (fallback visual).
-Server emits LotCreated(name, openBid, increments, description, imageUrl?, tile).
+Form fields: title ("Natural Pirus Hubei"), open bid (int rupiah), kelipatan ladder (preset +25 +50 +100 +150 +200 +300 ribu, editable), description (multi-line: weight, dimensions, origin, setting, condition), optional image URL (paste a link to the existing Facebook photo), optional BN price (the template's `BN:` line, added in UC-02b), emoji + color tile (fallback visual).
+Server emits LotCreated(name, openBid, increments, description, imageUrl?, buyNowPrice?, tile). buyNowPrice is the optional BN price from the template (UC-13).
 Lot appears on the board with status OPEN, current price = open bid.
-Extensions: 1a. Open bid ≤ 0 or empty ladder → typed validation error.
+Extensions: 1a. Open bid ≤ 0 or empty ladder → typed validation error. 1b. BN price at or below the open bid → typed validation error (UC-02b).
 TaroDomain: event-sourced Lot aggregate; board projection updates live.
 Design note: this form is the seller's existing -----# LELANG #----- template, structured. Quote that in the write-up.
 
@@ -191,11 +191,12 @@ Every committed event (bid, retraction, close) pushes to topic auction:{code}; a
 TaroDomain: post-commit live sync over websocket.
 Web risk note: verify websocket sync works in two separate browser windows by hour 2 — the entire demo depends on it.
 
-UC-13 Sell Now ("BN") — Organizer (Should — only if ahead; not in the video)
-Trigger: Organizer taps SELL NOW on a lot with at least one bid.
-Main flow: Emits LotClosed(SOLD, winner = current leader, finalPrice = current price, cause = SELL_NOW) through the same close command as UC-08 — idempotent, races safely with in-flight bids. "BN: via inbox" becomes an on-record instant sale.
-Roadmap (cut): buyer-initiated BN at a fixed price.
-TaroDomain: one command, two triggers (deadline saga and organizer) — command reuse, not a second code path. ~45 min.
+UC-13 Buy Now ("BN") — Bidder (Should — only if ahead; not in the video)
+Preconditions: Joined; lot OPEN; the lot has a BN price (optional field in UC-02, above the open bid) and the current price is still below it.
+Trigger: Instead of a kelipatan chip, the bidder taps BUY NOW and confirms — the Gavel version of commenting "BN" under the seller's post.
+Main flow: BuyNow(lotId, participantId, expectedVersion) under strong consistency appends BidPlaced(amount = BN price, buyNow) and LotClosed(SOLD, winner = buyer, finalPrice = BN price, cause = BUY_NOW) in one commit. Everyone sees the lot flip to SOLD live; the ledger shows the BN row and the closing row.
+Extensions: 2a. A chip bid committed first → OutbidError, the buyer re-confirms at the new state. 2b. Another BN or the deadline first → LotClosedError. 2c. Bidding already reached the BN price → validation error (BUY_NOW_PASSED); BN disappears and bidding continues. 2d. Lot has no BN price → validation error (NO_BUY_NOW).
+TaroDomain: one close path, two triggers (deadline saga and a buyer) — and a two-event atomic append that races cleanly with PlaceBid. ~1 h.
 
 UC-14 Mark unpaid — Organizer (Could — after the Musts; ~30 min)
 Trigger: The winner of a SOLD lot doesn't pay. The organizer taps "Mark unpaid" on the lot, with an optional short note.
@@ -211,7 +212,8 @@ TaroDomain: another appended event — the sale is never overwritten.
 |---|---|---|
 | `PlaceBid` | **Strong** | `OutbidError` (currentPrice, leaderName) |
 | `RetractBid` | **Strong** | Typed errors, no partial state |
-| `CloseAuction` (saga or SELL NOW) | **Strong** | Idempotent no-op |
+| `BuyNow` | **Strong** | `OutbidError` / `LotClosedError` |
+| `CloseAuction` (saga) | **Strong** | Idempotent no-op |
 | `JoinAuction` | Strong (state-based) | — |
 | Reads (board, ledger, time travel) | Eventual (projections) | Monotonic; race window invisible in practice |
 
@@ -223,11 +225,11 @@ Event
 Aggregate
 Key payload
 AuctionCreated	Auction	code, title, closeAt
-LotCreated	Lot	name, openBid, increments[], description, imageUrl?, tile
+LotCreated	Lot	name, openBid, increments[], description, imageUrl?, buyNowPrice?, tile
 ParticipantJoined	Participant (state-based)	displayName
-BidPlaced	Lot	participantId, amount, sequence
+BidPlaced	Lot	participantId, amount, sequence, buyNow
 BidRetracted	Lot	participantId, reference to voided bid
-LotClosed	Lot	outcome, winnerId?, finalPrice?, cause (DEADLINE | SELL_NOW)
+LotClosed	Lot	outcome, winnerId?, finalPrice?, cause (DEADLINE | BUY_NOW)
 LotMarkedUnpaid	Lot	winnerId, winnerName, markedAt, note?
 
 Error
@@ -242,6 +244,6 @@ AuctionNotFoundError	Unknown code in link	—
 All amounts are int rupiah (IDR has no subunit); format Rp 250.000.
 
 7. Out of scope (frozen)
-Cut for MVP: payments/escrow; accounts & auth; proxy/max bidding; anti-sniping soft close; photo/video upload (URL paste only); chat or comments of any kind; buyer-initiated BN; multiple concurrent auctions; FCM/web push notifications; QR codes (the link replaces them); custom bid amounts outside the ladder; staggered per-lot closes; PWA install.
+Cut for MVP: payments/escrow; accounts & auth; proxy/max bidding; anti-sniping soft close; photo/video upload (URL paste only); chat or comments of any kind; multiple concurrent auctions; FCM/web push notifications; QR codes (the link replaces them); custom bid amounts outside the ladder; staggered per-lot closes; PWA install.
 
 Roadmap (write-up): native mobile builds (same codebase — the pitch: "the web app is the MVP; iOS/Android are one flutter build away"), PWA + web push, FCM, escrow, relist after non-payment (the organizer marks a SOLD lot UNPAID and relists it into a new auction with one tap, copying name, ladder, description and image; the original record keeps the unpaid outcome, so a winner who doesn't pay stays visible on the public ledger; community practice is to restart the auction, not offer the lot to the runner-up), exportable certificate of result. Note that "shareable web link" — roadmap in v1 — is the MVP now; that's the story of this revision.

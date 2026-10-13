@@ -51,11 +51,11 @@ examples/gavel/
 | `LotRegistered` | Auction | lotId — *added*, so the close saga knows the lots without reading a projection |
 | `AuctionClosed` | Auction | lotIds, cause (`DEADLINE`) |
 | `AuctionFinalized` | Auction | — (saga's completion marker) |
-| `LotCreated` | Lot | lotId, auctionId, name, openBid, increments[], description, imageUrl?, tileEmoji, tileColor, closeAt, position |
+| `LotCreated` | Lot | lotId, auctionId, name, openBid, increments[], description, imageUrl?, buyNowPrice? (UC-13), tileEmoji, tileColor, closeAt, position |
 | `ParticipantJoined` | Participant | participantId, auctionId, displayName |
-| `BidPlaced` | Lot | participantId, **bidderName** (denormalized for `leaderName`), amount, sequence |
+| `BidPlaced` | Lot | participantId, **bidderName** (denormalized for `leaderName`), amount, sequence, buyNow (UC-13) |
 | `BidRetracted` | Lot | participantId, retractedSequence |
-| `LotClosed` | Lot | outcome (SOLD/PASSED), winnerId?, winnerName?, finalPrice?, cause (DEADLINE/SELL_NOW), closedAt |
+| `LotClosed` | Lot | outcome (SOLD/PASSED), winnerId?, winnerName?, finalPrice?, cause (DEADLINE/BUY_NOW), closedAt |
 
 ### Commands
 
@@ -105,7 +105,7 @@ All live in `domain/errors.dart` as `final class … extends DomainError` with a
   - Every bidder action (`placeBid`, `retractBid`, `checkParticipant`) takes `participantId` **and** `participantKey`. The endpoint helper `_verifyParticipant(session, auctionId, participantId, key)` loads the row and compares hashes in constant time. On an unknown ID, a different auction or a wrong key, it throws `NotParticipantError` and nothing is dispatched.
   - The key never goes into a command, event or log. Commands carry only the verified `participantId`.
   - Clearing browser storage loses the identity: the bidder joins again as a new participant. Existing bids stay with the old ID, and that bidder can no longer retract them. That's accepted for the MVP.
-- **Organizer:** `CreateAuction` returns an `organizerKey` (random 128-bit, base64url). The server stores only its SHA-256 in `AuctionCreated`. The client keeps it in `localStorage['gavel:<CODE>:org']`. `AddLot` and `SellNow` require it and throw `NotOrganizerError` on a mismatch. This is the minimum needed to stop a bidder from adding lots, and it isn't real auth.
+- **Organizer:** `CreateAuction` returns an `organizerKey` (random 128-bit, base64url). The server stores only its SHA-256 in `AuctionCreated`. The client keeps it in `localStorage['gavel:<CODE>:org']`. `AddLot` and `MarkUnpaid` require it and throw `NotOrganizerError` on a mismatch. This is the minimum needed to stop a bidder from adding lots, and it isn't real auth.
 
 ## 5. Time
 
