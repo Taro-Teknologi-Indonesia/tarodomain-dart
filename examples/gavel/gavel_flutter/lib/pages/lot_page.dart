@@ -9,6 +9,7 @@ import '../core/auction_controller.dart';
 import '../core/auction_scope.dart';
 import '../core/bidding.dart';
 import '../core/clock.dart';
+import '../core/failures.dart';
 import '../core/identity.dart';
 import '../core/ledger.dart';
 import '../core/live.dart';
@@ -17,6 +18,7 @@ import '../core/names.dart';
 import '../core/organizer_keys.dart';
 import '../core/retracting.dart';
 import '../core/share.dart';
+import '../widgets/as_of_sheet.dart';
 import '../widgets/bid_bar.dart';
 import '../widgets/join_sheet.dart';
 import '../widgets/ledger_list.dart';
@@ -26,7 +28,8 @@ import '../widgets/won_banner.dart';
 
 /// One lot (UC-05): its visual, price and status, and the full ledger, with
 /// the kelipatan chips in a bottom bar the thumb reaches (UC-06), and
-/// RETRACT there for whoever holds the latest valid bid (UC-07).
+/// RETRACT there for whoever holds the latest valid bid (UC-07). "As of…"
+/// replays the lot at a past moment (UC-10).
 class LotPage extends StatefulWidget {
   const LotPage({required this.code, required this.lotId, super.key});
 
@@ -56,6 +59,10 @@ class _LotPageState extends State<LotPage> {
 
   /// The organizer's winner codes by lot ID, once the lot is SOLD (UC-09).
   Map<String, String>? _winnerCodes;
+
+  /// The lot as of the moment the viewer picked, or null for live (UC-10).
+  /// Live updates keep arriving underneath.
+  LotAsOf? _asOf;
 
   static UuidValue? _parse(String id) {
     try {
@@ -138,6 +145,36 @@ class _LotPageState extends State<LotPage> {
     }
   }
 
+  /// Picks a past moment and asks the server to replay the lot up to it.
+  Future<void> _pickAsOf(AuctionController auction, LotCard lot) async {
+    final ledger = auction.ledgerFor(lot.lotId);
+    if (ledger == null || ledger.isEmpty) return;
+    final closedAt = lot.status == 'OPEN'
+        ? null
+        : lot.closedAt ?? auction.auction?.closeAt;
+    final now = DateTime.now().toUtc().add(auction.clockOffset.value);
+    final at = await AsOfSheet.show(
+      context,
+      ledger: ledger,
+      end: closedAt ?? now,
+      closedAt: closedAt,
+    );
+    if (at == null || !mounted) return;
+    try {
+      final asOf = await client.lot.asOf(lot.lotId, at);
+      if (mounted) setState(() => _asOf = asOf);
+    } catch (e) {
+      if (!mounted) return;
+      final message = switch (GavelFailure.from(e)) {
+        NotFound() => "Lot didn't exist yet",
+        _ => "Couldn't replay that moment — try again",
+      };
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   /// Copies the lot's URL, the receipt a winner pastes back (UC-09).
   Future<void> _share() => copyLotLink(context, widget.code, widget.lotId);
 
@@ -183,13 +220,22 @@ class _LotPageState extends State<LotPage> {
               loadWinnerCode: _loadWinnerCode,
               organizerCode: _winnerCodes?[lot.lotId.uuid],
               sharedNames: auction.sharedNames,
+              asOf: _asOf,
+              onAsOf: () => _pickAsOf(auction, lot),
             )
           : Center(
               child: loading
                   ? const CircularProgressIndicator()
                   : const Text('This lot is not in the auction'),
             ),
-      bottomNavigationBar: lot == null ? null : _actions(auction, lot),
+      bottomNavigationBar: switch ((lot, _asOf)) {
+        (null, _) => null,
+        (_, final asOf?) => AsOfBar(
+          at: asOf.at,
+          onLive: () => setState(() => _asOf = null),
+        ),
+        (final lot?, null) => _actions(auction, lot),
+      },
     );
   }
 
@@ -284,6 +330,9 @@ class ShareResultBar extends StatelessWidget {
 }
 
 /// The lot's visual, name, description, price block and ledger.
+///
+/// Given [asOf] (UC-10), the price block shows the server's replay of that
+/// moment and the ledger is read as of it.
 class LotDetailBody extends StatelessWidget {
   const LotDetailBody({
     required this.lot,
@@ -294,10 +343,18 @@ class LotDetailBody extends StatelessWidget {
     this.loadWinnerCode,
     this.organizerCode,
     this.sharedNames = const {},
+    this.asOf,
+    this.onAsOf,
     super.key,
   });
 
   final LotCard lot;
+
+  /// The lot as of a past moment, if the viewer picked one.
+  final LotAsOf? asOf;
+
+  /// Opens the moment picker, from the "As of…" chip.
+  final VoidCallback? onAsOf;
 
   /// Every bid, in ledger order, or null while it loads.
   final List<LedgerEntry>? ledger;
@@ -326,6 +383,7 @@ class LotDetailBody extends StatelessWidget {
     final scheme = theme.colorScheme;
     final steps = lot.increments;
     final ledger = this.ledger;
+    final asOf = this.asOf;
     final leading = me != null && lot.leaderId == me;
     final outbid = !leading && (ledger?.hasValidBidBy(me) ?? false);
     final leader = switch (lot.leaderName) {
@@ -350,7 +408,7 @@ class LotDetailBody extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
-            if (onShare case final onShare? when wonBy(lot, me))
+            if (onShare case final onShare? when asOf == null && wonBy(lot, me))
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: WonBanner(
@@ -387,7 +445,9 @@ class LotDetailBody extends StatelessWidget {
                     _Description(lot.description),
                   ],
                   const SizedBox(height: 16),
-                  if (lot.status == 'OPEN') ...[
+                  if (asOf != null && asOf.status == 'OPEN')
+                    _PriceAsOf(asOf, sharedNames)
+                  else if (lot.status == 'OPEN') ...[
                     _Price(lot.currentPrice),
                     if (steps.isNotEmpty)
                       Text(
@@ -409,7 +469,20 @@ class LotDetailBody extends StatelessWidget {
                       organizerCode: organizerCode,
                     ),
                   const SizedBox(height: 24),
-                  Text('Bids', style: theme.textTheme.titleMedium),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('Bids', style: theme.textTheme.titleMedium),
+                      ),
+                      if (onAsOf case final onAsOf?
+                          when ledger?.isNotEmpty ?? false)
+                        ActionChip(
+                          avatar: const Icon(Icons.history, size: 18),
+                          label: const Text('As of…'),
+                          onPressed: onAsOf,
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -426,6 +499,7 @@ class LotDetailBody extends StatelessWidget {
                 closeAt: closeAt,
                 me: me,
                 sharedNames: sharedNames,
+                asOf: asOf,
               ),
             if (lot.status != 'OPEN')
               Padding(
@@ -460,6 +534,87 @@ class _Price extends StatelessWidget {
       style: Theme.of(context).textTheme.displayLarge?.copyWith(
         fontWeight: FontWeight.bold,
         fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    ),
+  );
+}
+
+/// The price and leader the server's replay gives as of a past moment
+/// (UC-10).
+class _PriceAsOf extends StatelessWidget {
+  const _PriceAsOf(this.asOf, this.sharedNames);
+
+  final LotAsOf asOf;
+  final Set<String> sharedNames;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final leader = switch (asOf.leaderName) {
+      final name? => displayName(name, asOf.leaderId, sharedNames),
+      null => null,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Price(asOf.price),
+        Text(
+          leader == null ? 'No bids yet' : '$leader led',
+          style: theme.textTheme.titleMedium,
+        ),
+      ],
+    );
+  }
+}
+
+/// The bottom bar while viewing a past moment (UC-10): an amber
+/// "AS OF 22:02:00" badge and LIVE. It takes the place of the chips and
+/// RETRACT, so no command can run against past state.
+class AsOfBar extends StatelessWidget {
+  const AsOfBar({required this.at, required this.onLive, super.key});
+
+  /// The moment shown, in UTC.
+  final DateTime at;
+
+  final VoidCallback onLive;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Material(
+      elevation: 8,
+      color: Colors.amber.shade100,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.amber.shade700,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                child: Text(
+                  'AS OF ${formatClock(at)}',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(),
+            FilledButton.icon(
+              onPressed: onLive,
+              icon: const Icon(Icons.fiber_manual_record, size: 14),
+              label: const Text('LIVE'),
+            ),
+          ],
+        ),
       ),
     ),
   );

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'core/auction_scope.dart';
 import 'pages/board_page.dart';
 import 'pages/create_auction_page.dart';
+import 'pages/demo_page.dart';
 import 'pages/home_page.dart';
 import 'pages/lot_page.dart';
 import 'pages/organizer_page.dart';
@@ -13,6 +14,8 @@ final router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
     GoRoute(path: '/new', builder: (_, _) => const CreateAuctionPage()),
+    // Always an open auction to try (X2).
+    GoRoute(path: '/demo', builder: (_, _) => const DemoPage()),
     // Every page of one auction shares its controller, and so one live
     // subscription.
     ShellRoute(

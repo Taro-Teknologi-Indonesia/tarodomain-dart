@@ -16,6 +16,8 @@ Widget _app(
   LoadWinnerCode? loadWinnerCode,
   String? organizerCode,
   Set<String> sharedNames = const {},
+  LotAsOf? asOf,
+  VoidCallback? onAsOf,
 }) => MaterialApp(
   home: Scaffold(
     body: LotDetailBody(
@@ -27,6 +29,8 @@ Widget _app(
       loadWinnerCode: loadWinnerCode,
       organizerCode: organizerCode,
       sharedNames: sharedNames,
+      asOf: asOf,
+      onAsOf: onAsOf,
     ),
   ),
 );
@@ -235,5 +239,73 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
+  });
+
+  group('as of a past moment', () {
+    // Live: Budi leads at 250k after Siti's 200k.
+    final budiLeads = lotCard(
+      version: 4,
+      currentPrice: 250000,
+      leaderId: budi,
+      leaderName: 'Budi',
+    );
+    final ledger = [
+      ledgerEntry(1),
+      ledgerEntry(2, by: siti, name: 'Siti', amount: 200000),
+      ledgerEntry(3, amount: 250000),
+    ];
+    final at = DateTime.utc(2026, 10, 14, 22, 1, 2);
+    final sitiLed = LotAsOf(
+      at: at,
+      price: 200000,
+      leaderId: siti,
+      leaderName: 'Siti',
+      status: 'OPEN',
+      bidCount: 2,
+      retractedCount: 0,
+      lastSequence: 2,
+      version: 3,
+    );
+
+    testWidgets("shows the server's price and leader, not the live "
+        'ones', (tester) async {
+      await tester.pumpWidget(_app(budiLeads, ledger, me: budi, asOf: sitiLed));
+
+      expect(find.text('Rp 200.000'), findsOneWidget);
+      expect(find.text('Siti led'), findsOneWidget);
+      expect(find.text('Rp 250.000'), findsNothing);
+      expect(find.textContaining('high bidder'), findsNothing);
+      expect(find.textContaining('Next bid'), findsNothing);
+    });
+
+    testWidgets('the As of… chip opens the picker once there are bids', (
+      tester,
+    ) async {
+      var opened = 0;
+      await tester.pumpWidget(_app(budiLeads, ledger, onAsOf: () => opened++));
+
+      await tester.tap(find.text('As of…'));
+      expect(opened, 1);
+
+      // A ledger only grows, so start a fresh tree for the empty one.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(_app(lotCard(), const [], onAsOf: () {}));
+      expect(find.text('As of…'), findsNothing);
+    });
+
+    testWidgets('the bar shows the badge and LIVE returns', (tester) async {
+      var live = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: AsOfBar(at: at, onLive: () => live++),
+          ),
+        ),
+      );
+
+      expect(find.text('AS OF ${formatClock(at)}'), findsOneWidget);
+      await tester.tap(find.text('LIVE'));
+      expect(live, 1);
+    });
   });
 }

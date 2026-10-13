@@ -180,6 +180,35 @@ class LotEndpoint extends Endpoint {
     return keys.winnerCode(participant.keyHash, lotId.uuid);
   });
 
+  /// The lot [lotId] as it stood at [at] (UC-10): its events up to [at]
+  /// replayed through the [Lot] aggregate, not read from the projection.
+  ///
+  /// A read: nothing is dispatched or stored.
+  ///
+  /// Throws `AGGREGATE_NOT_FOUND` for an unknown lot, or one not yet
+  /// created at [at].
+  Future<LotAsOf> asOf(Session session, UuidValue lotId, DateTime at) =>
+      rethrowAsTaroDomainException(() async {
+        final id = LotId.fromExisting(lotId.uuid);
+        final events = await _taro
+            .runtime(session)
+            .eventStore
+            .loadStream(StreamIds.forAggregate('Lot', id));
+        final lot = Lot.asOf(id, events, at);
+        final leader = lot.lastValidBid;
+        return LotAsOf(
+          at: at.toUtc(),
+          price: lot.currentPrice,
+          leaderId: leader == null ? null : UuidValue.fromString(leader.bidder),
+          leaderName: leader?.bidderName,
+          status: lot.status.code,
+          bidCount: lot.bids.length,
+          retractedCount: lot.bids.where((b) => b.retracted).length,
+          lastSequence: lot.bids.lastOrNull?.sequence ?? 0,
+          version: lot.version,
+        );
+      });
+
   Future<LotCard> _card(Session session, UuidValue lotId) async =>
       await LotCard.db.findFirstRow(
         session,

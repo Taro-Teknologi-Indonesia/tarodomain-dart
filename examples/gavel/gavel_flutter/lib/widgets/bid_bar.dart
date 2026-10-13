@@ -173,7 +173,10 @@ class _BidBarState extends State<BidBar> {
         _show("Couldn't reach the server — try again", _Tone.bad);
       case Invalid(:final message):
         _show(message, _Tone.bad);
-      case RetractNotAllowed() || AuctionNotFound() || NotOrganizer():
+      case RetractNotAllowed() ||
+          AuctionNotFound() ||
+          NotOrganizer() ||
+          NotFound():
         _show('Something went wrong — try again', _Tone.bad);
     }
   }

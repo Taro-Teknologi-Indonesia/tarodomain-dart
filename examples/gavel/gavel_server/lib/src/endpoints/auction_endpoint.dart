@@ -1,29 +1,19 @@
-import 'dart:convert';
-import 'dart:math';
-
 import 'package:serverpod/serverpod.dart';
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart';
 
+import '../demo/demo_auctions.dart';
 import '../domain/auction.dart';
-import '../domain/auction_commands.dart';
 import '../domain/errors.dart';
 import '../domain/keys.dart';
 import '../domain/participant.dart';
 import '../domain/participant_commands.dart';
-import '../generated/future_calls.dart';
 import '../generated/protocol.dart';
+import '../infra/auction_creation.dart';
 import '../infra/participant_guard.dart';
 
 /// Creating, reading and joining auctions.
 class AuctionEndpoint extends Endpoint {
   TaroDomainServerpod get _taro => TaroDomainServerpod.instance;
-
-  static final _random = Random.secure();
-
-  /// Join code characters: no 0/O, 1/I/L.
-  static const _codeAlphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  static const _codeLength = 6;
-  static const _codeAttempts = 3;
 
   /// Creates an auction called [title] that closes at [closeAt], truncated
   /// to the second, and schedules its close.
@@ -33,42 +23,11 @@ class AuctionEndpoint extends Endpoint {
     Session session,
     String title,
     DateTime closeAt,
-  ) async {
-    final auctionId = AuctionId.generate();
-    final organizerKey = _secret();
-    // Whole seconds, so the event, the read model, the future call and the
-    // response all hold the same instant.
-    final utcCloseAt = _toSecond(closeAt.toUtc());
+  ) => createAuction(session, title: title, closeAt: closeAt);
 
-    final code = await _createWithFreshCode(
-      session,
-      (code) => CreateAuction(
-        auctionId,
-        title: title,
-        closeAt: utcCloseAt,
-        code: code,
-        organizerKeyHash: hashKey(organizerKey),
-      ),
-    );
-
-    // After the commit: the sweep closes the auction if the server stops
-    // between the two, and is the only trigger where future calls are
-    // disabled.
-    if (session.serverpod.config.futureCall.enabled) {
-      await session.serverpod.futureCalls
-          .callAtTime(utcCloseAt, identifier: 'close-${auctionId.uuid}')
-          .auctionCloseCalls
-          .close(auctionId.value);
-    }
-
-    return CreatedAuction(
-      code: code,
-      auctionId: auctionId.value,
-      organizerKey: organizerKey,
-      closeAt: utcCloseAt,
-      serverNow: DateTime.now().toUtc(),
-    );
-  }
+  /// The join code of the open public demo auction (X2), opening one first
+  /// if the demo job hasn't yet.
+  Future<String> currentDemo(Session session) => currentDemoCode(session);
 
   /// The auction with join [code] and its lots, with the server's clock.
   ///
@@ -100,7 +59,7 @@ class AuctionEndpoint extends Endpoint {
       rethrowAsTaroDomainException(() async {
         final auction = await findAuction(session, code);
         final participantId = ParticipantId.generate();
-        final participantKey = _secret();
+        final participantKey = newSecret();
         await _taro.dispatch(
           session,
           JoinAuction(
@@ -180,44 +139,4 @@ class AuctionEndpoint extends Endpoint {
           lot.lotId.uuid: winnerCode(keyHash, lot.lotId.uuid),
     };
   });
-
-  /// Dispatches [command] with a new random join code, again with another
-  /// one if the code is taken, and returns the code that was used.
-  ///
-  /// A taken code fails the projection's insert, which rolls the command
-  /// back; any other failure is rethrown.
-  Future<String> _createWithFreshCode(
-    Session session,
-    CreateAuction Function(String code) command,
-  ) async {
-    for (var attempt = 1; ; attempt++) {
-      final code = _joinCode();
-      try {
-        await _taro.dispatch(session, command(code));
-        return code;
-      } on TaroDomainException catch (e) {
-        final taken =
-            e.code == 'PROJECTION_HANDLER_FAILED' &&
-            await AuctionView.db.count(
-                  session,
-                  where: (t) => t.code.equals(code),
-                ) >
-                0;
-        if (!taken || attempt == _codeAttempts) rethrow;
-      }
-    }
-  }
-
-  static DateTime _toSecond(DateTime t) =>
-      DateTime.utc(t.year, t.month, t.day, t.hour, t.minute, t.second);
-
-  static String _joinCode() => String.fromCharCodes([
-    for (var i = 0; i < _codeLength; i++)
-      _codeAlphabet.codeUnitAt(_random.nextInt(_codeAlphabet.length)),
-  ]);
-
-  /// 32 random bytes, base64url without padding.
-  static String _secret() => base64Url
-      .encode([for (var i = 0; i < 32; i++) _random.nextInt(256)])
-      .replaceAll('=', '');
 }

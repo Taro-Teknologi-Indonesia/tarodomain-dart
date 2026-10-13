@@ -51,6 +51,7 @@ class AuctionCreated extends AuctionEvent {
     required this.title,
     required this.closeAt,
     required this.organizerKeyHash,
+    this.isDemo = false,
   });
 
   /// Rebuilds the event from [toData]'s output.
@@ -60,6 +61,8 @@ class AuctionCreated extends AuctionEvent {
     title: data['title']! as String,
     closeAt: DateTime.parse(data['closeAt']! as String),
     organizerKeyHash: data['organizerKeyHash']! as String,
+    // Events from before X2 have no flag.
+    isDemo: data['isDemo'] as bool? ?? false,
   );
 
   /// The join code in the share link.
@@ -74,6 +77,9 @@ class AuctionCreated extends AuctionEvent {
   /// The SHA-256 of the organizer key, never the key itself.
   final String organizerKeyHash;
 
+  /// Whether this is the rolling public demo (X2).
+  final bool isDemo;
+
   @override
   String get eventName => 'AuctionCreated';
 
@@ -84,6 +90,7 @@ class AuctionCreated extends AuctionEvent {
     'title': title,
     'closeAt': closeAt.toUtc().toIso8601String(),
     'organizerKeyHash': organizerKeyHash,
+    'isDemo': isDemo,
   };
 }
 
@@ -163,6 +170,7 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
     required String code,
     required String organizerKeyHash,
     required DateTime now,
+    bool isDemo = false,
   }) {
     final trimmed = title.trim();
     if (trimmed.isEmpty || trimmed.length > maxTitleLength) {
@@ -188,6 +196,7 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
         title: trimmed,
         closeAt: closeAt.toUtc(),
         organizerKeyHash: organizerKeyHash,
+        isDemo: isDemo,
       ),
     );
   }

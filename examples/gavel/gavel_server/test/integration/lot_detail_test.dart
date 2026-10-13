@@ -19,6 +19,7 @@ void main() {
       late TaroDomainServerpod taro;
       late CreatedAuction created;
       late LotCard lot;
+      late JoinResult budi;
 
       setUp(() async {
         session = sessionBuilder.build();
@@ -44,7 +45,7 @@ void main() {
             tileColor: '#2E7D6B',
           ),
         );
-        final budi = await endpoints.auction.join(
+        budi = await endpoints.auction.join(
           sessionBuilder,
           created.code,
           'Budi',
@@ -97,6 +98,54 @@ void main() {
       test('an unknown lot is AGGREGATE_NOT_FOUND', () async {
         await expectLater(
           endpoints.lot.detail(sessionBuilder, const Uuid().v4obj()),
+          throwsA(
+            isA<TaroDomainException>().having(
+              (e) => e.code,
+              'code',
+              'AGGREGATE_NOT_FOUND',
+            ),
+          ),
+        );
+      });
+
+      test('as of each ledger time the replay matches the ledger, and a '
+          'later retraction is undone', () async {
+        final before = await endpoints.lot.detail(sessionBuilder, lot.lotId);
+        await endpoints.lot.retractBid(
+          sessionBuilder,
+          lot.lotId,
+          budi.participantId,
+          budi.participantKey,
+          lot.version,
+          const Uuid().v7obj(),
+        );
+        final ledger = (await endpoints.lot.detail(
+          sessionBuilder,
+          lot.lotId,
+        )).ledger;
+        final [t1, t2, t3] = [for (final e in before.ledger) e.placedAt];
+        final t4 = ledger.last.retractedAt!;
+
+        Future<(int, String?, int)> asOf(DateTime at) async {
+          final view = await endpoints.lot.asOf(sessionBuilder, lot.lotId, at);
+          return (view.price, view.leaderName, view.retractedCount);
+        }
+
+        expect(await asOf(t1), (175000, 'Budi', 0));
+        expect(await asOf(t2), (225000, 'Sari', 0));
+        expect(await asOf(t3), (250000, 'Budi', 0));
+        expect(await asOf(t4.subtract(const Duration(milliseconds: 1))), (
+          250000,
+          'Budi',
+          0,
+        ));
+        expect(await asOf(t4), (225000, 'Sari', 1));
+        await expectLater(
+          endpoints.lot.asOf(
+            sessionBuilder,
+            lot.lotId,
+            t1.subtract(const Duration(hours: 1)),
+          ),
           throwsA(
             isA<TaroDomainException>().having(
               (e) => e.code,

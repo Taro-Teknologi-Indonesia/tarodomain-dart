@@ -21,6 +21,7 @@ import 'join_result.dart' as _irdkvnmr;
 import 'ledger_entry.dart' as _ivha9tke;
 import 'live_update.dart' as _irca74ja;
 import 'live_update_kind.dart' as _i6d34ixx;
+import 'lot_as_of.dart' as _i7b5dmd2;
 import 'lot_card.dart' as _i7jzpqum;
 import 'lot_detail.dart' as _ivoeyyyp;
 import 'new_lot.dart' as _i7vyupo4;
@@ -31,6 +32,7 @@ export 'join_result.dart';
 export 'ledger_entry.dart';
 export 'live_update.dart';
 export 'live_update_kind.dart';
+export 'lot_as_of.dart';
 export 'lot_card.dart';
 export 'lot_detail.dart';
 export 'new_lot.dart';
@@ -88,6 +90,9 @@ class Protocol extends _isc.SerializationManager {
     if (t == _i6d34ixx.LiveUpdateKind) {
       return _i6d34ixx.LiveUpdateKind.fromJson(data) as T;
     }
+    if (t == _i7b5dmd2.LotAsOf) {
+      return _i7b5dmd2.LotAsOf.fromJson(data) as T;
+    }
     if (t == _i7jzpqum.LotCard) {
       return _i7jzpqum.LotCard.fromJson(data) as T;
     }
@@ -120,6 +125,9 @@ class Protocol extends _isc.SerializationManager {
     if (t == _isc.getType<_i6d34ixx.LiveUpdateKind?>()) {
       return (data != null ? _i6d34ixx.LiveUpdateKind.fromJson(data) : null)
           as T;
+    }
+    if (t == _isc.getType<_i7b5dmd2.LotAsOf?>()) {
+      return (data != null ? _i7b5dmd2.LotAsOf.fromJson(data) : null) as T;
     }
     if (t == _isc.getType<_i7jzpqum.LotCard?>()) {
       return (data != null ? _i7jzpqum.LotCard.fromJson(data) : null) as T;
@@ -166,6 +174,7 @@ class Protocol extends _isc.SerializationManager {
       _ivha9tke.LedgerEntry => 'LedgerEntry',
       _irca74ja.LiveUpdate => 'LiveUpdate',
       _i6d34ixx.LiveUpdateKind => 'LiveUpdateKind',
+      _i7b5dmd2.LotAsOf => 'LotAsOf',
       _i7jzpqum.LotCard => 'LotCard',
       _ivoeyyyp.LotDetail => 'LotDetail',
       _i7vyupo4.NewLot => 'NewLot',
@@ -197,6 +206,8 @@ class Protocol extends _isc.SerializationManager {
         return 'LiveUpdate';
       case _i6d34ixx.LiveUpdateKind():
         return 'LiveUpdateKind';
+      case _i7b5dmd2.LotAsOf():
+        return 'LotAsOf';
       case _i7jzpqum.LotCard():
         return 'LotCard';
       case _ivoeyyyp.LotDetail():
@@ -239,6 +250,9 @@ class Protocol extends _isc.SerializationManager {
     }
     if (dataClassName == 'LiveUpdateKind') {
       return deserialize<_i6d34ixx.LiveUpdateKind>(data['data']);
+    }
+    if (dataClassName == 'LotAsOf') {
+      return deserialize<_i7b5dmd2.LotAsOf>(data['data']);
     }
     if (dataClassName == 'LotCard') {
       return deserialize<_i7jzpqum.LotCard>(data['data']);

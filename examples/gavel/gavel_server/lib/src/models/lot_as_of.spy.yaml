@@ -1,0 +1,30 @@
+### One lot as it stood at a past moment (UC-10), rebuilt by replaying the
+### lot's events up to then.
+class: LotAsOf
+fields:
+  ### The moment asked about, in UTC.
+  at: DateTime
+
+  ### The leading bid then, or the open bid while there was none.
+  price: int
+
+  ### The leading bidder then, if any.
+  leaderId: UuidValue?
+
+  ### The leading bidder's display name then, if any.
+  leaderName: String?
+
+  ### OPEN, SOLD or PASSED, as of then.
+  status: String
+
+  ### How many bids had been placed, retracted ones included.
+  bidCount: int
+
+  ### How many of them had been taken back.
+  retractedCount: int
+
+  ### The latest bid's place in the ledger, or 0 before the first bid.
+  lastSequence: int
+
+  ### How many of the lot's events the replay applied.
+  version: int

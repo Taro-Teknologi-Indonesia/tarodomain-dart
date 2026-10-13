@@ -15,6 +15,7 @@ import 'package:gavel_client/src/protocol/board_snapshot.dart' as _icq9digg;
 import 'package:gavel_client/src/protocol/created_auction.dart' as _ivm7o2d2;
 import 'package:gavel_client/src/protocol/join_result.dart' as _igr184mp;
 import 'package:gavel_client/src/protocol/live_update.dart' as _i9po14mf;
+import 'package:gavel_client/src/protocol/lot_as_of.dart' as _inzqluk9;
 import 'package:gavel_client/src/protocol/lot_card.dart' as _ik2e60uo;
 import 'package:gavel_client/src/protocol/lot_detail.dart' as _izswfryi;
 import 'package:gavel_client/src/protocol/new_lot.dart' as _iw77avg8;
@@ -44,6 +45,11 @@ class EndpointAuction extends _isc.EndpointRef {
     'create',
     {'title': title, 'closeAt': closeAt},
   );
+
+  /// The join code of the open public demo auction (X2), opening one first
+  /// if the demo job hasn't yet.
+  _ida.Future<String> currentDemo() =>
+      caller.callServerEndpoint<String>('auction', 'currentDemo', {});
 
   /// The auction with join [code] and its lots, with the server's clock.
   ///
@@ -224,6 +230,19 @@ class EndpointLot extends _isc.EndpointRef {
     'participantId': participantId,
     'participantKey': participantKey,
   });
+
+  /// The lot [lotId] as it stood at [at] (UC-10): its events up to [at]
+  /// replayed through the [Lot] aggregate, not read from the projection.
+  ///
+  /// A read: nothing is dispatched or stored.
+  ///
+  /// Throws `AGGREGATE_NOT_FOUND` for an unknown lot, or one not yet
+  /// created at [at].
+  _ida.Future<_inzqluk9.LotAsOf> asOf(_isc.UuidValue lotId, DateTime at) =>
+      caller.callServerEndpoint<_inzqluk9.LotAsOf>('lot', 'asOf', {
+        'lotId': lotId,
+        'at': at,
+      });
 }
 
 class Modules {

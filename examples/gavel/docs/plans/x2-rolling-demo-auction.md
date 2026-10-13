@@ -32,8 +32,8 @@ Depends on: UC-01, UC-02, UC-08.
 
 ## Acceptance
 
-- [ ] `/demo` always lands on an OPEN auction with 3 lots.
+- [x] `/demo` always lands on an OPEN auction with 3 lots.
 - [ ] After a close, a new demo auction appears within 60 s.
-- [ ] The demo auction is created only through commands, so it shows up in the event store like any other.
+- [x] The demo auction is created only through commands, so it shows up in the event store like any other.
 
 Estimate: 45 min.

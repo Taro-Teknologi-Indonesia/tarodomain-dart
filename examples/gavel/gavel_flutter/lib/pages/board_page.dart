@@ -13,6 +13,7 @@ import '../core/identity.dart';
 import '../core/live.dart';
 import '../core/organizer_keys.dart';
 import '../core/share.dart';
+import '../widgets/demo_banner.dart';
 import '../widgets/join_sheet.dart';
 import '../widgets/lot_card_widget.dart';
 import '../widgets/won_banner.dart';
@@ -153,8 +154,9 @@ class _BoardPageState extends State<BoardPage> {
           (AuctionNotFound(), _) => _NotFound(code: widget.code),
           (final GavelFailure failure, _) => Center(child: Text('$failure')),
           (_, null) => const Center(child: CircularProgressIndicator()),
-          (_, _) => Column(
+          (_, final auction?) => Column(
             children: [
+              if (auction.isDemo && !widget.bigScreen) const DemoBanner(),
               if (!widget.bigScreen)
                 for (final lot in _auction.lots)
                   if ((_identity, wonBy(lot, _identity?.participantId)) case (

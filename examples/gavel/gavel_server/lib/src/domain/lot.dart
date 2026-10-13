@@ -492,6 +492,27 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     context: {'field': field, 'reason': reason},
   );
 
+  /// The lot [id] as it stood at [at] (UC-10): [events], its whole stream,
+  /// replayed from version 0 up to [at], snapshots ignored.
+  ///
+  /// [at] counts to the end of its millisecond, since a web client's
+  /// clock has no finer grain: an event at 22:02:00.000400 is in as of
+  /// 22:02:00.000.
+  ///
+  /// Throws [AggregateNotFoundError] if the lot wasn't created by [at].
+  static Lot asOf(LotId id, Iterable<DomainEvent> events, DateTime at) {
+    final cutoff = at.toUtc().add(const Duration(milliseconds: 1));
+    final lot = Lot(id)
+      ..loadFromHistory(events.takeWhile((e) => e.occurredAt.isBefore(cutoff)));
+    if (lot.version == 0) {
+      throw AggregateNotFoundError(
+        'Lot ${id.uuid} did not exist at ${at.toUtc().toIso8601String()}',
+        context: {'aggregateType': 'Lot', 'aggregateId': id.uuid},
+      );
+    }
+    return lot;
+  }
+
   /// The auction the lot belongs to.
   String auctionId = '';
 

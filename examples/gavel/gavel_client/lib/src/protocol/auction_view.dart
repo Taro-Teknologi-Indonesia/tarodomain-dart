@@ -23,7 +23,8 @@ abstract class AuctionView
     required this.closeAt,
     required this.status,
     required this.lotCount,
-  });
+    bool? isDemo,
+  }) : isDemo = isDemo ?? false;
 
   factory AuctionView({
     int? id,
@@ -33,6 +34,7 @@ abstract class AuctionView
     required DateTime closeAt,
     required String status,
     required int lotCount,
+    bool? isDemo,
   }) = _AuctionViewImpl;
 
   factory AuctionView.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -48,6 +50,9 @@ abstract class AuctionView
       ),
       status: jsonSerialization['status'] as String,
       lotCount: jsonSerialization['lotCount'] as int,
+      isDemo: jsonSerialization['isDemo'] == null
+          ? null
+          : _isc.BoolJsonExtension.fromJson(jsonSerialization['isDemo']),
     );
   }
 
@@ -74,6 +79,10 @@ abstract class AuctionView
   /// How many lots the auction has.
   int lotCount;
 
+  /// Whether this is the rolling public demo (X2), which the server opens
+  /// itself.
+  bool isDemo;
+
   /// Returns a shallow copy of this [AuctionView]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
@@ -85,6 +94,7 @@ abstract class AuctionView
     DateTime? closeAt,
     String? status,
     int? lotCount,
+    bool? isDemo,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -97,6 +107,7 @@ abstract class AuctionView
       'closeAt': closeAt.toJson(),
       'status': status,
       'lotCount': lotCount,
+      'isDemo': isDemo,
     };
   }
 
@@ -111,6 +122,7 @@ abstract class AuctionView
       'closeAt': closeAt.toJson(),
       'status': status,
       'lotCount': lotCount,
+      'isDemo': isDemo,
     };
   }
 
@@ -131,6 +143,7 @@ class _AuctionViewImpl extends AuctionView {
     required DateTime closeAt,
     required String status,
     required int lotCount,
+    bool? isDemo,
   }) : super._(
          id: id,
          auctionId: auctionId,
@@ -139,6 +152,7 @@ class _AuctionViewImpl extends AuctionView {
          closeAt: closeAt,
          status: status,
          lotCount: lotCount,
+         isDemo: isDemo,
        );
 
   /// Returns a shallow copy of this [AuctionView]
@@ -153,6 +167,7 @@ class _AuctionViewImpl extends AuctionView {
     DateTime? closeAt,
     String? status,
     int? lotCount,
+    bool? isDemo,
   }) {
     return AuctionView(
       id: id is int? ? id : this.id,
@@ -162,6 +177,7 @@ class _AuctionViewImpl extends AuctionView {
       closeAt: closeAt ?? this.closeAt,
       status: status ?? this.status,
       lotCount: lotCount ?? this.lotCount,
+      isDemo: isDemo ?? this.isDemo,
     );
   }
 }

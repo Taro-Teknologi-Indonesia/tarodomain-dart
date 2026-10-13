@@ -20,6 +20,7 @@ import 'package:gavel_server/src/generated/future_calls_generated_models/auction
     as _i9bis1h2;
 import 'package:gavel_server/src/generated/join_result.dart' as _i9wld784;
 import 'package:gavel_server/src/generated/live_update.dart' as _isnlnvta;
+import 'package:gavel_server/src/generated/lot_as_of.dart' as _i3ox6xq2;
 import 'package:gavel_server/src/generated/lot_card.dart' as _ibsll3cm;
 import 'package:gavel_server/src/generated/lot_detail.dart' as _i9io6m2h;
 import 'package:gavel_server/src/generated/new_lot.dart' as _ipyv8n10;
@@ -183,6 +184,8 @@ class _InternalTestEndpoints extends TestEndpoints
 class _FutureCalls {
   late final auctionCloseCalls = _AuctionCloseCallsFutureCall();
 
+  late final demoCalls = _DemoCallsFutureCall();
+
   late final taroDomainCalls = _TaroDomainCallsFutureCall();
 }
 
@@ -221,6 +224,36 @@ class _AuctionEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_ig1hii49.CreatedAuction>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<String> currentDemo(
+    _ist.TestSessionBuilder sessionBuilder,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'auction',
+            method: 'currentDemo',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'auction',
+          methodName: 'currentDemo',
+          parameters: _ist.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<String>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();
@@ -631,6 +664,38 @@ class _LotEndpoint {
       }
     });
   }
+
+  _ida.Future<_i3ox6xq2.LotAsOf> asOf(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue lotId,
+    DateTime at,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'lot',
+            method: 'asOf',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'lot',
+          methodName: 'asOf',
+          parameters: _ist.testObjectToJson({'lotId': lotId, 'at': at}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i3ox6xq2.LotAsOf>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
 }
 
 class _AuctionCloseCallsFutureCall {
@@ -656,6 +721,21 @@ class _AuctionCloseCallsFutureCall {
         (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild();
     try {
       await _ixqh6y26.AuctionCloseCallsSweepFutureCall().invoke(
+        _localUniqueSession,
+        null,
+      );
+    } finally {
+      await _localUniqueSession.close();
+    }
+  }
+}
+
+class _DemoCallsFutureCall {
+  Future<void> ensureOpen(_ist.TestSessionBuilder sessionBuilder) async {
+    var _localUniqueSession =
+        (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild();
+    try {
+      await _ixqh6y26.DemoCallsEnsureOpenFutureCall().invoke(
         _localUniqueSession,
         null,
       );

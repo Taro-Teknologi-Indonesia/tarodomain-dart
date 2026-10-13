@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../core/money.dart';
 import '../core/names.dart';
+import '../core/time_travel.dart';
 
 final _clock = DateFormat('HH:mm:ss');
 
@@ -14,6 +15,9 @@ String formatClock(DateTime at) => _clock.format(at.toLocal());
 /// much and when. Retracted bids stay, struck through: the event log is
 /// the product. A closed lot's closing line sits above them all.
 ///
+/// As of a past moment (UC-10), rows placed after it are dimmed and a
+/// bid retracted after it stands un-struck: the replay, visible.
+///
 /// Lives inside the page's scroll view, so it doesn't scroll itself. New
 /// bids slide in at the top.
 class LedgerList extends StatefulWidget {
@@ -23,10 +27,14 @@ class LedgerList extends StatefulWidget {
     required this.closeAt,
     this.me,
     this.sharedNames = const {},
+    this.asOf,
     super.key,
   });
 
   final LotCard lot;
+
+  /// The lot as of a past moment, if the viewer picked one.
+  final LotAsOf? asOf;
 
   /// Every bid, in ledger order.
   final List<LedgerEntry> entries;
@@ -97,6 +105,7 @@ class _LedgerListState extends State<LedgerList> {
                   entry,
                   mine: widget.me != null && entry.participantId == widget.me,
                   sharedNames: widget.sharedNames,
+                  asOf: widget.asOf?.at,
                 ),
               ),
             );
@@ -108,7 +117,7 @@ class _LedgerListState extends State<LedgerList> {
 
   /// "🔨 Closed 22:03:00 — SOLD to Sari", or null while the lot is open.
   String? _closingLine(LotCard lot) {
-    if (lot.status == 'OPEN') return null;
+    if (lot.status == 'OPEN' || widget.asOf?.status == 'OPEN') return null;
     final at = formatClock(lot.closedAt ?? widget.closeAt);
     final winner = switch (lot.winnerName) {
       final name? => displayName(name, lot.leaderId, widget.sharedNames),
@@ -126,11 +135,14 @@ class _LedgerListState extends State<LedgerList> {
 /// One bid: `#12 · Budi · Rp 250.000 · 22:01:47`. Struck through and muted
 /// once retracted, with when, fading into it as the retraction arrives;
 /// highlighted when it's [mine]. A name in [sharedNames] gets its tag.
+/// As of [asOf], a bid placed later is dimmed and one retracted later
+/// isn't struck.
 class LedgerRow extends StatelessWidget {
   const LedgerRow(
     this.entry, {
     this.mine = false,
     this.sharedNames = const {},
+    this.asOf,
     super.key,
   });
 
@@ -138,38 +150,48 @@ class LedgerRow extends StatelessWidget {
   final bool mine;
   final Set<String> sharedNames;
 
+  /// The past moment the ledger is viewed at, or null for live.
+  final DateTime? asOf;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final retracted = entry.retracted;
+    final asOf = this.asOf;
+    final retracted = asOf == null ? entry.retracted : entry.retractedBy(asOf);
     final retractedAt = entry.retractedAt;
-    return ListTile(
-      dense: true,
-      tileColor: mine ? scheme.primaryContainer.withValues(alpha: 0.35) : null,
-      title: AnimatedDefaultTextStyle(
-        duration: const Duration(milliseconds: 300),
-        style: DefaultTextStyle.of(context).style.merge(
-          TextStyle(
-            decoration: retracted
-                ? TextDecoration.lineThrough
-                : TextDecoration.none,
-            color: retracted ? scheme.onSurfaceVariant : scheme.onSurface,
-            fontFeatures: const [FontFeature.tabularFigures()],
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: asOf != null && entry.placedAfter(asOf) ? 0.3 : 1,
+      child: ListTile(
+        dense: true,
+        tileColor: mine
+            ? scheme.primaryContainer.withValues(alpha: 0.35)
+            : null,
+        title: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 300),
+          style: DefaultTextStyle.of(context).style.merge(
+            TextStyle(
+              decoration: retracted
+                  ? TextDecoration.lineThrough
+                  : TextDecoration.none,
+              color: retracted ? scheme.onSurfaceVariant : scheme.onSurface,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          child: Text(
+            '#${entry.sequence} · '
+            '${displayName(entry.bidderName, entry.participantId, sharedNames)} · '
+            '${formatRupiah(entry.amount)} · ${formatClock(entry.placedAt)}',
           ),
         ),
-        child: Text(
-          '#${entry.sequence} · '
-          '${displayName(entry.bidderName, entry.participantId, sharedNames)} · '
-          '${formatRupiah(entry.amount)} · ${formatClock(entry.placedAt)}',
-        ),
+        subtitle: retracted
+            ? Text(
+                retractedAt == null
+                    ? 'retracted'
+                    : 'retracted ${formatClock(retractedAt)}',
+              )
+            : null,
       ),
-      subtitle: retracted
-          ? Text(
-              retractedAt == null
-                  ? 'retracted'
-                  : 'retracted ${formatClock(retractedAt)}',
-            )
-          : null,
     );
   }
 }

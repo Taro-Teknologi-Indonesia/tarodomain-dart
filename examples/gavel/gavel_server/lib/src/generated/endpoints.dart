@@ -54,6 +54,14 @@ class Endpoints extends _is.EndpointDispatch {
                 params['closeAt'],
               ),
         ),
+        'currentDemo': _is.MethodConnector(
+          name: 'currentDemo',
+          params: {},
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['auction'] as _iyn8i9y2.AuctionEndpoint).currentDemo(
+                session,
+              ),
+        ),
         'board': _is.MethodConnector(
           name: 'board',
           params: {
@@ -338,6 +346,27 @@ class Endpoints extends _is.EndpointDispatch {
                 params['lotId'],
                 params['participantId'],
                 params['participantKey'],
+              ),
+        ),
+        'asOf': _is.MethodConnector(
+          name: 'asOf',
+          params: {
+            'lotId': _is.ParameterDescription(
+              name: 'lotId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'at': _is.ParameterDescription(
+              name: 'at',
+              type: _is.getType<DateTime>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['lot'] as _i6hhfich.LotEndpoint).asOf(
+                session,
+                params['lotId'],
+                params['at'],
               ),
         ),
       },

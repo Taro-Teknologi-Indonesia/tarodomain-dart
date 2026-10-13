@@ -23,7 +23,8 @@ abstract class AuctionView
     required this.closeAt,
     required this.status,
     required this.lotCount,
-  });
+    bool? isDemo,
+  }) : isDemo = isDemo ?? false;
 
   factory AuctionView({
     int? id,
@@ -33,6 +34,7 @@ abstract class AuctionView
     required DateTime closeAt,
     required String status,
     required int lotCount,
+    bool? isDemo,
   }) = _AuctionViewImpl;
 
   factory AuctionView.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -46,6 +48,9 @@ abstract class AuctionView
       closeAt: _is.DateTimeJsonExtension.fromJson(jsonSerialization['closeAt']),
       status: jsonSerialization['status'] as String,
       lotCount: jsonSerialization['lotCount'] as int,
+      isDemo: jsonSerialization['isDemo'] == null
+          ? null
+          : _is.BoolJsonExtension.fromJson(jsonSerialization['isDemo']),
     );
   }
 
@@ -74,6 +79,10 @@ abstract class AuctionView
   /// How many lots the auction has.
   int lotCount;
 
+  /// Whether this is the rolling public demo (X2), which the server opens
+  /// itself.
+  bool isDemo;
+
   @override
   _is.Table<int?> get table => t;
 
@@ -88,6 +97,7 @@ abstract class AuctionView
     DateTime? closeAt,
     String? status,
     int? lotCount,
+    bool? isDemo,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -100,6 +110,7 @@ abstract class AuctionView
       'closeAt': closeAt.toJson(),
       'status': status,
       'lotCount': lotCount,
+      'isDemo': isDemo,
     };
   }
 
@@ -114,6 +125,7 @@ abstract class AuctionView
       'closeAt': closeAt.toJson(),
       'status': status,
       'lotCount': lotCount,
+      'isDemo': isDemo,
     };
   }
 
@@ -156,6 +168,7 @@ class _AuctionViewImpl extends AuctionView {
     required DateTime closeAt,
     required String status,
     required int lotCount,
+    bool? isDemo,
   }) : super._(
          id: id,
          auctionId: auctionId,
@@ -164,6 +177,7 @@ class _AuctionViewImpl extends AuctionView {
          closeAt: closeAt,
          status: status,
          lotCount: lotCount,
+         isDemo: isDemo,
        );
 
   /// Returns a shallow copy of this [AuctionView]
@@ -178,6 +192,7 @@ class _AuctionViewImpl extends AuctionView {
     DateTime? closeAt,
     String? status,
     int? lotCount,
+    bool? isDemo,
   }) {
     return AuctionView(
       id: id is int? ? id : this.id,
@@ -187,6 +202,7 @@ class _AuctionViewImpl extends AuctionView {
       closeAt: closeAt ?? this.closeAt,
       status: status ?? this.status,
       lotCount: lotCount ?? this.lotCount,
+      isDemo: isDemo ?? this.isDemo,
     );
   }
 }
@@ -212,6 +228,9 @@ class AuctionViewUpdateTable extends _is.UpdateTable<AuctionViewTable> {
 
   _is.ColumnValue<int, int> lotCount(int value) =>
       _is.ColumnValue(table.lotCount, value);
+
+  _is.ColumnValue<bool, bool> isDemo(bool value) =>
+      _is.ColumnValue(table.isDemo, value);
 }
 
 class AuctionViewTable extends _is.Table<int?> {
@@ -223,6 +242,7 @@ class AuctionViewTable extends _is.Table<int?> {
     closeAt = _is.ColumnDateTime('closeAt', this);
     status = _is.ColumnString('status', this);
     lotCount = _is.ColumnInt('lotCount', this);
+    isDemo = _is.ColumnBool('isDemo', this, hasDefault: true);
   }
 
   late final AuctionViewUpdateTable updateTable;
@@ -245,6 +265,10 @@ class AuctionViewTable extends _is.Table<int?> {
   /// How many lots the auction has.
   late final _is.ColumnInt lotCount;
 
+  /// Whether this is the rolling public demo (X2), which the server opens
+  /// itself.
+  late final _is.ColumnBool isDemo;
+
   @override
   List<_is.Column> get columns => [
     id,
@@ -254,6 +278,7 @@ class AuctionViewTable extends _is.Table<int?> {
     closeAt,
     status,
     lotCount,
+    isDemo,
   ];
 }
 

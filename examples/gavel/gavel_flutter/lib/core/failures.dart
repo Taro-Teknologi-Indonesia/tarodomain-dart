@@ -30,6 +30,7 @@ sealed class GavelFailure {
       'AUCTION_NOT_FOUND' => AuctionNotFound(context['code'] as String),
       'NOT_ORGANIZER' => const NotOrganizer(),
       'NOT_PARTICIPANT' => const NotParticipant(),
+      'AGGREGATE_NOT_FOUND' => const NotFound(),
       'COMMAND_VALIDATION' => Invalid(error.message, context),
       _ => Unexpected(error.message),
     };
@@ -96,6 +97,11 @@ final class NotOrganizer extends GavelFailure {
 /// The stored identity isn't a participant of this auction.
 final class NotParticipant extends GavelFailure {
   const NotParticipant();
+}
+
+/// The lot doesn't exist, or didn't yet at the moment asked about (UC-10).
+final class NotFound extends GavelFailure {
+  const NotFound();
 }
 
 /// The server rejected a field of the request.

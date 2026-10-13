@@ -1,5 +1,6 @@
 auction:
   - create:
+  - currentDemo:
   - board:
   - join:
   - checkParticipant:
@@ -13,3 +14,4 @@ lot:
   - retractBid:
   - detail:
   - winnerCode:
+  - asOf:

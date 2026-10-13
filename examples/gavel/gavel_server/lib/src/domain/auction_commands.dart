@@ -12,6 +12,7 @@ class CreateAuction extends Command {
     required this.closeAt,
     required this.code,
     required this.organizerKeyHash,
+    this.isDemo = false,
     super.timestamp,
   });
 
@@ -29,6 +30,9 @@ class CreateAuction extends Command {
 
   /// The SHA-256 of the organizer key.
   final String organizerKeyHash;
+
+  /// Whether this is the rolling public demo (X2).
+  final bool isDemo;
 }
 
 /// Closes an auction whose close time has passed (UC-08). Its [timestamp]
@@ -74,6 +78,7 @@ class AuctionHandler<C extends Command>
             code: command.code,
             organizerKeyHash: command.organizerKeyHash,
             now: command.timestamp,
+            isDemo: command.isDemo,
           ),
         );
       case CloseAuction(:final auctionId):

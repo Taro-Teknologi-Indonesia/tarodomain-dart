@@ -24,6 +24,7 @@ class AuctionTableProjection extends Projection {
           closeAt: e.closeAt,
           status: AuctionStatus.open.code,
           lotCount: 0,
+          isDemo: e.isDemo,
         ),
         transaction: _transaction,
       );

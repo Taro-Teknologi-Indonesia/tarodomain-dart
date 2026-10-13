@@ -19,6 +19,10 @@ fields:
 
   ### How many lots the auction has.
   lotCount: int
+
+  ### Whether this is the rolling public demo (X2), which the server opens
+  ### itself.
+  isDemo: bool, default=false
 indexes:
   gavel_auctions_code_idx:
     fields: code

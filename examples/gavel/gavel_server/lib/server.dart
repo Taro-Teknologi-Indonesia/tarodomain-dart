@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
     hide Endpoints, Protocol;
 
+import 'src/demo/demo_auctions.dart';
 import 'src/gavel.dart';
 import 'src/generated/serverpod.dart';
 import 'src/infra/timer_jobs.dart';
@@ -44,21 +45,41 @@ Future<void> run(List<String> args) async {
   } else {
     startTimerJobs(pod);
   }
+  await _openDemo(pod);
 }
 
-/// Schedules the recurring jobs, TaroDomain's and the auction-close sweep,
-/// replacing any scheduled by an earlier start.
+/// Opens the public demo auction at start-up, so `/demo` works before the
+/// demo job's first run. A failure is logged, not fatal: the job retries.
+Future<void> _openDemo(Serverpod pod) async {
+  final session = await pod.createSession(enableLogging: false);
+  try {
+    await ensureDemoOpen(session);
+  } catch (e, stackTrace) {
+    stderr.writeln('Opening the demo auction failed: $e\n$stackTrace');
+  } finally {
+    await session.close();
+  }
+}
+
+/// Schedules the recurring jobs, TaroDomain's, the auction-close sweep and
+/// the demo auction's, replacing any scheduled by an earlier start.
 Future<void> scheduleJobs(Serverpod pod) async {
   final calls = pod.futureCalls;
   for (final job in ['catch-up', 'saga-timeouts', 'cleanup']) {
     await calls.cancel('tarodomain-$job');
   }
   await calls.cancel('gavel-auction-close-sweep');
+  await calls.cancel('gavel-demo');
   await calls
       .callRecurring(identifier: 'gavel-auction-close-sweep')
       .every(const Duration(seconds: 5))
       .auctionCloseCalls
       .sweep();
+  await calls
+      .callRecurring(identifier: 'gavel-demo')
+      .every(const Duration(seconds: 60))
+      .demoCalls
+      .ensureOpen();
   await calls
       .callRecurring(identifier: 'tarodomain-catch-up')
       .every(const Duration(seconds: 5))

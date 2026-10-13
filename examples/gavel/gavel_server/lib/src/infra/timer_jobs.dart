@@ -4,13 +4,15 @@ import 'dart:io';
 import 'package:serverpod/serverpod.dart';
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart';
 
+import '../demo/demo_auctions.dart';
 import '../future_calls/auction_close_calls.dart';
 
 /// Runs the scheduled jobs from in-process timers, for a server whose plan
 /// disables future calls (Serverpod Cloud's).
 ///
 /// Every few seconds: TaroDomain's catch-up and saga timeouts, and the close
-/// of auctions past their deadline. Once a day: TaroDomain's cleanup. Each
+/// of auctions past their deadline. Every minute: the public demo auction's
+/// renewal. Once a day: TaroDomain's cleanup. Each
 /// server runs its own timers; the jobs are idempotent, so several servers
 /// running them is safe.
 void startTimerJobs(Serverpod pod) {
@@ -23,6 +25,7 @@ void startTimerJobs(Serverpod pod) {
     taro.runSagaTimeouts,
   );
   _every(pod, const Duration(seconds: 5), 'auction-close', closeDueAuctions);
+  _every(pod, const Duration(seconds: 60), 'demo', ensureDemoOpen);
   _every(pod, const Duration(days: 1), 'cleanup', taro.cleanup);
 }
 

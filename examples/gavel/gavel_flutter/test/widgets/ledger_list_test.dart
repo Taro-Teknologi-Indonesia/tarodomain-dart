@@ -7,22 +7,27 @@ import '../support.dart';
 
 final _closeAt = DateTime.utc(2026, 10, 14, 22, 3);
 
-Widget _app(List<LedgerEntry> entries, {LotCard? lot, UuidValue? me}) =>
-    MaterialApp(
-      home: Scaffold(
-        body: SingleChildScrollView(
-          child: SizedBox(
-            width: 360,
-            child: LedgerList(
-              lot: lot ?? lotCard(),
-              entries: entries,
-              closeAt: _closeAt,
-              me: me,
-            ),
-          ),
+Widget _app(
+  List<LedgerEntry> entries, {
+  LotCard? lot,
+  UuidValue? me,
+  LotAsOf? asOf,
+}) => MaterialApp(
+  home: Scaffold(
+    body: SingleChildScrollView(
+      child: SizedBox(
+        width: 360,
+        child: LedgerList(
+          lot: lot ?? lotCard(),
+          entries: entries,
+          closeAt: _closeAt,
+          me: me,
+          asOf: asOf,
         ),
       ),
-    );
+    ),
+  ),
+);
 
 /// The rows' first lines, top to bottom.
 List<String> _rows(WidgetTester tester) => [
@@ -157,5 +162,78 @@ void main() {
     expect(find.byType(LedgerRow), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 300));
     expect(_decoration(tester, '#1 · Budi'), TextDecoration.lineThrough);
+  });
+
+  group('as of a past moment', () {
+    // #3 placed 22:01:03, retracted 22:01:08.
+    final entries = [
+      ledgerEntry(1),
+      ledgerEntry(2, by: siti, name: 'Siti'),
+      ledgerEntry(3, retracted: true),
+    ];
+    LotAsOf asOf(DateTime at, {String status = 'OPEN'}) => LotAsOf(
+      at: at,
+      price: 175000,
+      status: status,
+      bidCount: 1,
+      retractedCount: 0,
+      lastSequence: 1,
+      version: 2,
+    );
+    double opacity(WidgetTester tester, int sequence) => tester
+        .widget<AnimatedOpacity>(
+          find.ancestor(
+            of: find.textContaining('#$sequence ·'),
+            matching: find.byType(AnimatedOpacity),
+          ),
+        )
+        .opacity;
+
+    testWidgets('dims the bids placed after it', (tester) async {
+      await tester.pumpWidget(
+        _app(entries, asOf: asOf(DateTime.utc(2026, 10, 14, 22, 1, 1))),
+      );
+
+      expect(opacity(tester, 1), 1);
+      expect(opacity(tester, 2), 0.3);
+      expect(opacity(tester, 3), 0.3);
+    });
+
+    testWidgets('a bid retracted after it stands un-struck', (tester) async {
+      await tester.pumpWidget(
+        _app(entries, asOf: asOf(DateTime.utc(2026, 10, 14, 22, 1, 5))),
+      );
+      await tester.pumpAndSettle();
+
+      expect(opacity(tester, 3), 1);
+      expect(_decoration(tester, '#3 ·'), TextDecoration.none);
+      expect(find.textContaining('retracted'), findsNothing);
+
+      await tester.pumpWidget(
+        _app(entries, asOf: asOf(DateTime.utc(2026, 10, 14, 22, 1, 8))),
+      );
+      await tester.pumpAndSettle();
+      expect(_decoration(tester, '#3 ·'), TextDecoration.lineThrough);
+    });
+
+    testWidgets('a closed lot has no closing line before it closed', (
+      tester,
+    ) async {
+      final sold = lotCard(
+        status: 'SOLD',
+        leaderId: siti,
+        winnerName: 'Siti',
+        closedAt: _closeAt,
+      );
+      await tester.pumpWidget(
+        _app(
+          entries,
+          lot: sold,
+          asOf: asOf(DateTime.utc(2026, 10, 14, 22, 1, 5)),
+        ),
+      );
+
+      expect(find.textContaining('🔨 Closed'), findsNothing);
+    });
   });
 }

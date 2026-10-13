@@ -58,10 +58,21 @@ class _HomePageState extends State<HomePage> {
                           'Set a close time, add lots, and share one link.',
                         ),
                         const SizedBox(height: 16),
-                        FilledButton.icon(
-                          onPressed: () => context.go('/new'),
-                          icon: const Icon(Icons.gavel),
-                          label: const Text('Create an auction'),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: () => context.go('/new'),
+                              icon: const Icon(Icons.gavel),
+                              label: const Text('Create an auction'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => context.go('/demo'),
+                              icon: const Icon(Icons.play_arrow),
+                              label: const Text('Try the live demo'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
