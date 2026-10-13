@@ -1,0 +1,28 @@
+# Local development: one server on port 8080, with a SQLite database file.
+
+apiServer:
+  port: 8080
+  publicHost: localhost
+  publicPort: 8080
+  publicScheme: http
+
+insightsServer:
+  port: 8081
+  publicHost: localhost
+  publicPort: 8081
+  publicScheme: http
+
+database:
+  dialect: sqlite
+  filePath: db/development.db
+
+maxRequestSize: 524288
+
+sessionLogs:
+  # SQLite allows no concurrent writes, so logs go to the console only.
+  persistentEnabled: false
+  consoleEnabled: true
+  consoleLogFormat: text
+
+futureCall:
+  scanInterval: 1000

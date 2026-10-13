@@ -1,0 +1,25 @@
+### A processed command, for command idempotency (spec §27.1
+### `processed_commands`).
+class: TaroProcessedCommandRow
+serverOnly: true
+table: tarodomain_processed_commands
+fields:
+  ### The command's ID.
+  commandId: UuidValue
+
+  ### The command type name.
+  commandType: String
+
+  ### The handler that processed it.
+  handlerName: String
+
+  ### When it was recorded, in UTC.
+  processedAt: DateTime
+indexes:
+  tarodomain_processed_commands_command_id_idx:
+    fields: commandId
+    unique: true
+  tarodomain_processed_commands_handler_idx:
+    fields: handlerName, processedAt
+  tarodomain_processed_commands_processed_at_idx:
+    fields: processedAt

@@ -1,0 +1,8 @@
+bank:
+  - openAccount:
+  - deposit:
+  - withdraw:
+  - transfer:
+  - balance:
+  - registerHolder:
+  - changeHolderEmail:

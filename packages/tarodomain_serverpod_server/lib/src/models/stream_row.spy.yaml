@@ -1,0 +1,20 @@
+### Metadata of one event stream (spec §27.1 `streams`).
+class: TaroStreamRow
+serverOnly: true
+table: tarodomain_streams
+fields:
+  ### The stream ID, such as `BankAccount-01909e3c-…`.
+  streamId: String
+
+  ### The version of the stream's last event.
+  version: int
+
+  ### When the first event was appended, in UTC.
+  createdAt: DateTime
+
+  ### When the last event was appended, in UTC.
+  updatedAt: DateTime
+indexes:
+  tarodomain_streams_stream_id_idx:
+    fields: streamId
+    unique: true

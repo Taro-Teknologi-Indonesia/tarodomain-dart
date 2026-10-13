@@ -1,0 +1,16 @@
+### A named counter. `EventSequencer` takes event positions from the
+### `event-position` counter, so a position is never handed out twice, even
+### after the event that had it is deleted.
+class: TaroCounterRow
+serverOnly: true
+table: tarodomain_counters
+fields:
+  ### The counter name.
+  name: String
+
+  ### The last value handed out.
+  value: int
+indexes:
+  tarodomain_counters_name_idx:
+    fields: name
+    unique: true

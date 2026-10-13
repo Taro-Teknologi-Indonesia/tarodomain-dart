@@ -11,6 +11,8 @@ workspace:
   - packages/tarodomain_serverpod_server
   - packages/tarodomain_serverpod_client
   - examples/bank_account
+  - examples/bank_account_serverpod/bank_account_serverpod_server
+  - examples/bank_account_serverpod/bank_account_serverpod_client
 
 dev_dependencies:
   lints: ^6.1.0

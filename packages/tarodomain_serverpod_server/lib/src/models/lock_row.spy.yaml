@@ -1,0 +1,18 @@
+### A lease that lets one server at a time run a scheduled job, such as
+### catch-up.
+class: TaroLockRow
+serverOnly: true
+table: tarodomain_locks
+fields:
+  ### The job name.
+  name: String
+
+  ### Who holds the lease.
+  owner: String
+
+  ### When the lease expires, in UTC.
+  lockedUntil: DateTime
+indexes:
+  tarodomain_locks_name_idx:
+    fields: name
+    unique: true

@@ -1,0 +1,17 @@
+### The current state of an `AccountHolder`, stored by
+### `AccountHolderRepository` instead of its events.
+class: AccountHolderRow
+serverOnly: true
+table: bank_account_holders
+fields:
+  ### The holder ID.
+  id: UuidValue?, defaultPersist=random_v7
+
+  ### The holder's name.
+  name: String
+
+  ### The holder's email address.
+  email: String
+
+  ### The aggregate version, for optimistic concurrency.
+  version: int

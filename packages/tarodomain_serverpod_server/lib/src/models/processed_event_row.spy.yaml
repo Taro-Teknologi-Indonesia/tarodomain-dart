@@ -1,0 +1,23 @@
+### An event a projection or saga has handled (spec §27.1
+### `processed_events`).
+class: TaroProcessedEventRow
+serverOnly: true
+table: tarodomain_processed_events
+fields:
+  ### The projection name or saga type.
+  handlerName: String
+
+  ### The projection or shard name, or the saga ID.
+  handlerInstance: String
+
+  ### The handled event.
+  eventId: UuidValue
+
+  ### When the event was recorded, in UTC.
+  processedAt: DateTime
+indexes:
+  tarodomain_processed_events_key_idx:
+    fields: handlerName, handlerInstance, eventId
+    unique: true
+  tarodomain_processed_events_processed_at_idx:
+    fields: processedAt

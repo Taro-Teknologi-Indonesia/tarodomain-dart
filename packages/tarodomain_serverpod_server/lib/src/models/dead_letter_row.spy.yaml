@@ -1,0 +1,32 @@
+### An event a handler gave up on (spec §27.1 `dead_letters`).
+class: TaroDeadLetterRow
+serverOnly: true
+table: tarodomain_dead_letters
+fields:
+  ### The handler that failed.
+  handlerName: String
+
+  ### The failed event's ID.
+  eventId: UuidValue
+
+  ### The serialized event as JSON.
+  event: String
+
+  ### The last error's message.
+  errorMessage: String
+
+  ### The last error's code, if it was a framework error.
+  errorCode: String?
+
+  ### How many times the handler was tried.
+  attempts: int
+
+  ### When the entry was written, in UTC.
+  createdAt: DateTime
+indexes:
+  tarodomain_dead_letters_handler_idx:
+    fields: handlerName, createdAt
+  tarodomain_dead_letters_event_idx:
+    fields: eventId, handlerName
+  tarodomain_dead_letters_created_at_idx:
+    fields: createdAt

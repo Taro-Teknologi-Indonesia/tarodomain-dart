@@ -1,0 +1,22 @@
+### A TaroDomain `FrameworkError` sent to a client (spec §22). Endpoints
+### convert framework errors to this, so Flutter clients get typed errors.
+exception: TaroDomainException
+fields:
+  ### The error code, such as `INSUFFICIENT_FUNDS`.
+  code: String
+
+  ### The error category: `domain`, `concurrency`, `infrastructure` or
+  ### `configuration`.
+  category: String
+
+  ### Whether retrying the same request may succeed.
+  retryable: bool
+
+  ### The HTTP status the spec assigns to the error.
+  httpStatus: int
+
+  ### The error message.
+  message: String
+
+  ### The error's context as JSON.
+  context: String?

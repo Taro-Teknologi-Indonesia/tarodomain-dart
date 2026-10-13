@@ -1,0 +1,41 @@
+### The state of one saga instance (spec §27.1 `sagas`).
+class: TaroSagaRow
+serverOnly: true
+table: tarodomain_sagas
+fields:
+  ### The saga type name.
+  sagaType: String
+
+  ### The saga instance ID.
+  sagaId: UuidValue
+
+  ### The correlation ID shared by the saga's events and commands.
+  correlationId: UuidValue
+
+  ### The saga's state as JSON.
+  state: String
+
+  ### The stored status: `RUNNING`, `COMPENSATING`, `COMPLETED` or
+  ### `FAILED`.
+  status: String
+
+  ### The name of the current step, if the saga tracks one.
+  currentStep: String?
+
+  ### Why the saga failed.
+  failureReason: String?
+
+  ### When the saga was first saved, in UTC.
+  startedAt: DateTime
+
+  ### When the saga was last saved, in UTC.
+  updatedAt: DateTime
+
+  ### When the saga reached a terminal status, in UTC.
+  completedAt: DateTime?
+indexes:
+  tarodomain_sagas_type_id_idx:
+    fields: sagaType, sagaId
+    unique: true
+  tarodomain_sagas_status_updated_idx:
+    fields: status, updatedAt

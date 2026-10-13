@@ -1,0 +1,19 @@
+name: bank_account_serverpod_server
+description: The bank account example served by Serverpod, on SQLite.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  bank_account: any
+  serverpod: 4.0.4
+  tarodomain: ^0.0.1
+  tarodomain_serverpod_server: ^0.0.1
+
+dev_dependencies:
+  lints: ^6.1.0
+  serverpod_test: 4.0.4
+  tarodomain_testing: ^0.0.1
+  test: ^1.33.0

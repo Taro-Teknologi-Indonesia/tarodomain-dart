@@ -12,6 +12,9 @@ void unitOfWorkContract(ContractFactory<Provider> create) {
     late EventStoreAdapter eventStore;
     late SagaStoreAdapter sagaStore;
     late ProcessedEventStore processedEvents;
+    late SnapshotStoreAdapter snapshots;
+    late CommandIdempotencyStore processedCommands;
+    late DeadLetterStore deadLetters;
     late TestEvents events;
 
     setUp(() async {
@@ -24,6 +27,9 @@ void unitOfWorkContract(ContractFactory<Provider> create) {
       eventStore = provider.createEventStoreAdapter();
       sagaStore = provider.createSagaStoreAdapter();
       processedEvents = provider.createProcessedEventStore();
+      snapshots = provider.createSnapshotStoreAdapter();
+      processedCommands = provider.createCommandIdempotencyStore();
+      deadLetters = provider.createDeadLetterStore();
       events = TestEvents();
     });
 
@@ -82,18 +88,44 @@ void unitOfWorkContract(ContractFactory<Provider> create) {
 
     test('rolls back every adapter\'s writes and rethrows', () async {
       final existing = events.streamId();
-      await eventStore.appendToStream(existing, events.events(1), 0);
+      final [existingEvent] = events.events(1);
+      await eventStore.appendToStream(existing, [existingEvent], 0);
+      await eventStore.subscribe('Balances');
       final streamId = events.streamId();
       final sagaId = events.nextId();
       final eventId = events.nextId();
+      final aggregateId = events.nextId();
+      final commandId = events.nextId();
       final error = StateError('projection failed');
 
       await expectLater(
         unitOfWork.execute(() async {
           await eventStore.appendToStream(streamId, events.events(2), 0);
           await eventStore.appendToStream(existing, events.events(1), 1);
+          await eventStore.ackSubscription('Balances', existingEvent.eventId);
           await sagaStore.save(saga(sagaId));
           await processedEvents.markProcessed('Balances', 'Balances', eventId);
+          await snapshots.save(
+            SnapshotInput(
+              sourceUuid: aggregateId,
+              sourceType: 'BankAccount',
+              sourceVersion: 1,
+              data: const {'balance': 1},
+            ),
+          );
+          await processedCommands.markProcessed(
+            commandId,
+            'Deposit',
+            'DepositHandler',
+          );
+          await deadLetters.write(
+            DeadLetterInput(
+              handlerName: 'Balances',
+              event: existingEvent,
+              errorMessage: 'boom',
+              attempts: 1,
+            ),
+          );
           throw error;
         }),
         throwsA(same(error)),
@@ -102,11 +134,15 @@ void unitOfWorkContract(ContractFactory<Provider> create) {
       expect(await eventStore.streamExists(streamId), isFalse);
       expect(await eventStore.getStreamVersion(existing), 1);
       expect(await eventStore.loadAll(), hasLength(1));
+      expect((await eventStore.getSubscription('Balances'))!.lastSeen, isNull);
       expect(await sagaStore.load('TransferMoney', sagaId), isNull);
       expect(
         await processedEvents.exists('Balances', 'Balances', eventId),
         isFalse,
       );
+      expect(await snapshots.count(aggregateId, 'BankAccount'), 0);
+      expect(await processedCommands.exists(commandId), isFalse);
+      expect(await deadLetters.count(), 0);
       // The rolled-back append left no trace of its version.
       final result = await eventStore.appendToStream(
         streamId,

@@ -1,0 +1,19 @@
+### One account's balance: the read model of `BalanceTableProjection`.
+class: AccountBalance
+table: bank_account_balances
+fields:
+  ### The account.
+  accountId: UuidValue
+
+  ### The account holder.
+  owner: String
+
+  ### The balance, in cents.
+  balanceCents: int
+
+  ### How many withdrawals were rejected.
+  rejectedWithdrawals: int
+indexes:
+  bank_account_balances_account_id_idx:
+    fields: accountId
+    unique: true

@@ -12,6 +12,8 @@ Working loop, run from `tarodomain_serverpod_server`:
 - `dart analyze` and `dart format`.
 - `dart test` to run the tests. They use `withServerpod` from the generated test tools together with `config/test.yaml`. No Docker is needed: `config/test.yaml` sets `database.dataPath`, so Serverpod starts and manages the test database (an embedded PostgreSQL) itself.
 
+All ORM access goes through `TaroDb` (`lib/src/db/taro_db.dart`), which passes the active unit of work's transaction on every call; Serverpod's ORM doesn't pick it up by itself. Never call `session.db` or a generated `Row.db` directly elsewhere in `lib/src/`: `test/taro_db_scan_test.dart` fails if you do.
+
 Prefix table names with `tarodomain_` (for example `tarodomain_events`) so they cannot collide with the tables of the projects that use this module.
 
 NEVER edit generated code. `tarodomain_serverpod_server/lib/src/generated/` and the whole `tarodomain_serverpod_client` package are rewritten by the code generator. Change the models, the endpoints or `lib/tarodomain_serverpod_server.dart` instead.

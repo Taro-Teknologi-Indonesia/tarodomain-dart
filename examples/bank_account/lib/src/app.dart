@@ -17,16 +17,28 @@ const accountBalances = Token<AccountBalances>('accountBalances');
 FrameworkDefinition bankDefinition({
   LocalDatabase? database,
   ConsistencyMode consistency = ConsistencyMode.eventual,
-}) {
+}) => registerBank(TaroDomain.builder().useLocal(database: database))
+    .consistency(consistency)
+    .snapshotEvery(100)
+    .bindSingleton(accountBalances, (_) => AccountBalances())
+    .projection(
+      (c) => BalanceProjection(
+        c.resolve(accountBalances),
+        processedEvents: c.processedEvents,
+      ),
+    )
+    .build();
+
+/// Registers the bank's aggregates, commands and saga on [builder], with no
+/// provider or read model, so other hosts (such as the Serverpod example)
+/// reuse the domain unchanged.
+TaroDomainBuilder registerBank(TaroDomainBuilder builder) {
   AccountHandler<C> account<C extends Command>(CommandContext c) =>
       AccountHandler<C>(c.repository());
   TransferHandler<C> transfer<C extends Command>(CommandContext c) =>
       TransferHandler<C>(c.repository());
 
-  return TaroDomain.builder()
-      .useLocal(database: database)
-      .consistency(consistency)
-      .snapshotEvery(100)
+  return builder
       .aggregate<BankAccount, AccountId>(
         'BankAccount',
         (a) => a
@@ -63,13 +75,5 @@ FrameworkDefinition bankDefinition({
       .command<TransferMoney>('TransferMoney', transfer)
       .command<CompleteTransfer>('CompleteTransfer', transfer)
       .command<FailTransfer>('FailTransfer', transfer)
-      .bindSingleton(accountBalances, (_) => AccountBalances())
-      .projection(
-        (c) => BalanceProjection(
-          c.resolve(accountBalances),
-          processedEvents: c.processedEvents,
-        ),
-      )
-      .saga(TransferSaga.new, timeout: const Duration(minutes: 5))
-      .build();
+      .saga(TransferSaga.new, timeout: const Duration(minutes: 5));
 }

@@ -1,0 +1,24 @@
+### A persistent catch-up cursor (spec §27.1 `subscriptions`).
+class: TaroSubscriptionRow
+serverOnly: true
+table: tarodomain_subscriptions
+fields:
+  ### The subscription name.
+  name: String
+
+  ### The stream followed, or null for every stream.
+  streamId: String?
+
+  ### The ID of the last processed event, or null before the first ack.
+  lastSeen: UuidValue?
+
+  ### The position of [lastSeen], so the cursor survives the deletion of
+  ### that event. It only moves forward.
+  lastPosition: int?
+
+  ### When the subscription was created, in UTC.
+  createdAt: DateTime
+indexes:
+  tarodomain_subscriptions_name_idx:
+    fields: name
+    unique: true

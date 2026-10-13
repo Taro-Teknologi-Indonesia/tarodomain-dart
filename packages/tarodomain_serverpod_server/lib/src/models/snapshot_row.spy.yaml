@@ -1,0 +1,26 @@
+### An aggregate snapshot (spec §27.1 `snapshots`).
+class: TaroSnapshotRow
+serverOnly: true
+table: tarodomain_snapshots
+fields:
+  ### The aggregate's ID.
+  sourceUuid: UuidValue
+
+  ### The aggregate type.
+  sourceType: String
+
+  ### The aggregate version the snapshot represents.
+  sourceVersion: int
+
+  ### The aggregate's state as JSON.
+  data: String
+
+  ### Free-form metadata as JSON.
+  metadata: String
+
+  ### When the snapshot was stored, in UTC.
+  createdAt: DateTime
+indexes:
+  tarodomain_snapshots_source_version_idx:
+    fields: sourceUuid, sourceVersion
+    unique: true

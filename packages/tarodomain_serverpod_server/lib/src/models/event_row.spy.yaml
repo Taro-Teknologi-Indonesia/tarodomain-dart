@@ -1,0 +1,45 @@
+### One stored event (spec §27.1 `events` and `stream_events`).
+class: TaroEventRow
+serverOnly: true
+table: tarodomain_events
+fields:
+  ### The event ID (UUIDv7).
+  eventId: UuidValue
+
+  ### The stream the event was appended to.
+  streamId: String
+
+  ### The stream's category: the part of [streamId] before the first `-`.
+  category: String
+
+  ### The event's version within its stream, counting from 1.
+  version: int
+
+  ### The event type name.
+  eventType: String
+
+  ### The trace the event belongs to.
+  correlationId: UuidValue
+
+  ### The serialized event (type, schema version, envelope and data) as
+  ### JSON.
+  payload: String
+
+  ### The event's global position, which orders cursor reads. Null until
+  ### `EventSequencer` assigns it, after the event has committed. The
+  ### auto-increment `id` is insert order, used only to break ties.
+  position: int?
+indexes:
+  tarodomain_events_event_id_idx:
+    fields: eventId
+    unique: true
+  tarodomain_events_stream_version_idx:
+    fields: streamId, version
+    unique: true
+  tarodomain_events_position_idx:
+    fields: position
+    unique: true
+  tarodomain_events_category_idx:
+    fields: category, position
+  tarodomain_events_correlation_id_idx:
+    fields: correlationId

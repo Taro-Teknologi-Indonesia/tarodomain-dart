@@ -12,6 +12,8 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'taro_domain_exception.dart' as _iubzmcf6;
+export 'taro_domain_exception.dart';
 export 'client.dart';
 
 class Protocol extends _isc.SerializationManager {
@@ -56,11 +58,21 @@ class Protocol extends _isc.SerializationManager {
       }
     }
 
+    if (t == _iubzmcf6.TaroDomainException) {
+      return _iubzmcf6.TaroDomainException.fromJson(data) as T;
+    }
+    if (t == _isc.getType<_iubzmcf6.TaroDomainException?>()) {
+      return (data != null
+              ? _iubzmcf6.TaroDomainException.fromJson(data)
+              : null)
+          as T;
+    }
     return super.deserialize<T>(data, t);
   }
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
+      _iubzmcf6.TaroDomainException => 'TaroDomainException',
       _ => null,
     };
   }
@@ -77,6 +89,10 @@ class Protocol extends _isc.SerializationManager {
       );
     }
 
+    switch (data) {
+      case _iubzmcf6.TaroDomainException():
+        return 'TaroDomainException';
+    }
     return null;
   }
 
@@ -85,6 +101,9 @@ class Protocol extends _isc.SerializationManager {
     var dataClassName = data['className'];
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
+    }
+    if (dataClassName == 'TaroDomainException') {
+      return deserialize<_iubzmcf6.TaroDomainException>(data['data']);
     }
     return super.deserializeByClassName(data);
   }

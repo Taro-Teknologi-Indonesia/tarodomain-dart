@@ -1,6 +1,6 @@
 # Implementation plan: TaroDomain core and Serverpod adaptation
 
-Status: draft, updated 2026-10-13. Targets the [TaroDomain spec v1.0](../spec/README.md) at commit `983d2cb` (the `spec/` submodule), Dart 3.12 and Serverpod 4.0.x.
+Status: Phases 0–8 done, updated 2026-10-13. Targets the [TaroDomain spec v1.0](../spec/README.md) at commit `983d2cb` (the `spec/` submodule), Dart 3.12 and Serverpod 4.0.x.
 
 ## Goal
 
@@ -52,7 +52,7 @@ The spec was written with JavaScript in mind. These are the places where the Dar
 | Saga `handle` returns a `Promise` of commands (§13.1) | Saga handlers are synchronous: `List<Command> Function(E)`, and the commands they create get UUIDv7 IDs derived from the event's timestamp and a hash of the saga type, event ID and position. | Keeps sagas pure decision logic, so a rebuild that replays them has no side effects, and an event handled twice dispatches the same command IDs, which command idempotency then skips. |
 | `CompensationStack` of closures, "not persisted, rebuilt on replay" (§13.5, §17) | Compensations are defined by name in the constructor (`defineCompensation('refund', () => [...])`) and a step pushes the name (`registerCompensation('refund')`). The stack of names is saved with the saga's state. Factories still run at compensation time. | `SagaEventHandler` loads the saga from the saga store for every event, never by replay, so a stack of closures registered for an earlier event would be empty when a later event triggers compensation. |
 | `SagaEventHandler` dispatches before saving (§13.3) | Same, plus a per-saga mailbox: an event for a saga that is still being handled in the same zone waits until that saga is saved, then is handled in the same call. | With a bus that delivers in the caller's zone (strong consistency, and the local provider's eventual bus), a command the saga dispatches publishes the next event before the saga is saved. Without the mailbox the saga would load stale state, or none at all, and skip it. |
-| Subscription `lastSeen` only moves forward (§18.2) | `SubscriptionManager.advance` skips a move to the event the cursor is already on, and otherwise trusts the caller. `CronDispatcher` acks in read order. | The cursor holds only an event ID, and event IDs don't order events within a millisecond or across servers (see Risks), so the manager can't tell forward from backward without a position. |
+| Subscription `lastSeen` only moves forward (§18.2) | `SubscriptionManager.advance` skips a move to the event the cursor is already on, and otherwise trusts the caller. `CronDispatcher` acks in read order. | The cursor holds only an event ID, and event IDs don't order events within a millisecond or across servers (see Risks), so the manager can't tell forward from backward without a position. The Serverpod adapter has positions, so it also refuses to move a cursor back. |
 | A timeout handler that throws marks the saga `FAILED` (§19.1) | Only a non-retryable error does. A retryable one (a conflict, an outage) leaves the saga for the next run. The `SagaTimeout` event's ID and timestamp are derived from the saga's type, ID and `updatedAt`, so the retry dispatches the same command IDs. | Failing a saga for good over a transient error is out of step with the rest of the error hierarchy. |
 | `loadTimedOut(threshold, { maxCount })` (§19.1) | `loadTimedOut(before, {sagaType, limit})` | One scheduler per saga type (§19.3) needs to filter by type in the store; filtering afterwards lets other types fill the limit. |
 | Events carry `correlationId` and `causationId` (§28.1) | Plus an optional `commandCausationId`: for an event raised by a command, that command's own `causationId`. `ExecutionContext.forCommand` sets it, and the envelope JSON omits it when null. | Commands aren't stored, so without it `CorrelationTrace` can't link a command to the event that caused it, and a saga's trace falls apart into unconnected pieces. |
@@ -130,13 +130,13 @@ Each phase ends with `melos run analyze` and `melos run test` passing.
 - ~~**Split between definition and runtime.**~~ Done. `build()` returns an immutable `FrameworkDefinition`; `createRuntime({provider})` returns a `TaroDomain` runtime bound to the provider: adapters, buses, pipelines, projections, saga handlers, a `CronDispatcher` and the timeout schedulers, plus a container scope with `TaroTokens.framework` and `TaroTokens.provider` bound. Every runtime on one `LocalProvider` shares its storage. The entry points are `dispatch`, `handleEvents` (queue consumer) and `runScheduled` (catch-up, then saga timeouts). A provider without a unit of work can't create a runtime if any command needs strong consistency.
 - **Exit:** ~~`examples/bank_account` runs the full spec scenario on the local provider: open, deposit, transfer saga, projection query and correlation trace.~~ Done: `dart run bin/main.dart` runs it, and `test/` checks it in both consistency modes, including a failed transfer, a projection rebuild and the saga's timeout refund. Core tests: `test/di/` and `test/framework/`, 67 tests.
 
-### Phase 8: Serverpod module
-The module is already scaffolded (2026-10-11): `packages/tarodomain_serverpod_server` and `packages/tarodomain_serverpod_client`, generated with `serverpod create --template module`, the template samples removed, both packages in the workspace, and an integration smoke test passing against the embedded PostgreSQL.
+### Phase 8: Serverpod module (done 2026-10-13)
+The module was scaffolded on 2026-10-11 (`serverpod create --template module`, template samples removed, both packages in the workspace).
 
 **Repositories.** `EventSourcedRepository` and `StateRepository` are defined in core (Phase 2); the module adds the Serverpod side for both persistence modes (§15.4):
 
-- **Event-sourced:** an aggregate configured with `.factory(…)` uses core's `EventSourcedRepository` with the module's `ServerpodEventStoreAdapter`. Saving appends the aggregate's events to the module's `tarodomain_events` tables through the ORM.
-- **State:** an aggregate configured with `.stateRepository(…)` gets a `ServerpodStateRepository<A, TId, R extends TableRow>`. The app's own Serverpod model `R` (for example an `Expense` table in the expense app) stores the current state. The subclass provides only `toRow(aggregate)` and `fromRow(row)`; the base class implements `load`, `exists` and `saveState` with Serverpod's `find`/`insertRow`/`updateWhere`. It checks optimistic concurrency with a `version` column, and it publishes the aggregate's events after the row is written so projections and sagas still run.
+- **Event-sourced:** an aggregate configured with `.factory(…)` uses core's `EventSourcedRepository` with the module's `ServerpodEventStoreAdapter`. Saving appends the aggregate's events to `tarodomain_events` through the ORM.
+- **State:** an aggregate configured with `.stateRepository(…)` gets a `ServerpodStateRepository<A, TId, R extends TableRow<UuidValue?>>`. The app's own Serverpod model `R` (for example an `Expense` table in the expense app) stores the current state; it needs a `UuidValue` ID and an `int` column named `version`. The subclass provides only `toRow(aggregate)` and `fromRow(row)`. The base class finds `R`'s table through Serverpod's serialization manager, the `version` column by name, and the aggregate type from the definition, and implements `load`, `exists` and `saveState`. Saving checks the version with `updateWhere`, writes the row, and **also appends the aggregate's events to its stream**, in one transaction, before publishing them. On Serverpod the eventual bus only schedules catch-up, which reads the event store, so without the append a state-based aggregate's events would never reach projections or sagas under eventual consistency (and would be missing from traces). The stream's version therefore follows the row's.
 
 In both modes the repository joins the current unit of work, so the aggregate write, projections and saga state commit or roll back together under strong consistency.
 
@@ -155,27 +155,34 @@ class ExpenseRepository
 }
 ```
 
-**Tables.** Module models (`.spy.yaml`) for the spec's §27 tables, prefixed `tarodomain_`. ID columns use Serverpod's `UuidValue` type, so the core's IDs are stored as they are. Serverpod migrations replace the spec's `schema_migrations` table. Each table gets the spec's key and indexes. `events` additionally keeps Serverpod's auto-increment `id` as a **global position** (see risks).
+**Tables.** Module models (`.spy.yaml`, `serverOnly`) for the spec's §27 tables, prefixed `tarodomain_`: `events`, `streams`, `subscriptions`, `snapshots`, `sagas`, `processed_events`, `processed_commands`, `dead_letters`, plus `counters` (the sequencer's position counter) and `locks` (job leases). ID columns use `UuidValue`. Serverpod migrations replace `schema_migrations`. The spec's `stream_events` is folded into `events`, which carries `streamId` and `version` with a unique index on the pair. An event row stores the whole serialized event as JSON in `payload`, plus the columns queries need. `events.position` is nullable with a unique index: the **global position**, assigned only after commit (see Risks). Serverpod's auto-increment `id` is insert order, used only to break ties. `subscriptions` stores `lastPosition` next to `lastSeen`. The only client-visible model is the `TaroDomainException` exception.
 
 **Adapters** (all take the request's `Session`):
 
 | Spec need | Serverpod mechanism |
 |---|---|
-| Append with expected version (§7.3) | Inside a transaction: `updateWhere` on the stream row with `version = expected`. No rows returned means `OptimisticConcurrencyError`. For a new stream, `insert` and treat a unique violation as a conflict. Then insert the events and stream_events rows. |
+| Append with expected version (§7.3) | Inside a transaction: `updateWhere` on the stream row with `version = expected`, or for a new stream `insert(ignoreConflicts: true)`. No rows back means `OptimisticConcurrencyError`. Neither raises a database error, so a PostgreSQL transaction is never left aborted. Then insert the event rows. |
+| Global order for cursor reads (§18) | `EventSequencer` assigns `position` to committed events in its own transaction. `loadAll` and `loadStreamAfterEvent` return only positioned events, ordered by `position`. See Risks. |
 | Idempotent inserts (§14.3) | `insert(…, ignoreConflicts: true)` and `upsert` |
-| UnitOfWork (§11.4) | `session.db.transaction(...)`. The active `Transaction` is kept in a `Zone` value, and every adapter call passes it on, because Serverpod's ORM does not pick up an ambient transaction by itself. |
-| Eventual event bus (§10.3) | `FutureCallEventBus`. The event store already holds the events durably, so publishing just schedules an immediate catch-up future call. A recurring cron future call is the safety net, the same role as the spec's CronDispatcher. No external queue is needed. |
-| Cron / timeouts / TTL cleanup (§18.3, §19, §14.1) | Module future calls: `TaroDomainCatchUpCall` (every few seconds), `TaroDomainSagaTimeoutCall`, `TaroDomainCleanupCall` (7-day / 30-day TTL deletes), registered with `callRecurring().cron(...)`. |
-| HTTP entry point (§26) | Apps keep their own typed endpoints and call `taro.dispatch(session, command)`. A `FrameworkError` is converted to a module-defined serializable `TaroDomainException` (code, category, message, context), so Flutter clients get typed errors. |
-| Live updates to apps | Optional `LiveProjectionNotifier` that posts to `session.messages` channels after a projection commits. Endpoint streams forward these to Flutter clients. |
+| UnitOfWork (§11.4) | `ServerpodUnitOfWork` on `session.db.transaction(...)`. The active `Transaction` is kept in a `Zone` value, per session. Adapters never call the ORM directly; they go through the internal `TaroDb`, which passes that transaction on every call. `ServerpodUnitOfWork.join` lets an endpoint that opened its own transaction run commands in it, and `afterCommit` runs callbacks only once the transaction commits. |
+| Eventual event bus (§10.3) | `FutureCallEventBus`. The event store already holds the events durably, so publishing just calls the app's `CatchUpScheduler`, which schedules an immediate catch-up future call. The recurring catch-up is the safety net. No external queue is needed. |
+| Cron / timeouts / TTL cleanup (§18.3, §19, §14.1) | `TaroDomainFutureCall`, an abstract future call with `catchUp` (runs the sequencer, then catch-up), `sagaTimeouts` and `cleanup` (7-day processed commands and events, 30-day dead letters). Serverpod generates future calls only from the app's own code (`serverpod generate` drops future call classes from packages), so the app declares `class TaroDomainCalls extends TaroDomainFutureCall {}` and gets all three. The example schedules catch-up and timeouts with `callRecurring().every(Duration(seconds: 5))` and cleanup with `.cron('0 3 * * *')`. Each job takes a lease in `tarodomain_locks` so one server runs it at a time; that saves duplicate work and isn't needed for correctness. |
+| HTTP entry point (§26) | Apps keep their own typed endpoints and call `TaroDomainServerpod.dispatch(session, command)`, which creates a runtime for the session and converts a `FrameworkError` to the serializable `TaroDomainException` (code, category, retryable, HTTP status, message, context as JSON), so Flutter clients get typed errors. |
+| Live updates to apps | `LiveProjectionNotifier.post(channel, message)` posts to `session.messages` after the unit of work commits, and not at all if it rolls back. |
 
-**Startup validation.** Projections are only validated when the first runtime is created (Phase 7), because they need a provider. With a runtime per request, a broken projection would surface on the first request instead of at startup. The module therefore creates one runtime when the server starts, with a session from `pod.createSession()`, and discards it. An invalid configuration then stops the server from starting.
+**Runtime per request.** `TaroDomainServerpod` holds the `FrameworkDefinition` and the provider settings, and is `install()`ed once so the future calls can find it. `runtime(session)` creates a `ServerpodProvider` and a runtime for the request.
 
-**Testing:** run the Phase 3 contract suites through `serverpod_test`'s `withServerpod`, against both PostgreSQL and SQLite. Add a `ServerpodStateRepository` test that uses a test-only table.
+**Startup validation.** `TaroDomainServerpod.validate(pod)` creates one runtime on a session from `pod.withSession` and discards it. The example calls it right after `pod.start()` and exits with status 1 if it throws, so an invalid configuration stops the server.
 
-**Example:** `examples/bank_account_serverpod` reuses the domain code from `examples/bank_account` unchanged. That shows the core really is platform-agnostic.
+**Timestamps.** SQLite stores `DateTime` as milliseconds and PostgreSQL as microseconds, so `TaroDb.now()` rounds up to the next whole millisecond. Both databases then read back the same value, and never one earlier than the moment of the write, which the contract suites check.
 
-- **Exit:** contract suites green on Serverpod, the example's strong and eventual commands both reach the projection, and a server with an invalid projection fails to start.
+**Example.** `examples/bank_account_serverpod/` holds a Serverpod server and its generated client, on SQLite. The server reuses `bank_account`'s domain through the new `registerBank(builder)` (aggregates, commands and saga, without provider or read model), adds a table-backed `BalanceTableProjection`, a state-based `AccountHolder` stored by `AccountHolderRepository`, a `BankEndpoint`, and `TaroDomainCalls`. `bankDefinition` in `bank_account` now calls `registerBank` too.
+
+- **Exit:** ~~contract suites green on Serverpod, the example's strong and eventual commands both reach the projection, and a server with an invalid projection fails to start.~~ Done.
+  - `packages/tarodomain_serverpod_server/test/` (98 tests, PostgreSQL): the contract suites; the ordering test (12 appenders, half holding their transactions open, against a cursor reader that must see every event once); a late commit positioned after an early one; no position reuse after a delete; a cursor that survives its event's deletion; forward-only acks; the unit of work (after-commit, per session, `join`); the event bus; leases and cleanup; the exception mapping; `LiveProjectionNotifier`; and the `TaroDb` source scan.
+  - `examples/bank_account_serverpod/bank_account_serverpod_server/test/` (93 tests, SQLite): the same contract suites, and the bank in both consistency modes through the generated test endpoints: a strong command reaches the projection at once and an eventual one after catch-up, the transfer saga, a failed transfer, typed client errors, the state repository (row and stream, a stale save rejected, a duplicate registration), a strong-mode rollback when the projection fails, and `validate` rejecting a projection that handles an unregistered event.
+  - Run by hand: the example server started on SQLite, and over HTTP an eventual deposit reached the read model through the scheduled future call within 3 seconds.
+- **Open:** the Phase 6 per-event attempt limit is still open. `subscriptions` could store attempts next to `lastPosition`.
 
 ### Phase 9: Documentation
 - Dartdoc for every public API (the `public_member_api_docs` lint is already on), plus a getting-started guide.
@@ -183,8 +190,57 @@ class ExpenseRepository
 
 ## Risks
 
-- **Global ordering under concurrency.** `loadAll` cursors that use UUIDv7, which the spec specifies, or an auto-increment ID can **skip events**. A transaction that obtained a lower ID may commit after a higher one has been read and the cursor advanced. Mitigation: catch-up reads only events older than a short settle window. That works through the ORM on both databases; a PostgreSQL-only fix based on transaction IDs would break the ORM-only rule. The window length has to be decided in Phase 8 and covered by a contract test with concurrent appends.
-- **UUIDv7 order within one millisecond.** The `uuid` package's v7 generator fills everything after the 48-bit timestamp with random bits. It has no monotonic counter, so two IDs generated in the same millisecond can sort in either order. Nothing may rely on event IDs for ordering within a millisecond: per-stream order comes from the stream version, and global order from the `events` table's auto-increment position. The spec's `lastSeen` cursor (§18) uses that position instead of the event ID.
-- **No ambient transaction in Serverpod.** If any adapter call forgets to pass the zone's `Transaction`, it silently runs outside the unit of work. Mitigation: route every database call through one internal helper, and add a contract test that rolls back and checks that nothing persisted.
-- **Serverpod 4 is new** (4.0.4, 2026-10-06). Module and future-call APIs may still shift. Pin `4.0.x` and adapt in one place.
-- **Scope.** The spec is large. Phases 1–7 are worth shipping by themselves on the local provider before the Serverpod work starts.
+Each risk has a resolution. The Serverpod facts below were checked against the 4.0.4 sources on 2026-10-13.
+
+### Global ordering under concurrency (resolved, built in Phase 8)
+
+**Problem.** A position handed out at insert time (an auto-increment ID or a UUIDv7) follows insert order, but other readers see events in commit order. A reader that sees position 11 and moves its cursor past it skips position 10 if 10's transaction commits later. A settle window (read only events older than N seconds) doesn't close the gap: under strong consistency the append's transaction also runs projections, sagas and the commands sagas dispatch, so there is no bound on how long it stays open, and `storedAt` is the app server's clock at insert, not the commit time.
+
+**Resolution: positions are assigned after commit.**
+
+- Appends leave `tarodomain_events.position` null.
+- `EventSequencer.run` assigns positions in its own transaction: it reads the `event-position` counter in `tarodomain_counters`, takes the unpositioned events it can see ordered by `id`, claims the counter with `updateWhere(value = read value)`, and sets `value + 1, value + 2, …`. A transaction only sees committed rows, so no event gets a position before it has committed, and no event committed later can get a lower one.
+- Two sequencers running at once read the same counter value. The claim locks the counter row, so the second waits for the first to commit, then finds the value changed, claims nothing and retries. No lock or lease is needed beyond that short row lock.
+- The counter, unlike `max(position) + 1`, never hands out a position twice. With `max + 1`, deleting the stream that holds the highest event would let the next event reuse its position, behind a cursor that has already passed it.
+- Per-stream order holds: appending version n+1 updates the stream row where `version = n`, which waits until version n has committed, so n+1 always gets a higher `id`.
+- `loadAll` and `loadStreamAfterEvent` return only positioned events, ordered by `position`. Outside a unit of work they run the sequencer first, so a read right after an append sees the event. Inside one they don't: on SQLite a second transaction would wait on the open one. The catch-up job runs the sequencer first too.
+- `loadStream` and `loadByCorrelationId` don't need positions. They order by version and by `id`.
+
+**Cost.** In eventual mode an event reaches projections one sequencer run after it commits. Writers are never serialized against each other.
+
+**Test.** A Serverpod test runs several appenders at once, some holding their transaction open, while a reader loops `loadAll` with a cursor. The reader must see every event exactly once.
+
+**Ruled out.** A global counter row updated by every append is also correct, but it holds a row lock for the whole strong-mode transaction, so every strong command in the cluster would run one at a time. PostgreSQL transaction IDs (`pg_current_snapshot()`) would need raw SQL, which the Decisions rule out.
+
+### UUIDv7 order within one millisecond (resolved)
+
+The `uuid` package's v7 generator has no monotonic counter, so two IDs from the same millisecond sort in either order. Nothing relies on that order:
+
+- Per-stream order comes from the stream version, and global order from `position`.
+- The Serverpod subscription row stores `lastPosition` next to `lastSeen`. The adapter resolves an `afterEventId` to its position, and falls back to `lastPosition` if that event was deleted with its stream.
+- `ackSubscription` only moves `lastPosition` forward (`updateWhere` with `lastPosition < new`). Two catch-up runs on one subscription, such as the recurring call and one scheduled by `FutureCallEventBus`, can't move it back. Projection idempotency already makes the double delivery harmless.
+- The local provider orders by its own append position. It compares event IDs only when the cursor's event has been deleted, which is accepted.
+- The Phase 3 contract test that appends two same-millisecond IDs in reverse order keeps this from regressing.
+
+### No ambient transaction in Serverpod (mitigated)
+
+In 4.0.4 the ORM falls back to `session.transaction` when no `transaction:` is passed, but a server `Session` always returns null there; only `serverpod_test` sessions override it. A call that forgets `transaction:` therefore runs outside the unit of work on PostgreSQL. On SQLite, which has one connection, it waits on the open transaction and hangs.
+
+**Resolution.**
+
+1. **One way in.** Adapters never call the ORM directly. They use the internal `TaroDb` (`lib/src/db/taro_db.dart`), which wraps `find`, `findFirstRow`, `findById`, `count`, `insert`, `insertRow`, `updateWhere`, `updateRow`, `deleteWhere` and `upsert` and passes the zone's transaction on every call. Only `ServerpodUnitOfWork` opens a transaction; `EventSequencer` asks it for one of its own with `separately`.
+2. **Enforced by a test.** A source-scan test (`test/taro_db_scan_test.dart`) fails if any file under `lib/src/` other than `taro_db.dart`, the unit of work and generated code uses `.db.` or `transaction:`. A forgotten transaction becomes a test failure instead of something code review has to catch.
+3. **Every write rolls back.** The `unitOfWorkContract` rollback test covers event appends, subscription acks, saga saves, processed events, snapshots, processed commands and dead letters, so every adapter's writes are checked on every provider.
+4. **Tests don't hide it.** The Serverpod suites run with `RollbackDatabase.disabled`. With the default, the test session's own transaction would absorb a forgotten `transaction:` and the bug wouldn't show. The racing-append tests need separate transactions anyway.
+
+### Serverpod 4 is new (mitigated)
+
+Serverpod 4.0.4 was released on 2026-10-06. Mitigation:
+
+- The module and its test tools pin exactly `4.0.4`. An upgrade is a deliberate change: bump the pin, run `serverpod generate`, run the contract suites.
+- Every Serverpod import stays in `tarodomain_serverpod_server`; the core and the local provider never see it.
+- The APIs Phase 8 depends on exist in 4.0.4: `insert(ignoreConflicts:)`, `upsert`/`upsertRow`, `updateWhere`, `transaction` with `TransactionSettings(isolationLevel:)`, and `callRecurring()` with `.every(…)` and `.cron(…)`. Cron expressions only go down to the minute, so the catch-up call uses `.every`.
+
+### Scope (resolved)
+
+Phases 1–8 are done. Phases 1–7 are usable on the local provider by themselves.
