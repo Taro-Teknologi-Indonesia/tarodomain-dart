@@ -59,6 +59,7 @@ Join link — URL containing the auction code; the only distribution mechanism.
 | UC-12 | Live update push | System | Must | WebSocket on web |
 | UC-13 | Buy Now ("BN") | Bidder | Should | New |
 | UC-14 | Mark unpaid | Organizer | Could | New — non-payment made visible |
+| UC-15 | My auctions: running & history | Organizer (signed in) | Should | New — builds on X6 sign-in |
 
 
 ```
@@ -206,6 +207,20 @@ Main flow: Emits LotMarkedUnpaid(winnerId, winnerName, markedAt, note?) on the L
 Extensions: 1a. Lot not SOLD → typed validation error (NOT_SOLD). 1b. Already marked → idempotent no-op. 1c. Not the organizer → NotOrganizerError.
 Why: winners who don't pay are the community's biggest pain, even with real Facebook accounts. Gavel can't force payment, but it puts non-payment on the same public, append-only record the winner would have used as proof. Relisting stays on the roadmap.
 TaroDomain: another appended event — the sale is never overwritten.
+
+UC-15 My auctions: running & history — Organizer (Should — after X6; ~2 h)
+Preconditions: The organizer is signed in (X6). Only auctions created while signed in belong to an account; older auctions and the demo have no creator and never show up.
+Trigger: On the home page, the signed-in organizer taps "My auctions" (shown next to "Sign out"). Signed out, the link isn't shown, and opening /mine directly asks for sign-in first, then returns to the list.
+Main flow:
+
+The server reads the organizer's auctions from the auctions read model by the signed-in user, never from the browser. Any browser the organizer signs into shows the same list.
+Running: every auction that is OPEN or CLOSING, soonest close first. Each row shows title, join code, close time (local) with a countdown, and lot count.
+History: every CLOSED auction, most recent close first. Each row shows title, join code, close date, lot count, and the outcome in one line: "2 of 3 sold · Rp 1.250.000", with "1 unpaid" when any SOLD lot was marked unpaid (UC-14).
+Tapping a row opens that auction's organizer dashboard (/a/<CODE>/organizer).
+Extensions: 1a. No auctions yet → empty state with a "Create an auction" button. 1b. Session expired or revoked → SignedOut → back to sign-in, then back to /mine. 4a. The browser doesn't hold that auction's organizer key (another device, cleared data) → the row says "View only on this device" and the dashboard opens read-only, as today; the share link and outcomes are still there, but adding lots, marking unpaid and winner codes need the creating browser (organizer rights by account stay on the roadmap).
+Postconditions: Nothing changes; this is a read.
+Privacy: the creator's user ID is never sent to bidders. It stays on the server; the board and the live push carry the same auction data as before.
+TaroDomain: projections — the creator was already on AuctionCreated (X6), so the list is one more column on the existing read model, filled by the projection and backfilled from the event store for auctions created since X6.
 
 5. Consistency model
 

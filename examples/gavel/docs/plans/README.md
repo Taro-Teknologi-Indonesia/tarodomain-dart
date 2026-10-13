@@ -28,6 +28,7 @@ Build in this order. The numbers are steps, not UC IDs. Plans prefixed `x` aren'
 | 14 | [uc-14-mark-unpaid.md](uc-14-mark-unpaid.md): non-payment made visible | Could | 0.5h |
 | 15 | [uc-10-time-travel.md](uc-10-time-travel.md): cut if past hour 12 at step 9 | Should | 1.5h |
 | 16 | [uc-13-buy-now.md](uc-13-buy-now.md): bidder BN at a fixed price, only if ahead | Should | 0.75h |
+| 16b | [uc-15-my-auctions.md](uc-15-my-auctions.md): a signed-in organizer's running and past auctions, in any browser | Should | 2h |
 | 17 | UC-09 Open Graph preview stretch | Stretch | 0.5h |
 | last | [x4-judges-readme.md](x4-judges-readme.md): live link, 2-minute try-it, Serverpod mapping, proof | Must | 0.5h |
 
