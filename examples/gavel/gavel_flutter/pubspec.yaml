@@ -18,6 +18,7 @@ dependencies:
   serverpod_flutter: 4.0.4
   shared_preferences: ^2.5.0
   tarodomain_serverpod_client: ^0.0.1
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

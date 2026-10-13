@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/auction_scope.dart';
+import 'pages/big_screen_board.dart';
 import 'pages/board_page.dart';
 import 'pages/create_auction_page.dart';
 import 'pages/demo_page.dart';
@@ -28,10 +29,11 @@ final router = GoRouter(
       routes: [
         GoRoute(
           path: '/a/:code',
-          builder: (_, state) => BoardPage(
-            code: _code(state),
-            bigScreen: state.uri.queryParameters['screen'] == 'board',
-          ),
+          // `?screen=board` is the projector's view, which nobody joins
+          // from (UC-11).
+          builder: (_, state) => state.uri.queryParameters['screen'] == 'board'
+              ? BigScreenBoard(code: _code(state))
+              : BoardPage(code: _code(state)),
           routes: [
             GoRoute(
               path: 'lot/:lotId',

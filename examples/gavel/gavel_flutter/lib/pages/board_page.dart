@@ -18,18 +18,15 @@ import '../widgets/join_sheet.dart';
 import '../widgets/lot_card_widget.dart';
 import '../widgets/won_banner.dart';
 
-/// An auction's live board (UC-04), or its big-screen mode (UC-11).
+/// An auction's live board (UC-04).
 ///
 /// A bidder without an identity for this auction is asked for a name once
 /// (UC-03); the board stays visible behind the prompt.
 class BoardPage extends StatefulWidget {
-  const BoardPage({required this.code, this.bigScreen = false, super.key});
+  const BoardPage({required this.code, super.key});
 
   /// The auction's join code.
   final String code;
-
-  /// Whether to show the read-only projector layout.
-  final bool bigScreen;
 
   @override
   State<BoardPage> createState() => _BoardPageState();
@@ -108,7 +105,6 @@ class _BoardPageState extends State<BoardPage> {
         !_identityLoaded ||
         _identity != null ||
         _isOrganizer ||
-        widget.bigScreen ||
         !_isOpen) {
       return;
     }
@@ -143,7 +139,7 @@ class _BoardPageState extends State<BoardPage> {
             offset: _auction.clockOffset,
           ),
           actions: [
-            if (!widget.bigScreen && auction != null) ..._identityActions(),
+            if (auction != null) ..._identityActions(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: LiveDot(_auction.status),
@@ -156,36 +152,30 @@ class _BoardPageState extends State<BoardPage> {
           (_, null) => const Center(child: CircularProgressIndicator()),
           (_, final auction?) => Column(
             children: [
-              if (auction.isDemo && !widget.bigScreen) const DemoBanner(),
-              if (!widget.bigScreen)
-                for (final lot in _auction.lots)
-                  if ((_identity, wonBy(lot, _identity?.participantId)) case (
-                    final identity?,
-                    true,
-                  ))
-                    WonBanner(
-                      key: ValueKey(lot.lotId),
-                      lot: lot,
-                      onShare: () =>
-                          copyLotLink(context, widget.code, lot.lotId.uuid),
-                      loadCode: () => client.lot.winnerCode(
-                        lot.lotId,
-                        identity.participantId,
-                        identity.participantKey,
-                      ),
+              if (auction.isDemo) const DemoBanner(),
+              for (final lot in _auction.lots)
+                if ((_identity, wonBy(lot, _identity?.participantId)) case (
+                  final identity?,
+                  true,
+                ))
+                  WonBanner(
+                    key: ValueKey(lot.lotId),
+                    lot: lot,
+                    onShare: () =>
+                        copyLotLink(context, widget.code, lot.lotId.uuid),
+                    loadCode: () => client.lot.winnerCode(
+                      lot.lotId,
+                      identity.participantId,
+                      identity.participantKey,
                     ),
+                  ),
               Expanded(
                 child: LotGrid(
                   lots: _auction.lots,
                   me: _identity?.participantId,
                   sharedNames: _auction.sharedNames,
-                  size: widget.bigScreen
-                      ? LotCardSize.large
-                      : LotCardSize.regular,
-                  onTap: widget.bigScreen
-                      ? null
-                      : (lot) =>
-                            context.go('/a/${widget.code}/lot/${lot.lotId}'),
+                  onTap: (lot) =>
+                      context.go('/a/${widget.code}/lot/${lot.lotId}'),
                   empty: 'No lots yet — the organizer is setting up.',
                 ),
               ),

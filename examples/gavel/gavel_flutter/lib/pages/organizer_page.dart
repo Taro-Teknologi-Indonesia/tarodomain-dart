@@ -6,6 +6,7 @@ import 'package:gavel_client/gavel_client.dart';
 import '../core/api.dart';
 import '../core/auction_controller.dart';
 import '../core/auction_scope.dart';
+import '../core/browser.dart';
 import '../core/clock.dart';
 import '../core/failures.dart';
 import '../core/live.dart';
@@ -93,9 +94,8 @@ class _OrganizerPageState extends State<OrganizerPage> {
     );
     if (card == null || !mounted) return;
     _auction.merge(card);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${card.name} is on the board')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('${card.name} is on the board')));
   }
 
   @override
@@ -110,6 +110,14 @@ class _OrganizerPageState extends State<OrganizerPage> {
         appBar: AppBar(
           title: Text(auction?.title ?? 'Organize ${widget.code}'),
           actions: [
+            // The projector's view, in its own tab (UC-11).
+            TextButton.icon(
+              onPressed: () => openInNewTab(
+                '${Uri.base.origin}/a/${widget.code}?screen=board',
+              ),
+              icon: const Icon(Icons.tv),
+              label: const Text('Open big screen'),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: LiveDot(_auction.status),

@@ -6,17 +6,21 @@ import 'package:gavel_flutter/widgets/lot_visual.dart';
 
 import '../support.dart';
 
-Widget _app(LotCard lot, {UuidValue? me, Set<String> sharedNames = const {}}) =>
-    MaterialApp(
-      home: Scaffold(
-        body: SingleChildScrollView(
-          child: SizedBox(
-            width: 360,
-            child: LotCardWidget(lot, me: me, sharedNames: sharedNames),
-          ),
-        ),
+Widget _app(
+  LotCard lot, {
+  UuidValue? me,
+  Set<String> sharedNames = const {},
+  LotCardSize size = LotCardSize.regular,
+}) => MaterialApp(
+  home: Scaffold(
+    body: SingleChildScrollView(
+      child: SizedBox(
+        width: size == LotCardSize.large ? 640 : 360,
+        child: LotCardWidget(lot, me: me, sharedNames: sharedNames, size: size),
       ),
-    );
+    ),
+  ),
+);
 
 /// The visible text, including that of rich text such as "**You** lead".
 String _texts(WidgetTester tester) => tester
@@ -219,5 +223,103 @@ void main() {
       );
       expect(tester.takeException(), isNull, reason: 'at $width px');
     }
+  });
+
+  group('on the big screen', () {
+    const large = LotCardSize.large;
+    final leading = lotCard(
+      version: 2,
+      currentPrice: 175000,
+      leaderId: siti,
+      leaderName: 'Siti',
+    );
+
+    testWidgets('slides a new leader in', (tester) async {
+      await tester.pumpWidget(_app(leading, size: large));
+      await tester.pumpWidget(
+        _app(
+          lotCard(
+            version: 3,
+            currentPrice: 200000,
+            leaderId: budi,
+            leaderName: 'Budi',
+          ),
+          size: large,
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Siti leads'), findsOneWidget);
+      expect(find.text('Budi leads'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.text('Siti leads'), findsNothing);
+      expect(find.text('Budi leads'), findsOneWidget);
+    });
+
+    testWidgets('flips to the hammer when the lot sells', (tester) async {
+      await tester.pumpWidget(_app(leading, size: large));
+      await tester.pumpWidget(
+        _app(
+          lotCard(
+            version: 3,
+            currentPrice: 175000,
+            status: 'SOLD',
+            leaderId: siti,
+            leaderName: 'Siti',
+            winnerName: 'Siti',
+            finalPrice: 175000,
+          ),
+          size: large,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('SOLD — Siti — Rp 175.000'), findsOneWidget);
+      expect(find.text('🔨'), findsOneWidget);
+      expect(find.text('Siti leads'), findsNothing);
+    });
+
+    testWidgets('says a passed lot had no bids', (tester) async {
+      await tester.pumpWidget(
+        _app(lotCard(version: 2, status: 'PASSED'), size: large),
+      );
+
+      expect(find.text('PASSED — no bids'), findsOneWidget);
+    });
+
+    testWidgets('keeps a fixed number of columns', (tester) async {
+      addTearDown(tester.view.reset);
+      tester.view
+        ..physicalSize = const Size(400, 900)
+        ..devicePixelRatio = 1;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LotGrid(
+              lots: [
+                for (var i = 1; i <= 2; i++)
+                  lotCard().copyWith(
+                    lotId: UuidValue.fromString(
+                      '00000000-0000-4000-8000-00000000000$i',
+                    ),
+                    position: i,
+                  ),
+              ],
+              size: large,
+              columns: 2,
+              empty: 'No lots yet.',
+            ),
+          ),
+        ),
+      );
+
+      // Side by side, even under 600 px.
+      final cards = find.byType(LotCardWidget);
+      expect(
+        tester.getTopLeft(cards.at(0)).dy,
+        tester.getTopLeft(cards.at(1)).dy,
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }
