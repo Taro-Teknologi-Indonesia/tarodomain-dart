@@ -36,6 +36,15 @@ The spec is a git submodule at [`spec/`](spec), pinned to the version this code 
 | The app itself | Serverpod web server hosting the Flutter web build, with a fallback route for deep links |
 | Hosting | Serverpod Cloud with managed PostgreSQL, deployed by [`tool/deploy.sh`](examples/gavel/tool/deploy.sh) |
 
+### A note on sign-in
+
+Since Gavel's sellers and bidders already live on Facebook, Facebook login would be the natural choice. We couldn't add it: Meta has to review and verify an app before people outside its developer team can log in with Facebook, and that couldn't be done before the hackathon deadline. So Gavel ships with:
+
+- **Organizers:** Serverpod's own auth module (email plus a verification code, JWT sessions). The server refuses to create an auction without a signed-in user.
+- **Bidders:** no account. A bidder types a display name and gets a random participant key kept in that browser. Making people sign up before they can bid would lose most of the crowd coming from a Facebook post.
+
+Facebook login can be added later as one more identity provider in Serverpod's auth module once the app is verified. The design is in [X6 — Organizer sign-in](examples/gavel/docs/plans/x6-organizer-sign-in.md).
+
 ### Run Gavel locally
 
 ```sh
