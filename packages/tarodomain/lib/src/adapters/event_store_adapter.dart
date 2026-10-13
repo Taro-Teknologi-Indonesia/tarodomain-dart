@@ -66,6 +66,8 @@ final class Subscription {
     this.streamId,
     this.lastSeen,
     required this.createdAt,
+    this.failedEventId,
+    this.failedAttempts = 0,
   });
 
   /// Unique subscription name.
@@ -81,9 +83,17 @@ final class Subscription {
   /// When the subscription was created, in UTC.
   final DateTime createdAt;
 
+  /// The event the handler last failed on with a retryable error, or null
+  /// if it hasn't failed since the last ack.
+  final UuidValue? failedEventId;
+
+  /// How many times in a row the handler has failed on [failedEventId].
+  final int failedAttempts;
+
   @override
   String toString() =>
-      'Subscription($name, streamId: $streamId, lastSeen: $lastSeen)';
+      'Subscription($name, streamId: $streamId, lastSeen: $lastSeen'
+      '${failedAttempts > 0 ? ', failed $failedAttempts× on $failedEventId' : ''})';
 }
 
 /// Storage for the append-only event log (spec §3.2).
@@ -160,10 +170,19 @@ abstract interface class EventStoreAdapter {
   /// The subscription [name], or null if it doesn't exist.
   Future<Subscription?> getSubscription(String name);
 
-  /// Moves the cursor of subscription [name] to [lastSeenEventId].
+  /// Moves the cursor of subscription [name] to [lastSeenEventId], and
+  /// clears its failed attempts.
   ///
   /// Throws [StateError] if the subscription doesn't exist.
   Future<void> ackSubscription(String name, UuidValue lastSeenEventId);
+
+  /// Records that the handler of subscription [name] failed on [eventId],
+  /// and returns how many times in a row it has failed on that event: one
+  /// more than before if [eventId] is the subscription's
+  /// `failedEventId`, otherwise 1. [ackSubscription] clears the count.
+  ///
+  /// Throws [StateError] if the subscription doesn't exist.
+  Future<int> recordFailedAttempt(String name, UuidValue eventId);
 
   /// Deletes the subscription [name]. Does nothing if it doesn't exist.
   Future<void> deleteSubscription(String name);

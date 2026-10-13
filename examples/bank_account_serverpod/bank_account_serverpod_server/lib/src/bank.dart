@@ -15,6 +15,10 @@ FrameworkDefinition bankServerDefinition({
 }) => registerBank(TaroDomain.builder())
     .consistency(consistency)
     .snapshotEvery(100)
+    // Catch-up runs at least every 5 seconds, so an event that keeps failing
+    // is dead-lettered after about 100 seconds instead of stopping its
+    // projection for good.
+    .catchUpMaxAttempts(20)
     .aggregate<AccountHolder, HolderId>(
       'AccountHolder',
       (a) => a

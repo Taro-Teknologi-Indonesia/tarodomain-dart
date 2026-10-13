@@ -22,7 +22,9 @@ abstract class TaroSubscriptionRow
     this.lastSeen,
     this.lastPosition,
     required this.createdAt,
-  });
+    this.failedEventId,
+    int? failedAttempts,
+  }) : failedAttempts = failedAttempts ?? 0;
 
   factory TaroSubscriptionRow({
     int? id,
@@ -31,6 +33,8 @@ abstract class TaroSubscriptionRow
     _is.UuidValue? lastSeen,
     int? lastPosition,
     required DateTime createdAt,
+    _is.UuidValue? failedEventId,
+    int? failedAttempts,
   }) = _TaroSubscriptionRowImpl;
 
   factory TaroSubscriptionRow.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -45,6 +49,12 @@ abstract class TaroSubscriptionRow
       createdAt: _is.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
+      failedEventId: jsonSerialization['failedEventId'] == null
+          ? null
+          : _is.UuidValueJsonExtension.fromJson(
+              jsonSerialization['failedEventId'],
+            ),
+      failedAttempts: jsonSerialization['failedAttempts'] as int?,
     );
   }
 
@@ -71,6 +81,13 @@ abstract class TaroSubscriptionRow
   /// When the subscription was created, in UTC.
   DateTime createdAt;
 
+  /// The event the handler last failed on with a retryable error, or null
+  /// if it hasn't failed since the last ack.
+  _is.UuidValue? failedEventId;
+
+  /// How many times in a row the handler has failed on [failedEventId].
+  int failedAttempts;
+
   @override
   _is.Table<int?> get table => t;
 
@@ -84,6 +101,8 @@ abstract class TaroSubscriptionRow
     _is.UuidValue? lastSeen,
     int? lastPosition,
     DateTime? createdAt,
+    _is.UuidValue? failedEventId,
+    int? failedAttempts,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -95,6 +114,8 @@ abstract class TaroSubscriptionRow
       if (lastSeen != null) 'lastSeen': lastSeen?.toJson(),
       if (lastPosition != null) 'lastPosition': lastPosition,
       'createdAt': createdAt.toJson(),
+      if (failedEventId != null) 'failedEventId': failedEventId?.toJson(),
+      'failedAttempts': failedAttempts,
     };
   }
 
@@ -141,6 +162,8 @@ class _TaroSubscriptionRowImpl extends TaroSubscriptionRow {
     _is.UuidValue? lastSeen,
     int? lastPosition,
     required DateTime createdAt,
+    _is.UuidValue? failedEventId,
+    int? failedAttempts,
   }) : super._(
          id: id,
          name: name,
@@ -148,6 +171,8 @@ class _TaroSubscriptionRowImpl extends TaroSubscriptionRow {
          lastSeen: lastSeen,
          lastPosition: lastPosition,
          createdAt: createdAt,
+         failedEventId: failedEventId,
+         failedAttempts: failedAttempts,
        );
 
   /// Returns a shallow copy of this [TaroSubscriptionRow]
@@ -161,6 +186,8 @@ class _TaroSubscriptionRowImpl extends TaroSubscriptionRow {
     Object? lastSeen = _Undefined,
     Object? lastPosition = _Undefined,
     DateTime? createdAt,
+    Object? failedEventId = _Undefined,
+    int? failedAttempts,
   }) {
     return TaroSubscriptionRow(
       id: id is int? ? id : this.id,
@@ -169,6 +196,10 @@ class _TaroSubscriptionRowImpl extends TaroSubscriptionRow {
       lastSeen: lastSeen is _is.UuidValue? ? lastSeen : this.lastSeen,
       lastPosition: lastPosition is int? ? lastPosition : this.lastPosition,
       createdAt: createdAt ?? this.createdAt,
+      failedEventId: failedEventId is _is.UuidValue?
+          ? failedEventId
+          : this.failedEventId,
+      failedAttempts: failedAttempts ?? this.failedAttempts,
     );
   }
 }
@@ -192,6 +223,13 @@ class TaroSubscriptionRowUpdateTable
 
   _is.ColumnValue<DateTime, DateTime> createdAt(DateTime value) =>
       _is.ColumnValue(table.createdAt, value);
+
+  _is.ColumnValue<_is.UuidValue, _is.UuidValue> failedEventId(
+    _is.UuidValue? value,
+  ) => _is.ColumnValue(table.failedEventId, value);
+
+  _is.ColumnValue<int, int> failedAttempts(int value) =>
+      _is.ColumnValue(table.failedAttempts, value);
 }
 
 class TaroSubscriptionRowTable extends _is.Table<int?> {
@@ -203,6 +241,8 @@ class TaroSubscriptionRowTable extends _is.Table<int?> {
     lastSeen = _is.ColumnUuid('lastSeen', this);
     lastPosition = _is.ColumnInt('lastPosition', this);
     createdAt = _is.ColumnDateTime('createdAt', this);
+    failedEventId = _is.ColumnUuid('failedEventId', this);
+    failedAttempts = _is.ColumnInt('failedAttempts', this, hasDefault: true);
   }
 
   late final TaroSubscriptionRowUpdateTable updateTable;
@@ -223,6 +263,13 @@ class TaroSubscriptionRowTable extends _is.Table<int?> {
   /// When the subscription was created, in UTC.
   late final _is.ColumnDateTime createdAt;
 
+  /// The event the handler last failed on with a retryable error, or null
+  /// if it hasn't failed since the last ack.
+  late final _is.ColumnUuid failedEventId;
+
+  /// How many times in a row the handler has failed on [failedEventId].
+  late final _is.ColumnInt failedAttempts;
+
   @override
   List<_is.Column> get columns => [
     id,
@@ -231,6 +278,8 @@ class TaroSubscriptionRowTable extends _is.Table<int?> {
     lastSeen,
     lastPosition,
     createdAt,
+    failedEventId,
+    failedAttempts,
   ];
 }
 

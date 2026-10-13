@@ -210,6 +210,7 @@ final class TaroDomain {
       eventStore: eventStore,
       subscriptions: SubscriptionManager(eventStoreAdapter),
       batchSize: definition.catchUpBatchSize,
+      maxAttempts: definition.catchUpMaxAttempts,
       unitOfWork: uow,
       deadLetters: deadLetters,
     );

@@ -415,6 +415,59 @@ void eventStoreAdapterContract(ContractFactory<EventStoreAdapter> create) {
         );
       });
 
+      test('counts failed attempts in a row on one event', () async {
+        await store.subscribe('projection-a', streamId: 'Account');
+        final lastSeen = events.nextId();
+        await store.ackSubscription('projection-a', lastSeen);
+        final stuck = events.nextId();
+
+        expect(await store.recordFailedAttempt('projection-a', stuck), 1);
+        expect(await store.recordFailedAttempt('projection-a', stuck), 2);
+
+        final subscription = (await store.getSubscription('projection-a'))!;
+        expect(subscription.failedEventId, stuck);
+        expect(subscription.failedAttempts, 2);
+        expect(subscription.lastSeen, lastSeen);
+        expect(subscription.streamId, 'Account');
+      });
+
+      test('a failure on another event counts from 1 again', () async {
+        await store.subscribe('projection-a');
+        await store.recordFailedAttempt('projection-a', events.nextId());
+        await store.recordFailedAttempt('projection-a', events.nextId());
+        final other = events.nextId();
+
+        expect(await store.recordFailedAttempt('projection-a', other), 1);
+        expect(
+          (await store.getSubscription('projection-a'))!.failedEventId,
+          other,
+        );
+      });
+
+      test('ack clears the failed attempts', () async {
+        await store.subscribe('projection-a');
+        final stuck = events.nextId();
+        await store.recordFailedAttempt('projection-a', stuck);
+        await store.recordFailedAttempt('projection-a', stuck);
+
+        await store.ackSubscription('projection-a', stuck);
+
+        final subscription = (await store.getSubscription('projection-a'))!;
+        expect(subscription.failedEventId, isNull);
+        expect(subscription.failedAttempts, 0);
+        expect(await store.recordFailedAttempt('projection-a', stuck), 1);
+      });
+
+      test(
+        'a failed attempt on a missing subscription throws StateError',
+        () async {
+          await expectLater(
+            store.recordFailedAttempt('missing', events.nextId()),
+            throwsStateError,
+          );
+        },
+      );
+
       test('getSubscription returns null when missing', () async {
         expect(await store.getSubscription('missing'), isNull);
       });

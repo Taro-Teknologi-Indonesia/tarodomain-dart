@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:serverpod/serverpod.dart';
 import 'package:tarodomain/tarodomain.dart';
@@ -47,54 +46,6 @@ void main() {
       }
 
       group('global order', () {
-        test('a cursor reader sees every event exactly once while appenders '
-            'hold their transactions open', () async {
-          final store = ServerpodEventStoreAdapter(session);
-          final random = Random(7);
-          final appended = <UuidValue>[];
-          var appending = true;
-          final appenders = Future.wait([
-            for (var i = 0; i < 12; i++)
-              () async {
-                await Future<void>.delayed(
-                  Duration(milliseconds: random.nextInt(60)),
-                );
-                final batch = events.events(1 + i % 3);
-                appended.addAll(idsOf(batch));
-                final streamId = events.streamId();
-                if (i.isEven) {
-                  await ServerpodUnitOfWork(session).execute(() async {
-                    await store.appendToStream(streamId, batch, 0);
-                    await Future<void>.delayed(
-                      Duration(milliseconds: random.nextInt(120)),
-                    );
-                  });
-                } else {
-                  await store.appendToStream(streamId, batch, 0);
-                }
-              }(),
-          ]).whenComplete(() => appending = false);
-
-          final seen = <UuidValue>[];
-          UuidValue? cursor;
-          Future<int> read() async {
-            final page = await store.loadAll(afterEventId: cursor, maxCount: 4);
-            seen.addAll(idsOf(page));
-            if (page.isNotEmpty) cursor = page.last.eventId;
-            return page.length;
-          }
-
-          while (appending) {
-            await read();
-            await Future<void>.delayed(const Duration(milliseconds: 3));
-          }
-          await appenders;
-          while (await read() > 0) {}
-
-          expect(seen.toSet(), hasLength(seen.length), reason: 'duplicates');
-          expect(seen.toSet(), appended.toSet());
-        });
-
         test(
           'an event committed late is positioned after one committed '
           'earlier, so a cursor past the earlier one still reads it',
@@ -132,37 +83,16 @@ void main() {
           },
         );
 
-        test('concurrent readers racing appenders never fail and together '
-            'position every event', () async {
+        test('a read with nothing to position skips the sequencer', () async {
           final store = ServerpodEventStoreAdapter(session);
-          final appended = <UuidValue>[];
-          var appending = true;
-          final appenders = Future.wait([
-            for (var i = 0; i < 8; i++)
-              () async {
-                for (var j = 0; j < 5; j++) {
-                  final batch = events.events(2);
-                  appended.addAll(idsOf(batch));
-                  await store.appendToStream(events.streamId(), batch, 0);
-                }
-              }(),
-          ]).whenComplete(() => appending = false);
 
-          // Every read runs the sequencer, so these fight over the counter.
-          // A read that loses must read what the winner positioned instead
-          // of retrying until it throws.
-          final readers = Future.wait([
-            for (var i = 0; i < 16; i++)
-              () async {
-                while (appending) {
-                  await store.loadAll(maxCount: 1);
-                }
-              }(),
-          ]);
-          await appenders;
-          await readers;
+          expect(await store.loadAll(), isEmpty);
+          // The sequencer creates its counter on its first run.
+          expect(await TaroCounterRow.db.count(session), 0);
 
-          expect(idsOf(await store.loadAll()).toSet(), appended.toSet());
+          await store.appendToStream(events.streamId(), events.events(1), 0);
+          expect(await store.loadAll(), hasLength(1));
+          expect(await TaroCounterRow.db.count(session), 1);
         });
 
         test('never reuses the position of a deleted event', () async {

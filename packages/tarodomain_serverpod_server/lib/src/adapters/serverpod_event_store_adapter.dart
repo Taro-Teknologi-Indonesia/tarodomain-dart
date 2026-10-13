@@ -208,10 +208,11 @@ final class ServerpodEventStoreAdapter implements EventStoreAdapter {
     return row == null ? null : _toSubscription(row);
   }
 
-  /// Moves the cursor of subscription [name] to [lastSeenEventId], but
-  /// never back: if the event has a position, the cursor moves only if that
-  /// position is past the current one. Two catch-up runs on one
-  /// subscription therefore can't undo each other's progress.
+  /// Moves the cursor of subscription [name] to [lastSeenEventId] and clears
+  /// its failed attempts, but never moves it back: if the event has a
+  /// position, the cursor moves only if that position is past the current
+  /// one. Two catch-up runs on one subscription therefore can't undo each
+  /// other's progress.
   @override
   Future<void> ackSubscription(String name, UuidValue lastSeenEventId) async {
     final position = (await _event(lastSeenEventId))?.position;
@@ -221,6 +222,8 @@ final class ServerpodEventStoreAdapter implements EventStoreAdapter {
         ColumnValue(_subscriptions.lastSeen, lastSeenEventId),
         if (position != null)
           ColumnValue(_subscriptions.lastPosition, position),
+        ColumnValue(_subscriptions.failedEventId, null),
+        ColumnValue(_subscriptions.failedAttempts, 0),
       ],
       where: position == null
           ? named
@@ -232,6 +235,25 @@ final class ServerpodEventStoreAdapter implements EventStoreAdapter {
       throw StateError('Subscription $name does not exist');
     }
   }
+
+  @override
+  Future<int> recordFailedAttempt(String name, UuidValue eventId) =>
+      _db.atomically(() async {
+        final row =
+            await _subscription(name) ??
+            (throw StateError('Subscription $name does not exist'));
+        final attempts = row.failedEventId == eventId
+            ? row.failedAttempts + 1
+            : 1;
+        await _db.updateWhere<TaroSubscriptionRow>(
+          columnValues: [
+            ColumnValue(_subscriptions.failedEventId, eventId),
+            ColumnValue(_subscriptions.failedAttempts, attempts),
+          ],
+          where: _subscriptions.name.equals(name),
+        );
+        return attempts;
+      });
 
   @override
   Future<void> deleteSubscription(String name) async {
@@ -279,6 +301,8 @@ final class ServerpodEventStoreAdapter implements EventStoreAdapter {
     streamId: row.streamId,
     lastSeen: row.lastSeen,
     createdAt: row.createdAt.toUtc(),
+    failedEventId: row.failedEventId,
+    failedAttempts: row.failedAttempts,
   );
 
   static List<SerializedEvent> _decode(List<TaroEventRow> rows) => [

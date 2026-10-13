@@ -135,6 +135,7 @@ final class FrameworkDefinition {
     required this.concurrency,
     required this.clock,
     required this.catchUpBatchSize,
+    required this.catchUpMaxAttempts,
   }) : aggregates = List.unmodifiable(aggregates),
        commands = List.unmodifiable(commands),
        sagas = List.unmodifiable(sagas),
@@ -188,6 +189,10 @@ final class FrameworkDefinition {
 
   /// The default number of events per catch-up pass.
   final int catchUpBatchSize;
+
+  /// How many times in a row catch-up retries one event after a retryable
+  /// error before dead-lettering it, or null to retry it forever.
+  final int? catchUpMaxAttempts;
 
   final Map<Type, AggregateDefinition> _aggregatesByClass;
   bool _projectionsValidated = false;

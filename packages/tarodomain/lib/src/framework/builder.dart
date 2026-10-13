@@ -49,6 +49,7 @@ final class TaroDomainBuilder {
   ConcurrencyChecker? _concurrency;
   DateTime Function()? _clock;
   int _catchUpBatchSize = 100;
+  int? _catchUpMaxAttempts;
 
   /// Uses [provider] for runtimes created without one. Providers also add
   /// shortcuts, such as `useLocal()` from `tarodomain_local`.
@@ -219,6 +220,18 @@ final class TaroDomainBuilder {
     return this;
   }
 
+  /// Dead-letters an event and moves past it once a projection or saga has
+  /// failed on it [n] times in a row with a retryable error during
+  /// catch-up. By default, as in spec §18.3, catch-up retries it forever and
+  /// the subscription stays stuck on it.
+  ///
+  /// Every catch-up run counts as an attempt, so choose [n] to outlast a
+  /// short outage. Pass null to retry forever again.
+  TaroDomainBuilder catchUpMaxAttempts(int? n) {
+    _catchUpMaxAttempts = n;
+    return this;
+  }
+
   /// Validates the configuration and returns the definition.
   ///
   /// Throws [InvalidConfigurationError] listing every problem found. Warnings
@@ -235,6 +248,9 @@ final class TaroDomainBuilder {
     }
     if (_catchUpBatchSize < 1) {
       errors.add('catchUpBatchSize must be at least 1');
+    }
+    if (_catchUpMaxAttempts case final n? when n < 1) {
+      errors.add('catchUpMaxAttempts must be at least 1');
     }
 
     final sagas = <SagaDefinition>[];
@@ -262,6 +278,7 @@ final class TaroDomainBuilder {
       concurrency: _concurrency,
       clock: _clock,
       catchUpBatchSize: _catchUpBatchSize,
+      catchUpMaxAttempts: _catchUpMaxAttempts,
     );
 
     if (_validate) {

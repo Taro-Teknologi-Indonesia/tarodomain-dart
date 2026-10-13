@@ -22,6 +22,19 @@ void main() {
       expect(warnings, isEmpty);
     });
 
+    test('rejects catch-up settings below 1', () {
+      final builder = transferApp(
+        ConsistencyMode.eventual,
+      ).catchUpBatchSize(0).catchUpMaxAttempts(0);
+      expect(
+        builder.build,
+        invalidWith([
+          'catchUpBatchSize must be at least 1',
+          'catchUpMaxAttempts must be at least 1',
+        ]),
+      );
+    });
+
     test('reports every error at once', () {
       final builder = transferDomain(TaroDomain.builder())
           .aggregate<Wallet, WalletId>('Wallet', (a) => a.factory(Wallet.new))

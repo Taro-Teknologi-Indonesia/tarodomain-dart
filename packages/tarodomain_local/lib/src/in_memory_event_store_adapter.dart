@@ -172,6 +172,27 @@ final class InMemoryEventStoreAdapter implements EventStoreAdapter {
   }
 
   @override
+  Future<int> recordFailedAttempt(String name, UuidValue eventId) async {
+    final subscriptions = _tables.subscriptions;
+    final subscription = subscriptions[name];
+    if (subscription == null) {
+      throw StateError('Subscription $name does not exist');
+    }
+    final attempts = subscription.failedEventId == eventId
+        ? subscription.failedAttempts + 1
+        : 1;
+    subscriptions[name] = Subscription(
+      name: name,
+      streamId: subscription.streamId,
+      lastSeen: subscription.lastSeen,
+      createdAt: subscription.createdAt,
+      failedEventId: eventId,
+      failedAttempts: attempts,
+    );
+    return attempts;
+  }
+
+  @override
   Future<void> deleteSubscription(String name) async {
     _tables.subscriptions.remove(name);
   }

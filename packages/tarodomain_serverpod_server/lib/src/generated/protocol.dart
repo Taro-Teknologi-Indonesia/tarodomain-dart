@@ -835,6 +835,19 @@ class Protocol extends _is.DatabaseSerializationManager {
           isNullable: false,
           dartType: 'DateTime',
         ),
+        _isp.ColumnDefinition(
+          name: 'failedEventId',
+          columnType: _isp.ColumnType.uuid,
+          isNullable: true,
+          dartType: 'UuidValue?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'failedAttempts',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+          columnDefault: '0',
+        ),
       ],
       foreignKeys: [],
       indexes: [

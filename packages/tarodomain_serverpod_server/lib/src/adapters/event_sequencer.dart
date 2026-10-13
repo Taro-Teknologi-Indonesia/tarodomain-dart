@@ -39,6 +39,7 @@ final class EventSequencer {
   /// which has one writer, don't call it while a unit of work is active on
   /// the same database: it would wait on that transaction.
   Future<int> run() async {
+    if (!await _hasPending()) return 0;
     var total = 0;
     while (true) {
       final positioned = await _runBatch();
@@ -55,6 +56,7 @@ final class EventSequencer {
   /// only make concurrent readers fight over the counter, and [run] throws
   /// after losing [_attempts] times in a row.
   Future<int> tryRun() async {
+    if (!await _hasPending()) return 0;
     var total = 0;
     while (true) {
       final positioned = await _db.separately(_claimAndPosition);
@@ -63,6 +65,15 @@ final class EventSequencer {
       if (positioned < batchSize) return total;
     }
   }
+
+  /// Whether any visible event still has no position. One lookup on the
+  /// `position` index, outside any transaction, so a read with nothing to
+  /// position costs one query instead of a transaction and two.
+  Future<bool> _hasPending() async =>
+      await _db.findFirstRow<TaroEventRow>(
+        where: TaroEventRow.t.position.equals(null),
+      ) !=
+      null;
 
   Future<int> _runBatch() async {
     for (var attempt = 1; ; attempt++) {

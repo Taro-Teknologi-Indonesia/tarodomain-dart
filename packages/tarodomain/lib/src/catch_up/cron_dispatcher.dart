@@ -17,7 +17,10 @@ import 'subscription_manager.dart';
 ///
 /// - on success, the cursor moves past the event;
 /// - on a retryable error ([shouldRetry]), the pass stops and the cursor
-///   stays, so the event is tried again on the next run;
+///   stays, so the event is tried again on the next run. With [maxAttempts],
+///   the failure is counted in the subscription, and the event that reaches
+///   the limit is treated like a non-retryable error instead, so one bad
+///   event can't stop its subscription for good;
 /// - on any other error, including an event that can't be deserialized, the
 ///   event is written to the [deadLetters] store if there is one, and the
 ///   cursor moves past it.
@@ -30,15 +33,23 @@ final class CronDispatcher {
   /// Creates the dispatcher. [batchSize] is how many events one [catchUp]
   /// handles at most.
   ///
-  /// Throws [InvalidConfigurationError] if [batchSize] is less than 1.
+  /// Throws [InvalidConfigurationError] if [batchSize] or [maxAttempts] is
+  /// less than 1.
   CronDispatcher({
     required this.eventStore,
     required this.subscriptions,
     this.batchSize = 100,
     this.unitOfWork,
     this.deadLetters,
+    this.maxAttempts,
   }) {
     _checkBatchSize(batchSize);
+    if (maxAttempts case final max? when max < 1) {
+      throw InvalidConfigurationError(
+        'maxAttempts must be at least 1, not $max',
+        context: {'maxAttempts': max},
+      );
+    }
   }
 
   /// Reads the events and deserializes them.
@@ -55,6 +66,14 @@ final class CronDispatcher {
 
   /// Receives the events skipped after a non-retryable error, if given.
   final DeadLetterStore? deadLetters;
+
+  /// How many times in a row a handler may fail on one event with a
+  /// retryable error before the event is skipped, or null to retry it
+  /// forever, as spec §18.3 does.
+  ///
+  /// Every catch-up run counts as an attempt, so the limit should outlast a
+  /// short outage.
+  final int? maxAttempts;
 
   final _handlers = <String, EventHandler>{};
 
@@ -135,8 +154,30 @@ final class CronDispatcher {
         });
         result.processed++;
       } catch (error, stackTrace) {
-        if (stopOnError || shouldRetry(error)) {
+        if (stopOnError) {
           return result.stop(error, stackTrace, serialized.eventId);
+        }
+        var attempts = 1;
+        if (shouldRetry(error)) {
+          final max = maxAttempts;
+          if (max == null) {
+            return result.stop(error, stackTrace, serialized.eventId);
+          }
+          try {
+            attempts = await eventStore.adapter.recordFailedAttempt(
+              name,
+              serialized.eventId,
+            );
+          } catch (recordError, recordStackTrace) {
+            return result.stop(
+              recordError,
+              recordStackTrace,
+              serialized.eventId,
+            );
+          }
+          if (attempts < max) {
+            return result.stop(error, stackTrace, serialized.eventId);
+          }
         }
         try {
           await deadLetters?.write(
@@ -145,7 +186,7 @@ final class CronDispatcher {
               event: serialized,
               errorMessage: '$error',
               errorCode: error is FrameworkError ? error.code : null,
-              attempts: 1,
+              attempts: attempts,
             ),
           );
           await _ack(name, serialized.eventId);
@@ -184,7 +225,8 @@ final class CronDispatcher {
   }
 }
 
-/// An event [CronDispatcher] skipped after a non-retryable error.
+/// An event [CronDispatcher] skipped after a non-retryable error, or after
+/// a retryable one reached [CronDispatcher.maxAttempts].
 final class SkippedEvent {
   SkippedEvent._(this.event, this.error, this.stackTrace);
 
@@ -216,8 +258,8 @@ final class CatchUpResult {
   /// How many events the handler completed.
   final int processed;
 
-  /// The events skipped after a non-retryable error. The cursor moved past
-  /// them.
+  /// The events skipped after a non-retryable error, or after a retryable
+  /// one reached `maxAttempts`. The cursor moved past them.
   final List<SkippedEvent> skipped;
 
   /// Whether more events may follow the cursor: the batch was full, or the

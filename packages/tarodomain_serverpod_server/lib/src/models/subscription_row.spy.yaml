@@ -18,6 +18,13 @@ fields:
 
   ### When the subscription was created, in UTC.
   createdAt: DateTime
+
+  ### The event the handler last failed on with a retryable error, or null
+  ### if it hasn't failed since the last ack.
+  failedEventId: UuidValue?
+
+  ### How many times in a row the handler has failed on [failedEventId].
+  failedAttempts: int, default=0
 indexes:
   tarodomain_subscriptions_name_idx:
     fields: name

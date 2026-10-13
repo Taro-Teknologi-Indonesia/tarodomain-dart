@@ -7,14 +7,18 @@ void main() {
   late Store s;
   late RecordingHandler handler;
 
-  CronDispatcher dispatcher({int batchSize = 100, UnitOfWork? unitOfWork}) =>
-      CronDispatcher(
-        eventStore: s.eventStore,
-        subscriptions: s.subscriptions,
-        batchSize: batchSize,
-        unitOfWork: unitOfWork,
-        deadLetters: s.deadLetters,
-      )..register(handler);
+  CronDispatcher dispatcher({
+    int batchSize = 100,
+    UnitOfWork? unitOfWork,
+    int? maxAttempts,
+  }) => CronDispatcher(
+    eventStore: s.eventStore,
+    subscriptions: s.subscriptions,
+    batchSize: batchSize,
+    unitOfWork: unitOfWork,
+    deadLetters: s.deadLetters,
+    maxAttempts: maxAttempts,
+  )..register(handler);
 
   setUp(() {
     s = Store();
@@ -91,6 +95,96 @@ void main() {
     final retry = await cron.catchUp('p');
     expect(retry.processed, 2);
     expect(handler.cents, [1, 2, 3]);
+  });
+
+  group('maxAttempts', () {
+    test('without it, a retryable error is retried forever and not '
+        'counted', () async {
+      final events = await s.deposit([1, 2]);
+      handler.failOn = (e) => e.id == events[1].id ? retryableError() : null;
+      final cron = dispatcher();
+
+      for (var i = 0; i < 5; i++) {
+        expect((await cron.catchUp('p')).stopped, isTrue);
+      }
+
+      expect((await s.subscriptions.get('p'))!.failedAttempts, 0);
+      expect(await s.deadLetters.count(), 0);
+    });
+
+    test('counts each failed run and dead-letters the event at the '
+        'limit', () async {
+      final events = await s.deposit([1, 2, 3]);
+      handler.failOn = (e) => e.id == events[1].id ? retryableError() : null;
+      final cron = dispatcher(maxAttempts: 3);
+
+      for (final attempt in [1, 2]) {
+        final result = await cron.catchUp('p');
+        expect(result.stopped, isTrue);
+        expect(result.failedEventId, events[1].id);
+        final subscription = (await s.subscriptions.get('p'))!;
+        expect(subscription.failedEventId, events[1].id);
+        expect(subscription.failedAttempts, attempt);
+        expect(subscription.lastSeen, events[0].id);
+      }
+      final lag = (await s.subscriptions.getLagReport()).subscriptions.single;
+      expect(lag.failedAttempts, 2);
+
+      final last = await cron.catchUp('p');
+
+      expect(last.stopped, isFalse);
+      expect(last.skipped.single.event.eventId, events[1].id);
+      expect(last.skipped.single.error, isA<EventStoreError>());
+      expect(handler.cents, [1, 3]);
+      final dead = (await s.deadLetters.get(events[1].id, 'p'))!;
+      expect(dead.attempts, 3);
+      final subscription = (await s.subscriptions.get('p'))!;
+      expect(subscription.lastSeen, events[2].id);
+      expect(subscription.failedAttempts, 0);
+      expect(subscription.failedEventId, isNull);
+    });
+
+    test('a success clears the count, so the next stuck event starts '
+        'from 1', () async {
+      final events = await s.deposit([1, 2, 3]);
+      final failing = {events[1].id, events[2].id};
+      handler.failOn = (e) => failing.contains(e.id) ? retryableError() : null;
+      final cron = dispatcher(maxAttempts: 3);
+
+      await cron.catchUp('p');
+      await cron.catchUp('p');
+      failing.remove(events[1].id);
+      final result = await cron.catchUp('p');
+
+      expect(result.failedEventId, events[2].id);
+      final subscription = (await s.subscriptions.get('p'))!;
+      expect(subscription.failedEventId, events[2].id);
+      expect(subscription.failedAttempts, 1);
+      expect(await s.deadLetters.count(), 0);
+    });
+
+    test('stopOnError neither counts nor skips', () async {
+      final events = await s.deposit([1, 2]);
+      handler.failOn = (e) => e.id == events[1].id ? retryableError() : null;
+      final cron = dispatcher(maxAttempts: 1);
+
+      final result = await cron.catchUp('p', stopOnError: true);
+
+      expect(result.stopped, isTrue);
+      expect((await s.subscriptions.get('p'))!.failedAttempts, 0);
+      expect(await s.deadLetters.count(), 0);
+    });
+
+    test('a non-retryable error is still skipped at once', () async {
+      final events = await s.deposit([1, 2]);
+      handler.failOn = (e) => e.id == events[0].id ? domainError() : null;
+
+      final result = await dispatcher(maxAttempts: 3).catchUp('p');
+
+      expect(result.skipped.single.event.eventId, events[0].id);
+      expect((await s.deadLetters.get(events[0].id, 'p'))!.attempts, 1);
+      expect(handler.cents, [2]);
+    });
   });
 
   test('a non-retryable error dead-letters the event and moves on', () async {
@@ -173,6 +267,14 @@ void main() {
         eventStore: s.eventStore,
         subscriptions: s.subscriptions,
         batchSize: 0,
+      ),
+      throwsA(isA<InvalidConfigurationError>()),
+    );
+    expect(
+      () => CronDispatcher(
+        eventStore: s.eventStore,
+        subscriptions: s.subscriptions,
+        maxAttempts: 0,
       ),
       throwsA(isA<InvalidConfigurationError>()),
     );

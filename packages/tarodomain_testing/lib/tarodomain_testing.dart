@@ -5,6 +5,7 @@
 /// single adapter. Each suite registers its tests in a `group`.
 library;
 
+export 'src/concurrency_contract.dart';
 export 'src/dead_letter_store_contract.dart';
 export 'src/event_store_adapter_contract.dart';
 export 'src/fixtures.dart';

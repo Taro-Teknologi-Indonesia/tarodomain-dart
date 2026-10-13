@@ -183,9 +183,15 @@ final class SubscriptionLag {
   /// Whether no event follows the cursor.
   bool get isCaughtUp => pending == 0;
 
+  /// How many times in a row the handler has failed on the event after the
+  /// cursor. Above 0, the subscription is stuck on that event until it
+  /// succeeds or catch-up's attempt limit skips it.
+  int get failedAttempts => subscription.failedAttempts;
+
   @override
   String toString() =>
-      'SubscriptionLag($name, pending: $pending${isCapped ? '+' : ''})';
+      'SubscriptionLag($name, pending: $pending${isCapped ? '+' : ''}'
+      '${failedAttempts > 0 ? ', failed: $failedAttempts' : ''})';
 }
 
 /// The lag of every subscription, from [SubscriptionManager.getLagReport].
