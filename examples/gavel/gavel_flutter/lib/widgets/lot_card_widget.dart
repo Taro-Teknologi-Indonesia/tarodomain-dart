@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gavel_client/gavel_client.dart';
 
 import '../core/money.dart';
+import '../core/names.dart';
 import 'lot_visual.dart';
 
 /// How much room a [LotCardWidget] takes: compact on the organizer
@@ -17,6 +18,7 @@ class LotCardWidget extends StatefulWidget {
   const LotCardWidget(
     this.lot, {
     this.me,
+    this.sharedNames = const {},
     this.size = LotCardSize.regular,
     this.onTap,
     super.key,
@@ -26,6 +28,9 @@ class LotCardWidget extends StatefulWidget {
 
   /// The participant this browser bids as, whose lead is highlighted.
   final UuidValue? me;
+
+  /// The names more than one bidder goes by, which get their tag.
+  final Set<String> sharedNames;
 
   final LotCardSize size;
   final VoidCallback? onTap;
@@ -142,7 +147,12 @@ class _LotCardWidgetState extends State<LotCardWidget>
                         ],
                       ],
                     ),
-                    _Leader(lot: lot, me: widget.me, style: detail),
+                    _Leader(
+                      lot: lot,
+                      me: widget.me,
+                      sharedNames: widget.sharedNames,
+                      style: detail,
+                    ),
                   ],
                 ),
               ),
@@ -209,18 +219,28 @@ class BuyNowTag extends StatelessWidget {
 }
 
 /// Who leads [lot], or who won it, or its opening bid while nobody has bid.
-/// "You" stands out when [me] is the one.
+/// "You" stands out when [me] is the one, and a name in [sharedNames] gets
+/// its tag.
 class _Leader extends StatelessWidget {
-  const _Leader({required this.lot, required this.me, required this.style});
+  const _Leader({
+    required this.lot,
+    required this.me,
+    required this.sharedNames,
+    required this.style,
+  });
 
   final LotCard lot;
   final UuidValue? me;
+  final Set<String> sharedNames;
   final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
     final open = lot.status == 'OPEN';
-    final name = open ? lot.leaderName : lot.winnerName;
+    final name = switch (open ? lot.leaderName : lot.winnerName) {
+      final name? => displayName(name, lot.leaderId, sharedNames),
+      null => null,
+    };
     final isMe = me != null && lot.leaderId == me;
     if (name == null) {
       return Text(
@@ -294,6 +314,7 @@ class LotGrid extends StatelessWidget {
     required this.lots,
     required this.empty,
     this.me,
+    this.sharedNames = const {},
     this.size = LotCardSize.regular,
     this.onTap,
     super.key,
@@ -305,6 +326,9 @@ class LotGrid extends StatelessWidget {
   /// The participant this browser bids as, whose leads are highlighted.
   final UuidValue? me;
 
+  /// The names more than one bidder goes by, which get their tag.
+  final Set<String> sharedNames;
+
   final LotCardSize size;
   final void Function(LotCard lot)? onTap;
 
@@ -313,6 +337,7 @@ class LotGrid extends StatelessWidget {
     // Keeps each card's flash state with its lot as the list changes.
     key: ValueKey(lot.lotId),
     me: me,
+    sharedNames: sharedNames,
     size: size,
     onTap: onTap == null ? null : () => onTap!(lot),
   );

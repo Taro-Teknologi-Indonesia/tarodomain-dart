@@ -3,6 +3,7 @@ import 'package:tarodomain/tarodomain.dart';
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart';
 
 import '../domain/auction.dart';
+import '../domain/keys.dart' as keys;
 import '../domain/lot.dart';
 import '../domain/lot_commands.dart';
 import '../domain/participant.dart';
@@ -152,6 +153,32 @@ class LotEndpoint extends Endpoint {
           serverNow: DateTime.now().toUtc(),
         );
       });
+
+  /// [participantId]'s winner code for the lot [lotId] (UC-09), or null
+  /// unless the lot is SOLD to them. The seller compares it before handing
+  /// the lot over, so a namesake can't claim the win.
+  ///
+  /// A read: nothing is dispatched and the code is never stored or logged.
+  ///
+  /// Throws `NOT_PARTICIPANT` unless [participantKey] is the key of a
+  /// participant of the lot's auction, and `AGGREGATE_NOT_FOUND` for an
+  /// unknown lot.
+  Future<String?> winnerCode(
+    Session session,
+    UuidValue lotId,
+    UuidValue participantId,
+    String participantKey,
+  ) => rethrowAsTaroDomainException(() async {
+    final card = await _card(session, lotId);
+    final participant = await verifyParticipant(
+      session,
+      card.auctionId,
+      participantId,
+      participantKey,
+    );
+    if (card.status != 'SOLD' || card.leaderId != participantId) return null;
+    return keys.winnerCode(participant.keyHash, lotId.uuid);
+  });
 
   Future<LotCard> _card(Session session, UuidValue lotId) async =>
       await LotCard.db.findFirstRow(

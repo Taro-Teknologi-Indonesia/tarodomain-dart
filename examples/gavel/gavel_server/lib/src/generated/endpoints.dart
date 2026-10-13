@@ -118,6 +118,27 @@ class Endpoints extends _is.EndpointDispatch {
                     params['participantKey'],
                   ),
         ),
+        'winnerCodes': _is.MethodConnector(
+          name: 'winnerCodes',
+          params: {
+            'code': _is.ParameterDescription(
+              name: 'code',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'organizerKey': _is.ParameterDescription(
+              name: 'organizerKey',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['auction'] as _iyn8i9y2.AuctionEndpoint).winnerCodes(
+                session,
+                params['code'],
+                params['organizerKey'],
+              ),
+        ),
       },
     );
     connectors['live'] = _is.EndpointConnector(
@@ -290,6 +311,33 @@ class Endpoints extends _is.EndpointDispatch {
               (endpoints['lot'] as _i6hhfich.LotEndpoint).detail(
                 session,
                 params['lotId'],
+              ),
+        ),
+        'winnerCode': _is.MethodConnector(
+          name: 'winnerCode',
+          params: {
+            'lotId': _is.ParameterDescription(
+              name: 'lotId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantId': _is.ParameterDescription(
+              name: 'participantId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantKey': _is.ParameterDescription(
+              name: 'participantKey',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['lot'] as _i6hhfich.LotEndpoint).winnerCode(
+                session,
+                params['lotId'],
+                params['participantId'],
+                params['participantKey'],
               ),
         ),
       },

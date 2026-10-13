@@ -38,7 +38,7 @@ indexes:
 
 Write-up line: *"Bids are event-sourced because we need time travel and an audit trail. Joins are a plain row because we don't. TaroDomain lets you choose per aggregate, and the events are still recorded."* Check that the state repository still publishes `ParticipantJoined` to the bus, as `HolderRegistered` does.
 
-Duplicate names are allowed, and `participantId` tells them apart. The ledger may show "Budi" twice. Add `· #a3f` (the first 3 hex chars of the id) only where two leaders with the same name would be ambiguous. That's optional polish.
+Duplicate names are allowed, and `participantId` tells them apart. The ledger may show "Budi" twice. UC-09 adds a name tag (`Budi · #3f9c`, the **last** 4 hex chars of the ID, since a UUIDv7 starts with its timestamp) where two people share a name, and a winner code so that the real winner can claim the lot.
 
 ## Endpoints
 

@@ -143,6 +143,44 @@ class AuctionEndpoint extends Endpoint {
     }
   }
 
+  /// The winner code of every SOLD lot in the auction with join [code],
+  /// by lot ID (UC-09), for the organizer to check a buyer's claim.
+  ///
+  /// A read: nothing is dispatched and the codes are never stored or
+  /// logged.
+  ///
+  /// Throws `AUCTION_NOT_FOUND` for an unknown code and `NOT_ORGANIZER`
+  /// for a wrong [organizerKey].
+  Future<Map<String, String>> winnerCodes(
+    Session session,
+    String code,
+    String organizerKey,
+  ) => rethrowAsTaroDomainException(() async {
+    final view = await findAuction(session, code);
+    final auction = await _taro
+        .runtime(session)
+        .repository<Auction, AuctionId>()
+        .load(AuctionId.fromExisting(view.auctionId.uuid));
+    if (!auction.isOrganizer(organizerKey)) throw NotOrganizerError();
+
+    final sold = await LotCard.db.find(
+      session,
+      where: (t) => t.code.equals(view.code) & t.status.equals('SOLD'),
+    );
+    final winners = {
+      for (final row in await ParticipantRow.db.find(
+        session,
+        where: (t) => t.auctionId.equals(view.auctionId),
+      ))
+        row.id!: row.keyHash,
+    };
+    return {
+      for (final lot in sold)
+        if (winners[lot.leaderId] case final keyHash?)
+          lot.lotId.uuid: winnerCode(keyHash, lot.lotId.uuid),
+    };
+  });
+
   /// Dispatches [command] with a new random join code, again with another
   /// one if the code is taken, and returns the code that was used.
   ///

@@ -330,6 +330,41 @@ class _AuctionEndpoint {
       }
     });
   }
+
+  _ida.Future<Map<String, String>> winnerCodes(
+    _ist.TestSessionBuilder sessionBuilder,
+    String code,
+    String organizerKey,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'auction',
+            method: 'winnerCodes',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'auction',
+          methodName: 'winnerCodes',
+          parameters: _ist.testObjectToJson({
+            'code': code,
+            'organizerKey': organizerKey,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<Map<String, String>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
 }
 
 class _LiveEndpoint {
@@ -553,6 +588,43 @@ class _LotEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_i9io6m2h.LotDetail>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<String?> winnerCode(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue lotId,
+    _is.UuidValue participantId,
+    String participantKey,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'lot',
+            method: 'winnerCode',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'lot',
+          methodName: 'winnerCode',
+          parameters: _ist.testObjectToJson({
+            'lotId': lotId,
+            'participantId': participantId,
+            'participantKey': participantKey,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<String?>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

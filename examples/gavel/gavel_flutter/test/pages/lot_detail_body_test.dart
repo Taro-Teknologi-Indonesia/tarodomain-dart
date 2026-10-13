@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gavel_client/gavel_client.dart';
+import 'package:gavel_flutter/core/names.dart';
 import 'package:gavel_flutter/pages/lot_page.dart';
+import 'package:gavel_flutter/widgets/ledger_list.dart';
+import 'package:gavel_flutter/widgets/won_banner.dart';
 
 import '../support.dart';
 
@@ -10,6 +13,9 @@ Widget _app(
   List<LedgerEntry>? ledger, {
   UuidValue? me,
   VoidCallback? onShare,
+  LoadWinnerCode? loadWinnerCode,
+  String? organizerCode,
+  Set<String> sharedNames = const {},
 }) => MaterialApp(
   home: Scaffold(
     body: LotDetailBody(
@@ -18,6 +24,9 @@ Widget _app(
       closeAt: DateTime.utc(2026, 10, 14, 22, 3),
       me: me,
       onShare: onShare,
+      loadWinnerCode: loadWinnerCode,
+      organizerCode: organizerCode,
+      sharedNames: sharedNames,
     ),
   ),
 );
@@ -77,28 +86,127 @@ void main() {
       closedAt: DateTime.utc(2026, 10, 14, 22, 3),
     );
 
-    testWidgets('celebrates with the winner, who can share it', (tester) async {
+    testWidgets('celebrates with the winner, who can share it and gets '
+        'their tag and winner code', (tester) async {
       var shared = 0;
       await tester.pumpWidget(
-        _app(soldToBudi, [ledgerEntry(1)], me: budi, onShare: () => shared++),
+        _app(
+          soldToBudi,
+          [ledgerEntry(1)],
+          me: budi,
+          onShare: () => shared++,
+          loadWinnerCode: () async => '7KQ-2XM',
+        ),
       );
+      await tester.pump();
 
       expect(
         find.text('🔨 You won Batik tulis Lasem — Rp 175.000'),
+        findsOneWidget,
+      );
+      expect(find.text("You're Budi · #00b1 on the receipt"), findsOneWidget);
+      expect(
+        find.textContaining('7KQ-2XM', findRichText: true),
         findsOneWidget,
       );
       await tester.tap(find.text('Share result'));
       expect(shared, 1);
     });
 
-    testWidgets('names the winner to everyone else', (tester) async {
+    testWidgets('shows the tagged result block to everyone else, with no '
+        'chips, no code and the record note', (tester) async {
       await tester.pumpWidget(
-        _app(soldToBudi, [ledgerEntry(1)], me: siti, onShare: () {}),
+        _app(
+          soldToBudi,
+          [ledgerEntry(1)],
+          me: siti,
+          onShare: () {},
+          loadWinnerCode: () async => fail('only the winner asks'),
+        ),
       );
+      await tester.pump();
 
       expect(find.textContaining('You won'), findsNothing);
-      expect(find.text('SOLD to Budi — Rp 175.000'), findsOneWidget);
+      expect(find.text('🔨 SOLD to Budi · #00b1'), findsOneWidget);
+      expect(find.text('Rp 175.000'), findsOneWidget);
+      expect(
+        find.text('Closed ${formatClock(soldToBudi.closedAt!)} · by deadline'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Next bid'), findsNothing);
+      // One name in the auction: the ledger keeps it plain.
+      expect(
+        find.text(
+          '🔨 Closed ${formatClock(soldToBudi.closedAt!)} — '
+          'SOLD to Budi',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('· Budi ·'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.textContaining('append-only'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('append-only'), findsOneWidget);
     });
+
+    testWidgets('shows the organizer the winner code under the '
+        'result', (tester) async {
+      await tester.pumpWidget(
+        _app(soldToBudi, [ledgerEntry(1)], organizerCode: '7KQ-2XM'),
+      );
+
+      expect(find.text('Budi · #00b1 · code 7KQ-2XM'), findsOneWidget);
+    });
+
+    testWidgets('tags both Budis in the ledger when they share the '
+        'name', (tester) async {
+      final ledger = [
+        ledgerEntry(1, by: otherBudi, name: 'budi'),
+        ledgerEntry(2),
+      ];
+      await tester.pumpWidget(
+        _app(
+          soldToBudi,
+          ledger,
+          sharedNames: sharedNames([
+            for (final e in ledger) (e.bidderName, e.participantId),
+          ]),
+        ),
+      );
+
+      expect(find.textContaining('· budi · #00b2 ·'), findsOneWidget);
+      expect(find.textContaining('· Budi · #00b1 ·'), findsOneWidget);
+      expect(find.textContaining('SOLD to Budi · #00b1'), findsNWidgets(2));
+    });
+  });
+
+  testWidgets('a PASSED lot says so, greyed, with no price', (tester) async {
+    final passed = lotCard(
+      version: 2,
+      status: 'PASSED',
+      closeCause: 'DEADLINE',
+      closedAt: DateTime.utc(2026, 10, 14, 22, 3),
+    );
+    await tester.pumpWidget(_app(passed, const []));
+
+    expect(find.text('🔨 PASSED — no bids'), findsOneWidget);
+    expect(find.text('Rp 150.000'), findsNothing);
+  });
+
+  testWidgets('the share bar shares', (tester) async {
+    var shared = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: ShareResultBar(onShare: () => shared++),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Share result'));
+    expect(shared, 1);
   });
 
   testWidgets('shows the next bid and a spinner while the ledger '

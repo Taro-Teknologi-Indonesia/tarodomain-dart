@@ -6,6 +6,7 @@ import 'package:gavel_client/gavel_client.dart';
 
 import 'failures.dart';
 import 'live.dart';
+import 'names.dart' as names;
 
 /// One auction as the app holds it: the auction, its lot cards, and the
 /// live feed that keeps both current.
@@ -89,6 +90,17 @@ class AuctionController extends ChangeNotifier {
     if (held != null && held.retracted && !entry.retracted) return;
     ledger[entry.sequence] = entry;
   }
+
+  /// The names more than one bidder goes by among the lots and the
+  /// ledgers loaded, normalized: those get their tag (UC-09).
+  Set<String> get sharedNames => names.sharedNames([
+    for (final lot in _lots.values)
+      if ((lot.leaderName, lot.leaderId) case (final name?, final id?))
+        (name, id),
+    for (final lotId in _ledgersLoaded)
+      for (final entry in _ledgers[lotId]!.values)
+        (entry.bidderName, entry.participantId),
+  ]);
 
   /// Whether the live stream is connected.
   ValueListenable<LiveStatus> get status => live.status;

@@ -13,6 +13,7 @@ import '../core/identity.dart';
 import '../core/ledger.dart';
 import '../core/live.dart';
 import '../core/money.dart';
+import '../core/names.dart';
 import '../core/organizer_keys.dart';
 import '../core/retracting.dart';
 import '../core/share.dart';
@@ -51,6 +52,10 @@ class _LotPageState extends State<LotPage> {
 
   /// Organizers don't bid, so they get no chips.
   bool _isOrganizer = false;
+  String? _organizerKey;
+
+  /// The organizer's winner codes by lot ID, once the lot is SOLD (UC-09).
+  Map<String, String>? _winnerCodes;
 
   static UuidValue? _parse(String id) {
     try {
@@ -73,8 +78,40 @@ class _LotPageState extends State<LotPage> {
     setState(() {
       _identity = identity;
       _isOrganizer = organizerKey != null;
+      _organizerKey = organizerKey;
       _identityLoaded = true;
     });
+  }
+
+  /// Fetches the organizer's winner codes the first time this lot shows
+  /// SOLD in a browser holding the organizer key.
+  void _maybeLoadWinnerCodes(LotCard lot) {
+    final key = _organizerKey;
+    if (key == null || lot.status != 'SOLD' || _winnerCodes != null) return;
+    _winnerCodes = const {};
+    unawaited(
+      client.auction
+          .winnerCodes(widget.code, key)
+          .then((codes) {
+            if (mounted) setState(() => _winnerCodes = codes);
+          })
+          .catchError((Object _) {
+            // Asked again the next time the page builds.
+            _winnerCodes = null;
+          }),
+    );
+  }
+
+  /// This browser's winner code for the lot, from the server.
+  Future<String?> _loadWinnerCode() async {
+    final identity = _identity;
+    final lotId = _lotId;
+    if (identity == null || lotId == null) return null;
+    return client.lot.winnerCode(
+      lotId,
+      identity.participantId,
+      identity.participantKey,
+    );
   }
 
   Future<void> _join({String? message}) async {
@@ -111,6 +148,7 @@ class _LotPageState extends State<LotPage> {
     final lot = lotId == null ? null : auction.lot(lotId);
     final loading = auction.auction == null && auction.failure == null;
     final closeAt = auction.auction?.closeAt;
+    if (lot != null) _maybeLoadWinnerCodes(lot);
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.go('/a/${widget.code}')),
@@ -142,6 +180,9 @@ class _LotPageState extends State<LotPage> {
               closeAt: closeAt,
               me: _identity?.participantId,
               onShare: _share,
+              loadWinnerCode: _loadWinnerCode,
+              organizerCode: _winnerCodes?[lot.lotId.uuid],
+              sharedNames: auction.sharedNames,
             )
           : Center(
               child: loading
@@ -154,6 +195,7 @@ class _LotPageState extends State<LotPage> {
 
   Widget? _actions(AuctionController auction, LotCard lot) {
     final closeAt = auction.auction?.closeAt;
+    if (lot.status != 'OPEN') return ShareResultBar(onShare: _share);
     if (!_identityLoaded || _isOrganizer || closeAt == null) return null;
     final identity = _identity;
     return SafeArea(
@@ -162,15 +204,13 @@ class _LotPageState extends State<LotPage> {
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: identity == null
-              ? lot.status == 'OPEN'
-                    ? FilledButton(
-                        onPressed: _join,
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                        child: const Text('Join to bid'),
-                      )
-                    : null
+              ? FilledButton(
+                  onPressed: _join,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  child: const Text('Join to bid'),
+                )
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -219,6 +259,30 @@ class _LotPageState extends State<LotPage> {
   }
 }
 
+/// A closed lot's action bar: one button that copies the receipt's URL
+/// (UC-09), for everyone, joined or not.
+class ShareResultBar extends StatelessWidget {
+  const ShareResultBar({required this.onShare, super.key});
+
+  final VoidCallback onShare;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Material(
+      elevation: 8,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: FilledButton.icon(
+          onPressed: onShare,
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          icon: const Icon(Icons.share),
+          label: const Text('Share result'),
+        ),
+      ),
+    ),
+  );
+}
+
 /// The lot's visual, name, description, price block and ledger.
 class LotDetailBody extends StatelessWidget {
   const LotDetailBody({
@@ -227,6 +291,9 @@ class LotDetailBody extends StatelessWidget {
     required this.closeAt,
     this.me,
     this.onShare,
+    this.loadWinnerCode,
+    this.organizerCode,
+    this.sharedNames = const {},
     super.key,
   });
 
@@ -244,6 +311,15 @@ class LotDetailBody extends StatelessWidget {
   /// Shares the result, from the banner of a lot [me] won.
   final VoidCallback? onShare;
 
+  /// Fetches [me]'s winner code for the banner of a lot they won.
+  final LoadWinnerCode? loadWinnerCode;
+
+  /// The winner code, for the organizer to check a buyer's claim.
+  final String? organizerCode;
+
+  /// The names more than one bidder goes by, which get their tag.
+  final Set<String> sharedNames;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -252,21 +328,20 @@ class LotDetailBody extends StatelessWidget {
     final ledger = this.ledger;
     final leading = me != null && lot.leaderId == me;
     final outbid = !leading && (ledger?.hasValidBidBy(me) ?? false);
+    final leader = switch (lot.leaderName) {
+      final name? => displayName(name, lot.leaderId, sharedNames),
+      null => null,
+    };
     final (status, color) = switch (lot) {
-      LotCard(status: 'SOLD', :final winnerName, :final finalPrice) => (
-        'SOLD to $winnerName — ${formatRupiah(finalPrice ?? lot.currentPrice)}',
-        null,
-      ),
-      LotCard(status: 'PASSED') => ('PASSED — no bids', null),
       _ when leading => (
         "You're the high bidder — ${formatRupiah(lot.currentPrice)}",
         Colors.green.shade700,
       ),
-      LotCard(:final leaderName?) when outbid => (
-        'Outbid — $leaderName leads at ${formatRupiah(lot.currentPrice)}',
+      _ when leader != null && outbid => (
+        'Outbid — $leader leads at ${formatRupiah(lot.currentPrice)}',
         Colors.amber.shade900,
       ),
-      LotCard(:final leaderName?) => ('$leaderName leads', scheme.onSurface),
+      _ when leader != null => ('$leader leads', scheme.onSurface),
       _ => ('No bids yet', scheme.onSurfaceVariant),
     };
     return Center(
@@ -278,7 +353,11 @@ class LotDetailBody extends StatelessWidget {
             if (onShare case final onShare? when wonBy(lot, me))
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: WonBanner(lot: lot, onShare: onShare),
+                child: WonBanner(
+                  lot: lot,
+                  onShare: onShare,
+                  loadCode: loadWinnerCode,
+                ),
               ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -308,28 +387,27 @@ class LotDetailBody extends StatelessWidget {
                     _Description(lot.description),
                   ],
                   const SizedBox(height: 16),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      formatRupiah(lot.currentPrice),
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                  if (lot.status == 'OPEN') ...[
+                    _Price(lot.currentPrice),
+                    if (steps.isNotEmpty)
+                      Text(
+                        'Next bid from '
+                        '${formatRupiah(lot.currentPrice + steps.first)}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      status,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: color,
                       ),
                     ),
-                  ),
-                  if (lot.status == 'OPEN' && steps.isNotEmpty)
-                    Text(
-                      'Next bid from '
-                      '${formatRupiah(lot.currentPrice + steps.first)}',
-                      style: theme.textTheme.bodyMedium,
+                  ] else
+                    ResultBlock(
+                      lot: lot,
+                      closeAt: closeAt,
+                      organizerCode: organizerCode,
                     ),
-                  const SizedBox(height: 4),
-                  Text(
-                    status,
-                    style: theme.textTheme.titleMedium?.copyWith(color: color),
-                  ),
                   const SizedBox(height: 24),
                   Text('Bids', style: theme.textTheme.titleMedium),
                 ],
@@ -342,10 +420,107 @@ class LotDetailBody extends StatelessWidget {
                 child: Center(child: CircularProgressIndicator()),
               )
             else
-              LedgerList(lot: lot, entries: ledger, closeAt: closeAt, me: me),
+              LedgerList(
+                lot: lot,
+                entries: ledger,
+                closeAt: closeAt,
+                me: me,
+                sharedNames: sharedNames,
+              ),
+            if (lot.status != 'OPEN')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Text(
+                  "This record is append-only. Bids can't be edited or "
+                  'deleted — retractions stay visible.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// [price] in big tabular figures, shrunk to fit a phone.
+class _Price extends StatelessWidget {
+  const _Price(this.price);
+
+  final int price;
+
+  @override
+  Widget build(BuildContext context) => FittedBox(
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerLeft,
+    child: Text(
+      formatRupiah(price),
+      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+        fontWeight: FontWeight.bold,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    ),
+  );
+}
+
+/// A closed lot's outcome, the receipt a winner shares (UC-09):
+/// "🔨 SOLD to Sari · #3f9c", the final price, and when and how it closed.
+/// The winner's tag is always there, so two Saris can't be confused.
+class ResultBlock extends StatelessWidget {
+  const ResultBlock({
+    required this.lot,
+    required this.closeAt,
+    this.organizerCode,
+    super.key,
+  });
+
+  final LotCard lot;
+
+  /// When the auction closes, in UTC: the close time until the lot knows
+  /// its own.
+  final DateTime closeAt;
+
+  /// The winner code, shown to the organizer only.
+  final String? organizerCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final winner = switch ((lot.winnerName, lot.leaderId)) {
+      (final name?, final id?) when lot.status == 'SOLD' => tagged(name, id),
+      _ => null,
+    };
+    final closed = 'Closed ${formatClock(lot.closedAt ?? closeAt)}';
+    final how = lot.closeCause == 'BUY_NOW'
+        ? 'Buy Now by ${lot.winnerName}'
+        : 'by deadline';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          winner == null ? '🔨 PASSED — no bids' : '🔨 SOLD to $winner',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: winner == null ? Colors.grey.shade600 : null,
+          ),
+        ),
+        if (winner != null) _Price(lot.finalPrice ?? lot.currentPrice),
+        Text(
+          winner == null ? closed : '$closed · $how',
+          style: theme.textTheme.bodyMedium,
+        ),
+        if ((winner, organizerCode) case (final winner?, final code?)) ...[
+          const SizedBox(height: 8),
+          SelectableText(
+            '$winner · code $code',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

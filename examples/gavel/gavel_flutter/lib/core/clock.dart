@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 /// [remaining] as `2 h 14 m`, `14 m 05 s` or `42 s`.
 String formatRemaining(Duration remaining) {
@@ -13,10 +14,12 @@ String formatRemaining(Duration remaining) {
   return '${remaining.inSeconds} s';
 }
 
+final _closedAt = DateFormat('HH:mm');
+
 /// The time left until [closeAt] on the server's clock: the local clock
 /// plus [offset], so a phone that is off by 30 seconds still agrees with
 /// everyone else. Red under a minute, then "Closing…" until the server
-/// says the auction is [closed] (UC-08).
+/// says the auction is [closed] (UC-08), then "Closed 22:03" (UC-09).
 class CountdownText extends StatefulWidget {
   const CountdownText({
     required this.closeAt,
@@ -68,7 +71,8 @@ class _CountdownTextState extends State<CountdownText> {
     return Text(
       switch (timeUp) {
         false => formatRemaining(remaining),
-        true when widget.closed => 'Closed',
+        true when widget.closed =>
+          'Closed ${_closedAt.format(widget.closeAt.toLocal())}',
         true => 'Closing…',
       },
       style: style.copyWith(

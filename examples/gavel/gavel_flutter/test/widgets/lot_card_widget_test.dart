@@ -6,13 +6,17 @@ import 'package:gavel_flutter/widgets/lot_visual.dart';
 
 import '../support.dart';
 
-Widget _app(LotCard lot, {UuidValue? me}) => MaterialApp(
-  home: Scaffold(
-    body: SingleChildScrollView(
-      child: SizedBox(width: 360, child: LotCardWidget(lot, me: me)),
-    ),
-  ),
-);
+Widget _app(LotCard lot, {UuidValue? me, Set<String> sharedNames = const {}}) =>
+    MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: SizedBox(
+            width: 360,
+            child: LotCardWidget(lot, me: me, sharedNames: sharedNames),
+          ),
+        ),
+      ),
+    );
 
 /// The visible text, including that of rich text such as "**You** lead".
 String _texts(WidgetTester tester) => tester
@@ -90,6 +94,23 @@ void main() {
 
     expect(find.text('SOLD'), findsOneWidget);
     expect(find.text('Siti won'), findsOneWidget);
+  });
+
+  testWidgets('tags the winner only when another bidder shares the '
+      'name', (tester) async {
+    final lot = lotCard(
+      version: 3,
+      currentPrice: 200000,
+      status: 'SOLD',
+      leaderId: budi,
+      leaderName: 'Budi',
+      winnerName: 'Budi',
+    );
+    await tester.pumpWidget(_app(lot, me: siti, sharedNames: {'budi'}));
+    expect(find.text('Budi · #00b1 won'), findsOneWidget);
+
+    await tester.pumpWidget(_app(lot, me: siti));
+    expect(find.text('Budi won'), findsOneWidget);
   });
 
   testWidgets('shows a passed lot', (tester) async {

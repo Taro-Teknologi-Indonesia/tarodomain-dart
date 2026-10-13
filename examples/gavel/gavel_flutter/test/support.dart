@@ -7,6 +7,9 @@ final lotId = UuidValue.fromString('00000000-0000-4000-8000-000000000001');
 final budi = UuidValue.fromString('00000000-0000-4000-8000-0000000000b1');
 final siti = UuidValue.fromString('00000000-0000-4000-8000-0000000000c1');
 
+/// Another bidder who also calls themself Budi.
+final otherBudi = UuidValue.fromString('00000000-0000-4000-8000-0000000000b2');
+
 /// An open lot with no bids, opening at Rp 150.000.
 LotCard lotCard({
   int version = 1,

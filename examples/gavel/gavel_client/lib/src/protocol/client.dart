@@ -79,6 +79,23 @@ class EndpointAuction extends _isc.EndpointRef {
     'participantId': participantId,
     'participantKey': participantKey,
   });
+
+  /// The winner code of every SOLD lot in the auction with join [code],
+  /// by lot ID (UC-09), for the organizer to check a buyer's claim.
+  ///
+  /// A read: nothing is dispatched and the codes are never stored or
+  /// logged.
+  ///
+  /// Throws `AUCTION_NOT_FOUND` for an unknown code and `NOT_ORGANIZER`
+  /// for a wrong [organizerKey].
+  _ida.Future<Map<String, String>> winnerCodes(
+    String code,
+    String organizerKey,
+  ) => caller.callServerEndpoint<Map<String, String>>(
+    'auction',
+    'winnerCodes',
+    {'code': code, 'organizerKey': organizerKey},
+  );
 }
 
 /// Live updates of one auction, pushed to every subscribed browser.
@@ -188,6 +205,25 @@ class EndpointLot extends _isc.EndpointRef {
       caller.callServerEndpoint<_izswfryi.LotDetail>('lot', 'detail', {
         'lotId': lotId,
       });
+
+  /// [participantId]'s winner code for the lot [lotId] (UC-09), or null
+  /// unless the lot is SOLD to them. The seller compares it before handing
+  /// the lot over, so a namesake can't claim the win.
+  ///
+  /// A read: nothing is dispatched and the code is never stored or logged.
+  ///
+  /// Throws `NOT_PARTICIPANT` unless [participantKey] is the key of a
+  /// participant of the lot's auction, and `AGGREGATE_NOT_FOUND` for an
+  /// unknown lot.
+  _ida.Future<String?> winnerCode(
+    _isc.UuidValue lotId,
+    _isc.UuidValue participantId,
+    String participantKey,
+  ) => caller.callServerEndpoint<String?>('lot', 'winnerCode', {
+    'lotId': lotId,
+    'participantId': participantId,
+    'participantKey': participantKey,
+  });
 }
 
 class Modules {

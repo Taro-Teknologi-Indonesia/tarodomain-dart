@@ -18,9 +18,10 @@ Build in this order. The numbers are steps, not UC IDs. Plans prefixed `x` aren'
 | 7 | [uc-05-lot-detail-ledger.md](uc-05-lot-detail-ledger.md) | Must | 1.5h |
 | 8 | [uc-07-retract-bid.md](uc-07-retract-bid.md) | Must | 1h |
 | 9 | [uc-08-auto-close.md](uc-08-auto-close.md) | Must | 2h |
-| 10 | [uc-09-outcome-share.md](uc-09-outcome-share.md) (without the OG stretch) | Must | 0.75h |
+| 10 | [uc-09-outcome-share.md](uc-09-outcome-share.md) (without the OG stretch): outcome, receipt, name tag, winner code | Must | 1.75h |
 | 11 | [x2-rolling-demo-auction.md](x2-rolling-demo-auction.md): `/demo` always open for judges | Must | 0.75h |
 | 12 | [x3-race-proof.md](x3-race-proof.md): real parallel bids against production | Must | 0.75h |
+| 12b | [x5-client-validation.md](x5-client-validation.md): every server rule on user input also checked in the app before the call | Should | 1.5h |
 | — | **Record the video** | | |
 | 13 | [uc-11-big-screen.md](uc-11-big-screen.md) | Should | 0.5h |
 | 14 | [uc-14-mark-unpaid.md](uc-14-mark-unpaid.md): non-payment made visible | Could | 0.5h |
@@ -29,7 +30,7 @@ Build in this order. The numbers are steps, not UC IDs. Plans prefixed `x` aren'
 | 17 | UC-09 Open Graph preview stretch | Stretch | 0.5h |
 | last | [x4-judges-readme.md](x4-judges-readme.md): live link, 2-minute try-it, Serverpod mapping, proof | Must | 0.5h |
 
-Musts total about 18.5 h, including deploy, the demo auction, the race proof and the README. Add about 1.5 h for recording and the submission form.
+Musts total about 19.5 h, including deploy, the demo auction, the race proof and the README. Add about 1.5 h for recording and the submission form.
 
 **Nothing faked:** no artificial server delays, no bot bidders, and the demo auction is created through the normal commands.
 
@@ -41,9 +42,11 @@ Musts total about 18.5 h, including deploy, the demo auction, the race proof and
 - **`BidPlaced` carries `bidderName`**, so `OutbidError.leaderName` and the ledger need no join.
 - **`Auction` records `LotRegistered`**, so the close saga knows its lots without reading a projection.
 - **Participant key:** `join` returns a random secret next to the public `participantId`. Only its hash is stored, and bidding or retracting requires it, so an ID copied from the ledger can't be used to act as someone else.
+- **Claiming a win with a shared name:** the receipt tags the winner (`Budi · #3f9c`, the last 4 hex chars of the participantId), and a winner code, an HMAC of the lot ID keyed with the participant's stored key hash, is shown only to the winner's browser and the organizer. It's computed on request and never stored or published (UC-09).
 - **Organizer key:** a random secret returned by `create`, kept in localStorage, with only its hash stored. It guards AddLot and MarkUnpaid. This isn't auth.
 - **Every command is strong**, so projections and the live push happen in or after the same transaction.
 - **Server clock offset** drives all countdowns.
+- **Client validation mirrors the server, never replaces it.** Limits live once in `gavel_client/lib/rules.dart`, a server parity test fails if they drift from the domain, and every server check and `GavelFailure` mapping stays (X5).
 
 ## Things to verify early (API details not confirmed while planning)
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:gavel_flutter/core/clock.dart';
 
 Widget _countdown(DateTime closeAt, {bool closed = false}) => MaterialApp(
@@ -25,6 +26,9 @@ void main() {
     expect(find.text('Closing…'), findsOneWidget);
 
     await tester.pumpWidget(_countdown(past, closed: true));
-    expect(find.text('Closed'), findsOneWidget);
+    expect(
+      find.text('Closed ${DateFormat('HH:mm').format(past.toLocal())}'),
+      findsOneWidget,
+    );
   });
 }

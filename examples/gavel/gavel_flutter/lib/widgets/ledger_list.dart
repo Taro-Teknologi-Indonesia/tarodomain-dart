@@ -3,6 +3,7 @@ import 'package:gavel_client/gavel_client.dart';
 import 'package:intl/intl.dart';
 
 import '../core/money.dart';
+import '../core/names.dart';
 
 final _clock = DateFormat('HH:mm:ss');
 
@@ -21,6 +22,7 @@ class LedgerList extends StatefulWidget {
     required this.entries,
     required this.closeAt,
     this.me,
+    this.sharedNames = const {},
     super.key,
   });
 
@@ -35,6 +37,9 @@ class LedgerList extends StatefulWidget {
 
   /// Who this browser bids as, whose rows are highlighted.
   final UuidValue? me;
+
+  /// The names more than one bidder goes by, which get their tag.
+  final Set<String> sharedNames;
 
   @override
   State<LedgerList> createState() => _LedgerListState();
@@ -91,6 +96,7 @@ class _LedgerListState extends State<LedgerList> {
                 child: LedgerRow(
                   entry,
                   mine: widget.me != null && entry.participantId == widget.me,
+                  sharedNames: widget.sharedNames,
                 ),
               ),
             );
@@ -104,10 +110,13 @@ class _LedgerListState extends State<LedgerList> {
   String? _closingLine(LotCard lot) {
     if (lot.status == 'OPEN') return null;
     final at = formatClock(lot.closedAt ?? widget.closeAt);
+    final winner = switch (lot.winnerName) {
+      final name? => displayName(name, lot.leaderId, widget.sharedNames),
+      null => null,
+    };
     final outcome = switch (lot) {
-      LotCard(status: 'SOLD', closeCause: 'BUY_NOW', :final winnerName) =>
-        'Bought now by $winnerName',
-      LotCard(status: 'SOLD', :final winnerName) => 'SOLD to $winnerName',
+      LotCard(status: 'SOLD', closeCause: 'BUY_NOW') => 'Bought now by $winner',
+      LotCard(status: 'SOLD') => 'SOLD to $winner',
       _ => 'PASSED — no bids',
     };
     return '🔨 Closed $at — $outcome';
@@ -116,12 +125,18 @@ class _LedgerListState extends State<LedgerList> {
 
 /// One bid: `#12 · Budi · Rp 250.000 · 22:01:47`. Struck through and muted
 /// once retracted, with when, fading into it as the retraction arrives;
-/// highlighted when it's [mine].
+/// highlighted when it's [mine]. A name in [sharedNames] gets its tag.
 class LedgerRow extends StatelessWidget {
-  const LedgerRow(this.entry, {this.mine = false, super.key});
+  const LedgerRow(
+    this.entry, {
+    this.mine = false,
+    this.sharedNames = const {},
+    super.key,
+  });
 
   final LedgerEntry entry;
   final bool mine;
+  final Set<String> sharedNames;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +158,8 @@ class LedgerRow extends StatelessWidget {
           ),
         ),
         child: Text(
-          '#${entry.sequence} · ${entry.bidderName} · '
+          '#${entry.sequence} · '
+          '${displayName(entry.bidderName, entry.participantId, sharedNames)} · '
           '${formatRupiah(entry.amount)} · ${formatClock(entry.placedAt)}',
         ),
       ),

@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gavel_client/gavel_client.dart';
 
+import '../core/api.dart';
 import '../core/auction_controller.dart';
 import '../core/auction_scope.dart';
 import '../core/clock.dart';
 import '../core/failures.dart';
 import '../core/live.dart';
+import '../core/names.dart';
 import '../core/organizer_keys.dart';
 import '../widgets/lot_card_widget.dart';
 import 'lot_form_sheet.dart';
@@ -29,17 +32,57 @@ class _OrganizerPageState extends State<OrganizerPage> {
   String? _organizerKey;
   var _keyLoaded = false;
 
+  /// The winner code of each SOLD lot by lot ID, once fetched (UC-09).
+  Map<String, String>? _winnerCodes;
+
+  /// The SOLD lots the codes were fetched for, so a newly sold lot fetches
+  /// them again.
+  var _codesFor = 0;
+
   @override
   void initState() {
     super.initState();
+    _auction.addListener(_maybeLoadWinnerCodes);
     OrganizerKeys.load(widget.code).then((key) {
       if (mounted) {
         setState(() {
           _organizerKey = key;
           _keyLoaded = true;
         });
+        _maybeLoadWinnerCodes();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _auction.removeListener(_maybeLoadWinnerCodes);
+    super.dispose();
+  }
+
+  List<LotCard> get _sold => [
+    for (final lot in _auction.lots)
+      if (lot.status == 'SOLD') lot,
+  ];
+
+  /// Fetches the winner codes whenever more lots are SOLD than they were
+  /// fetched for.
+  void _maybeLoadWinnerCodes() {
+    final key = _organizerKey;
+    final sold = _sold.length;
+    if (key == null || sold == 0 || sold <= _codesFor) return;
+    _codesFor = sold;
+    client.auction
+        .winnerCodes(widget.code, key)
+        .then(
+          (codes) {
+            if (mounted) setState(() => _winnerCodes = codes);
+          },
+          onError: (Object _) {
+            // Fetched again with the next update.
+            _codesFor = 0;
+          },
+        );
   }
 
   Future<void> _addLot(String organizerKey) async {
@@ -106,9 +149,12 @@ class _OrganizerPageState extends State<OrganizerPage> {
                   ),
                   actions: [const SizedBox.shrink()],
                 ),
+              if (_winnerCodes case final codes? when codes.isNotEmpty)
+                _Winners(lots: _sold, codes: codes),
               Expanded(
                 child: LotGrid(
                   lots: _auction.lots,
+                  sharedNames: _auction.sharedNames,
                   size: LotCardSize.dense,
                   empty: key == null
                       ? 'No lots yet.'
@@ -121,6 +167,58 @@ class _OrganizerPageState extends State<OrganizerPage> {
       );
     },
   );
+}
+
+/// Each SOLD lot's winner with their tag and winner code (UC-09):
+/// "Natural Pirus Hubei — Budi · #3f9c · code 7KQ-2XM". The seller asks a
+/// buyer for the code and hands the lot over only on a match.
+class _Winners extends StatelessWidget {
+  const _Winners({required this.lots, required this.codes});
+
+  final List<LotCard> lots;
+
+  /// Winner codes by lot ID.
+  final Map<String, String> codes;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Card(
+        child: ConstrainedBox(
+          // Many winners scroll inside the card, leaving room for the grid.
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.3,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Winners', style: theme.textTheme.titleMedium),
+                Text(
+                  'Ask the buyer for their code and hand the lot over only '
+                  'if it matches.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                for (final lot in lots)
+                  if ((lot.winnerName, lot.leaderId, codes[lot.lotId.uuid])
+                      case (final name?, final id?, final code?))
+                    SelectableText(
+                      '${lot.name} — ${tagged(name, id)} · code $code',
+                      style: const TextStyle(
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The join link with a copy button, and the countdown to the close.

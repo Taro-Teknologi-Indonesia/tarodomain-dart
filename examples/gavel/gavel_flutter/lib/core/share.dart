@@ -11,5 +11,9 @@ Future<void> copyLotLink(
   final messenger = ScaffoldMessenger.of(context);
   final url = Uri.base.resolve('/a/$code/lot/$lotId');
   await Clipboard.setData(ClipboardData(text: url.toString()));
-  messenger.showSnackBar(const SnackBar(content: Text('Link copied')));
+  messenger.showSnackBar(
+    const SnackBar(
+      content: Text('Link copied — paste it in the Facebook thread as proof'),
+    ),
+  );
 }

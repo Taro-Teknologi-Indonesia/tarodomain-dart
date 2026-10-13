@@ -157,17 +157,26 @@ class _BoardPageState extends State<BoardPage> {
             children: [
               if (!widget.bigScreen)
                 for (final lot in _auction.lots)
-                  if (wonBy(lot, _identity?.participantId))
+                  if ((_identity, wonBy(lot, _identity?.participantId)) case (
+                    final identity?,
+                    true,
+                  ))
                     WonBanner(
                       key: ValueKey(lot.lotId),
                       lot: lot,
                       onShare: () =>
                           copyLotLink(context, widget.code, lot.lotId.uuid),
+                      loadCode: () => client.lot.winnerCode(
+                        lot.lotId,
+                        identity.participantId,
+                        identity.participantKey,
+                      ),
                     ),
               Expanded(
                 child: LotGrid(
                   lots: _auction.lots,
                   me: _identity?.participantId,
+                  sharedNames: _auction.sharedNames,
                   size: widget.bigScreen
                       ? LotCardSize.large
                       : LotCardSize.regular,

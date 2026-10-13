@@ -53,7 +53,7 @@ Join link — URL containing the auction code; the only distribution mechanism.
 | UC-06 | Place bid via kelipatan chips | Bidder | Must — the star | Chips replace fixed button |
 | UC-07 | Retract bid | Bidder | Must | — |
 | UC-08 | Auto-close at deadline | System | Must | — |
-| UC-09 | View outcome & share result | Participant | Must | URL = shareable receipt |
+| UC-09 | View outcome & share result | Participant | Must | URL = shareable receipt; winner code to claim |
 | UC-10 | Time-travel view | Participant | Should | — |
 | UC-11 | Big-screen mode | Viewer | Should | Trivial on web |
 | UC-12 | Live update push | System | Must | WebSocket on web |
@@ -113,7 +113,7 @@ URL carries the code. If no stored identity for this auction, prompt for a displ
 Server creates participant (state-based aggregate — a normal Serverpod row, events still recorded) → ParticipantJoined.
 Board loads; client subscribes to the auction's live topic over websocket.
 Extensions: 1a. Unknown code → AuctionNotFoundError → "Auction not found — check the link." 1b. Auction already closed → join read-only; the history is browsable — the record outlives the event.
-Web notes: participantId + display name persisted in localStorage per auction — refresh keeps you logged in as you; duplicate names allowed, participantId disambiguates. Phone browser is the primary target (bidders arrive from the Facebook mobile app): single-column responsive layout, thumb-reachable chips.
+Web notes: participantId + display name persisted in localStorage per auction — refresh keeps you logged in as you; duplicate names allowed, participantId disambiguates (shown as a short tag like "Budi · #3f9c" where names collide; UC-09). Phone browser is the primary target (bidders arrive from the Facebook mobile app): single-column responsive layout, thumb-reachable chips.
 TaroDomain: deliberately state-based — demonstrates the per-aggregate choice: joins don't need time travel, bids do.
 
 UC-04 View live board — Participant (Must)
@@ -175,7 +175,9 @@ TaroDomain: saga with timeout driven by Serverpod future calls; idempotency; str
 UC-09 View outcome & share result — Participant (Must)
 Main flow: After close, board shows SOLD + winner + final price (or PASSED). Lot detail ends in the closing event. Late joiners can still enter and read everything.
 Web note (new): the closed lot's URL is a shareable receipt — the winner pastes it back into the Facebook thread as proof of result. This is the "certificate of result" from the roadmap, essentially free on web; it closes the loop with the venue the crowd never left.
-TaroDomain: event sourcing as permanent, publicly verifiable record.
+Claiming the win: display names aren't unique (UC-03), and the receipt is public, so two bidders called "Budi" could both paste it. The receipt names the winner with a short tag from their participantId ("SOLD to Budi · #3f9c"); the tag also appears on the board and in the ledger wherever two people share a name. The tag is public, so it is not proof. Proof is a winner code: the winner's browser shows it in the "You won" banner (only the holder of the participant key can request it), and the organizer's dashboard shows the same code for each SOLD lot. The seller asks the buyer for the code before handing over the lot.
+Extensions: 1a. Two bidders with the same name both claim the lot → seller asks for the winner code; only the real winner's matches. 1b. Winner lost their browser identity (cleared data, other device) → no code; seller decides, or marks the lot unpaid (UC-14).
+TaroDomain: event sourcing as permanent, publicly verifiable record. The winner code is derived from the participant's stored key hash on request; it is never an event, so the public history can't leak it.
 
 UC-10 Time-travel view — Participant (Should — cut if behind hour 12)
 Main flow: In lot history, tap the "as of" chip → pick a past time (presets, e.g., 22:00 / 22:02, or slider) → server replays the lot's events up to T → UI shows price + leader with an "AS OF 22:02" badge. Tap LIVE to return. Read-only; no commands against past state.

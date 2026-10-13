@@ -3,6 +3,7 @@ auction:
   - board:
   - join:
   - checkParticipant:
+  - winnerCodes:
 live:
   - watch:
   - ping:
@@ -11,3 +12,4 @@ lot:
   - placeBid:
   - retractBid:
   - detail:
+  - winnerCode:
