@@ -10,11 +10,44 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'dart:async' as _ida;
+import 'package:gavel_client/src/protocol/board_snapshot.dart' as _icq9digg;
+import 'package:gavel_client/src/protocol/created_auction.dart' as _ivm7o2d2;
 import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart'
     as _ispsicqs;
 import 'protocol.dart' as _il2as5qe;
+
+/// Creating and reading auctions.
+/// {@category Endpoint}
+class EndpointAuction extends _isc.EndpointRef {
+  EndpointAuction(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'auction';
+
+  /// Creates an auction called [title] that closes at [closeAt], truncated
+  /// to the second, and schedules its close.
+  ///
+  /// The returned organizer key is sent only this once.
+  _ida.Future<_ivm7o2d2.CreatedAuction> create(
+    String title,
+    DateTime closeAt,
+  ) => caller.callServerEndpoint<_ivm7o2d2.CreatedAuction>(
+    'auction',
+    'create',
+    {'title': title, 'closeAt': closeAt},
+  );
+
+  /// The auction with join [code], with the server's clock.
+  ///
+  /// Throws `AUCTION_NOT_FOUND` if no auction has the code.
+  _ida.Future<_icq9digg.BoardSnapshot> board(String code) =>
+      caller.callServerEndpoint<_icq9digg.BoardSnapshot>('auction', 'board', {
+        'code': code,
+      });
+}
 
 class Modules {
   Modules(Client client) {
@@ -46,13 +79,16 @@ class Client extends _isc.ServerpodClientShared {
              disconnectStreamsOnLostInternetConnection,
          httpClientOverride: httpClientOverride,
        ) {
+    auction = EndpointAuction(this);
     modules = Modules(this);
   }
+
+  late final EndpointAuction auction;
 
   late final Modules modules;
 
   @override
-  Map<String, _isc.EndpointRef> get endpointRefLookup => {};
+  Map<String, _isc.EndpointRef> get endpointRefLookup => {'auction': auction};
 
   @override
   Map<String, _isc.ModuleEndpointCaller> get moduleLookup => {

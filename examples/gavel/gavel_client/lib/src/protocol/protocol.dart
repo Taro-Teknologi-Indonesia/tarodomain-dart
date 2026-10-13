@@ -14,6 +14,12 @@
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart'
     as _ispsicqs;
+import 'auction_view.dart' as _iwrduo5z;
+import 'board_snapshot.dart' as _i5fz6h4w;
+import 'created_auction.dart' as _ij286fs9;
+export 'auction_view.dart';
+export 'board_snapshot.dart';
+export 'created_auction.dart';
 export 'client.dart';
 
 class Protocol extends _isc.SerializationManager {
@@ -47,6 +53,26 @@ class Protocol extends _isc.SerializationManager {
       }
     }
 
+    if (t == _iwrduo5z.AuctionView) {
+      return _iwrduo5z.AuctionView.fromJson(data) as T;
+    }
+    if (t == _i5fz6h4w.BoardSnapshot) {
+      return _i5fz6h4w.BoardSnapshot.fromJson(data) as T;
+    }
+    if (t == _ij286fs9.CreatedAuction) {
+      return _ij286fs9.CreatedAuction.fromJson(data) as T;
+    }
+    if (t == _isc.getType<_iwrduo5z.AuctionView?>()) {
+      return (data != null ? _iwrduo5z.AuctionView.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i5fz6h4w.BoardSnapshot?>()) {
+      return (data != null ? _i5fz6h4w.BoardSnapshot.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_ij286fs9.CreatedAuction?>()) {
+      return (data != null ? _ij286fs9.CreatedAuction.fromJson(data) : null)
+          as T;
+    }
     try {
       return _ispsicqs.Protocol().deserialize<T>(data, t);
     } on _isc.DeserializationTypeNotFoundException catch (_) {}
@@ -55,6 +81,9 @@ class Protocol extends _isc.SerializationManager {
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
+      _iwrduo5z.AuctionView => 'AuctionView',
+      _i5fz6h4w.BoardSnapshot => 'BoardSnapshot',
+      _ij286fs9.CreatedAuction => 'CreatedAuction',
       _ => null,
     };
   }
@@ -68,6 +97,14 @@ class Protocol extends _isc.SerializationManager {
       return (data['__className__'] as String).replaceFirst('gavel.', '');
     }
 
+    switch (data) {
+      case _iwrduo5z.AuctionView():
+        return 'AuctionView';
+      case _i5fz6h4w.BoardSnapshot():
+        return 'BoardSnapshot';
+      case _ij286fs9.CreatedAuction():
+        return 'CreatedAuction';
+    }
     className = _ispsicqs.Protocol().getClassNameForObject(data);
     if (className != null) {
       return className.contains('.')
@@ -82,6 +119,15 @@ class Protocol extends _isc.SerializationManager {
     var dataClassName = data['className'];
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
+    }
+    if (dataClassName == 'AuctionView') {
+      return deserialize<_iwrduo5z.AuctionView>(data['data']);
+    }
+    if (dataClassName == 'BoardSnapshot') {
+      return deserialize<_i5fz6h4w.BoardSnapshot>(data['data']);
+    }
+    if (dataClassName == 'CreatedAuction') {
+      return deserialize<_ij286fs9.CreatedAuction>(data['data']);
     }
     if (dataClassName.startsWith('tarodomain_serverpod.')) {
       data['className'] = dataClassName.substring(21);

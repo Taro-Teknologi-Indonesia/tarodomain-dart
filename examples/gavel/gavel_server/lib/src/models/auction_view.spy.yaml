@@ -1,0 +1,30 @@
+### One auction: the read model of `AuctionTableProjection`.
+class: AuctionView
+table: gavel_auctions
+fields:
+  ### The auction.
+  auctionId: UuidValue
+
+  ### The join code in the share link.
+  code: String
+
+  ### The auction's title.
+  title: String
+
+  ### When the auction closes, in UTC.
+  closeAt: DateTime
+
+  ### OPEN, CLOSING or CLOSED.
+  status: String
+
+  ### How many lots the auction has.
+  lotCount: int
+indexes:
+  gavel_auctions_code_idx:
+    fields: code
+    unique: true
+  gavel_auctions_auction_id_idx:
+    fields: auctionId
+    unique: true
+  gavel_auctions_status_close_idx:
+    fields: status, closeAt

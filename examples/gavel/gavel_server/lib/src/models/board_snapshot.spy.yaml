@@ -1,0 +1,8 @@
+### An auction as the board shows it. Lots are added in UC-02.
+class: BoardSnapshot
+fields:
+  ### The auction.
+  auction: AuctionView
+
+  ### The server's clock when it answered, for the client's clock offset.
+  serverNow: DateTime

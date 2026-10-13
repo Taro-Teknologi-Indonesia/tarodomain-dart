@@ -14,7 +14,10 @@
 import 'dart:async' as _ida;
 import 'package:clock/clock.dart' as _io0w16m8;
 import 'package:serverpod/serverpod.dart' as _is;
+import '../future_calls/auction_close_calls.dart' as _ij043ien;
 import '../future_calls/taro_domain_calls.dart' as _ish7r71q;
+import 'future_calls_generated_models/auction_close_calls_close_model.dart'
+    as _ijzrfwlf;
 
 /// Invokes a future call.
 typedef _InvokeFutureCall =
@@ -55,6 +58,7 @@ class FutureCalls extends _is.FutureCallDispatch<_FutureCallRef> {
   @override
   void initialize(_is.FutureCallManager futureCallManager, String serverId) {
     var registeredFutureCalls = <String, _is.InvokableFutureCall>{
+      'AuctionCloseCallsCloseFutureCall': AuctionCloseCallsCloseFutureCall(),
       'TaroDomainCallsCatchUpFutureCall': TaroDomainCallsCatchUpFutureCall(),
       'TaroDomainCallsSagaTimeoutsFutureCall':
           TaroDomainCallsSagaTimeoutsFutureCall(),
@@ -162,9 +166,24 @@ class _FutureCallRef {
 
   final _InvokeFutureCall _invokeFutureCall;
 
+  late final auctionCloseCalls = _AuctionCloseCallsFutureCallDispatcher(
+    _invokeFutureCall,
+  );
+
   late final taroDomainCalls = _TaroDomainCallsFutureCallDispatcher(
     _invokeFutureCall,
   );
+}
+
+class _AuctionCloseCallsFutureCallDispatcher {
+  _AuctionCloseCallsFutureCallDispatcher(this._invokeFutureCall);
+
+  final _InvokeFutureCall _invokeFutureCall;
+
+  Future<void> close(_is.UuidValue auctionId) {
+    var object = _ijzrfwlf.AuctionCloseCallsCloseModel(auctionId: auctionId);
+    return _invokeFutureCall('AuctionCloseCallsCloseFutureCall', object);
+  }
 }
 
 class _TaroDomainCallsFutureCallDispatcher {
@@ -182,6 +201,21 @@ class _TaroDomainCallsFutureCallDispatcher {
 
   Future<void> cleanup() {
     return _invokeFutureCall('TaroDomainCallsCleanupFutureCall', null);
+  }
+}
+
+/// Closes the auction [auctionId].
+class AuctionCloseCallsCloseFutureCall
+    extends _is.FutureCall<_ijzrfwlf.AuctionCloseCallsCloseModel>
+    implements _is.InvokableFutureCall<_ijzrfwlf.AuctionCloseCallsCloseModel> {
+  @override
+  _ida.Future<void> invoke(
+    _is.Session session,
+    _ijzrfwlf.AuctionCloseCallsCloseModel? object,
+  ) async {
+    if (object != null) {
+      await _ij043ien.AuctionCloseCalls().close(session, object.auctionId);
+    }
   }
 }
 

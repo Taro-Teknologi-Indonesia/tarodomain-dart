@@ -15,6 +15,14 @@ import 'package:serverpod/protocol.dart' as _isp;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
     as _i13if8es;
+import 'auction_view.dart' as _iwrduo5z;
+import 'board_snapshot.dart' as _i5fz6h4w;
+import 'created_auction.dart' as _ij286fs9;
+import 'future_calls_generated_models/auction_close_calls_close_model.dart'
+    as _ijzrfwlf;
+export 'auction_view.dart';
+export 'board_snapshot.dart';
+export 'created_auction.dart';
 
 class Protocol extends _is.DatabaseSerializationManager {
   Protocol._();
@@ -24,6 +32,104 @@ class Protocol extends _is.DatabaseSerializationManager {
   static final Protocol _instance = Protocol._().._registerHostProtocols();
 
   static List<_isp.TableDefinition> get targetTableDefinitions => [
+    _isp.TableDefinition(
+      name: 'gavel_auctions',
+      dartName: 'AuctionView',
+      schema: 'public',
+      module: 'gavel',
+      columns: [
+        _isp.ColumnDefinition(
+          name: 'id',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int?',
+          columnDefault: 'serial',
+        ),
+        _isp.ColumnDefinition(
+          name: 'auctionId',
+          columnType: _isp.ColumnType.uuid,
+          isNullable: false,
+          dartType: 'UuidValue',
+        ),
+        _isp.ColumnDefinition(
+          name: 'code',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'title',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'closeAt',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _isp.ColumnDefinition(
+          name: 'status',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'lotCount',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [
+        _isp.IndexDefinition(
+          indexName: 'gavel_auctions_code_idx',
+          tableSpace: null,
+          elements: [
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'code',
+            ),
+          ],
+          type: 'btree',
+          isUnique: true,
+          isPrimary: false,
+        ),
+        _isp.IndexDefinition(
+          indexName: 'gavel_auctions_auction_id_idx',
+          tableSpace: null,
+          elements: [
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'auctionId',
+            ),
+          ],
+          type: 'btree',
+          isUnique: true,
+          isPrimary: false,
+        ),
+        _isp.IndexDefinition(
+          indexName: 'gavel_auctions_status_close_idx',
+          tableSpace: null,
+          elements: [
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'status',
+            ),
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'closeAt',
+            ),
+          ],
+          type: 'btree',
+          isUnique: false,
+          isPrimary: false,
+        ),
+      ],
+      managed: true,
+    ),
     ..._i13if8es.Protocol.targetTableDefinitions,
     ..._isp.Protocol.targetTableDefinitions,
   ];
@@ -52,6 +158,35 @@ class Protocol extends _is.DatabaseSerializationManager {
       }
     }
 
+    if (t == _iwrduo5z.AuctionView) {
+      return _iwrduo5z.AuctionView.fromJson(data) as T;
+    }
+    if (t == _i5fz6h4w.BoardSnapshot) {
+      return _i5fz6h4w.BoardSnapshot.fromJson(data) as T;
+    }
+    if (t == _ij286fs9.CreatedAuction) {
+      return _ij286fs9.CreatedAuction.fromJson(data) as T;
+    }
+    if (t == _ijzrfwlf.AuctionCloseCallsCloseModel) {
+      return _ijzrfwlf.AuctionCloseCallsCloseModel.fromJson(data) as T;
+    }
+    if (t == _is.getType<_iwrduo5z.AuctionView?>()) {
+      return (data != null ? _iwrduo5z.AuctionView.fromJson(data) : null) as T;
+    }
+    if (t == _is.getType<_i5fz6h4w.BoardSnapshot?>()) {
+      return (data != null ? _i5fz6h4w.BoardSnapshot.fromJson(data) : null)
+          as T;
+    }
+    if (t == _is.getType<_ij286fs9.CreatedAuction?>()) {
+      return (data != null ? _ij286fs9.CreatedAuction.fromJson(data) : null)
+          as T;
+    }
+    if (t == _is.getType<_ijzrfwlf.AuctionCloseCallsCloseModel?>()) {
+      return (data != null
+              ? _ijzrfwlf.AuctionCloseCallsCloseModel.fromJson(data)
+              : null)
+          as T;
+    }
     try {
       return _i13if8es.Protocol().deserialize<T>(data, t);
     } on _is.DeserializationTypeNotFoundException catch (_) {}
@@ -63,6 +198,10 @@ class Protocol extends _is.DatabaseSerializationManager {
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
+      _iwrduo5z.AuctionView => 'AuctionView',
+      _i5fz6h4w.BoardSnapshot => 'BoardSnapshot',
+      _ij286fs9.CreatedAuction => 'CreatedAuction',
+      _ijzrfwlf.AuctionCloseCallsCloseModel => 'AuctionCloseCallsCloseModel',
       _ => null,
     };
   }
@@ -76,6 +215,16 @@ class Protocol extends _is.DatabaseSerializationManager {
       return (data['__className__'] as String).replaceFirst('gavel.', '');
     }
 
+    switch (data) {
+      case _iwrduo5z.AuctionView():
+        return 'AuctionView';
+      case _i5fz6h4w.BoardSnapshot():
+        return 'BoardSnapshot';
+      case _ij286fs9.CreatedAuction():
+        return 'CreatedAuction';
+      case _ijzrfwlf.AuctionCloseCallsCloseModel():
+        return 'AuctionCloseCallsCloseModel';
+    }
     className = _i13if8es.Protocol().getClassNameForObject(data);
     if (className != null) {
       return className.contains('.')
@@ -94,6 +243,18 @@ class Protocol extends _is.DatabaseSerializationManager {
     var dataClassName = data['className'];
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
+    }
+    if (dataClassName == 'AuctionView') {
+      return deserialize<_iwrduo5z.AuctionView>(data['data']);
+    }
+    if (dataClassName == 'BoardSnapshot') {
+      return deserialize<_i5fz6h4w.BoardSnapshot>(data['data']);
+    }
+    if (dataClassName == 'CreatedAuction') {
+      return deserialize<_ij286fs9.CreatedAuction>(data['data']);
+    }
+    if (dataClassName == 'AuctionCloseCallsCloseModel') {
+      return deserialize<_ijzrfwlf.AuctionCloseCallsCloseModel>(data['data']);
     }
     if (dataClassName.startsWith('tarodomain_serverpod.')) {
       data['className'] = dataClassName.substring(21);
@@ -123,6 +284,10 @@ class Protocol extends _is.DatabaseSerializationManager {
       if (table != null) {
         return table;
       }
+    }
+    switch (t) {
+      case _iwrduo5z.AuctionView:
+        return _iwrduo5z.AuctionView.t;
     }
     return null;
   }

@@ -11,8 +11,13 @@
 // ignore_for_file: no_leading_underscores_for_local_identifiers
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'dart:async' as _ida;
 import 'dart:io' as _idi;
+import 'package:gavel_server/src/generated/board_snapshot.dart' as _i7biazhv;
+import 'package:gavel_server/src/generated/created_auction.dart' as _ig1hii49;
 import 'package:gavel_server/src/generated/future_calls.dart' as _ixqh6y26;
+import 'package:gavel_server/src/generated/future_calls_generated_models/auction_close_calls_close_model.dart'
+    as _i9bis1h2;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_test/serverpod_test.dart' as _ist;
 import 'package:gavel_server/src/generated/protocol.dart';
@@ -149,6 +154,8 @@ void withServerpod(
 
 class TestEndpoints {
   late final futureCalls = _FutureCalls();
+
+  late final _AuctionEndpoint auction;
 }
 
 class _InternalTestEndpoints extends TestEndpoints
@@ -157,11 +164,108 @@ class _InternalTestEndpoints extends TestEndpoints
   void initialize(
     _is.SerializationManager serializationManager,
     _is.EndpointDispatch endpoints,
-  ) {}
+  ) {
+    auction = _AuctionEndpoint(endpoints, serializationManager);
+  }
 }
 
 class _FutureCalls {
+  late final auctionCloseCalls = _AuctionCloseCallsFutureCall();
+
   late final taroDomainCalls = _TaroDomainCallsFutureCall();
+}
+
+class _AuctionEndpoint {
+  _AuctionEndpoint(this._endpointDispatch, this._serializationManager);
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_ig1hii49.CreatedAuction> create(
+    _ist.TestSessionBuilder sessionBuilder,
+    String title,
+    DateTime closeAt,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'auction',
+            method: 'create',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'auction',
+          methodName: 'create',
+          parameters: _ist.testObjectToJson({
+            'title': title,
+            'closeAt': closeAt,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ig1hii49.CreatedAuction>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_i7biazhv.BoardSnapshot> board(
+    _ist.TestSessionBuilder sessionBuilder,
+    String code,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'auction',
+            method: 'board',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'auction',
+          methodName: 'board',
+          parameters: _ist.testObjectToJson({'code': code}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i7biazhv.BoardSnapshot>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _AuctionCloseCallsFutureCall {
+  Future<void> close(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue auctionId,
+  ) async {
+    var object = _i9bis1h2.AuctionCloseCallsCloseModel(auctionId: auctionId);
+    var _localUniqueSession =
+        (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild();
+    try {
+      await _ixqh6y26.AuctionCloseCallsCloseFutureCall().invoke(
+        _localUniqueSession,
+        object,
+      );
+    } finally {
+      await _localUniqueSession.close();
+    }
+  }
 }
 
 class _TaroDomainCallsFutureCall {

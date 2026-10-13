@@ -1,0 +1,18 @@
+### What `AuctionEndpoint.create` returns to the organizer.
+class: CreatedAuction
+fields:
+  ### The join code in the share link.
+  code: String
+
+  ### The new auction.
+  auctionId: UuidValue
+
+  ### The organizer's secret. The server keeps only its hash, so this is
+  ### the one time it is sent.
+  organizerKey: String
+
+  ### When the auction closes, in UTC.
+  closeAt: DateTime
+
+  ### The server's clock when it answered, for the client's clock offset.
+  serverNow: DateTime
