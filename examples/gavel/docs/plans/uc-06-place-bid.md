@@ -89,6 +89,18 @@ Integration (`serverpod_test`, PostgreSQL):
 
 Manual (video rehearsal): two windows side by side, the second in incognito, and tap +100k in both within about 200 ms. Repeat until it's reliable on camera. **No artificial server delay**: if a two-person collision is hard to film, film [X3 `tool/race.dart`](x3-race-proof.md) hitting the deployed server instead.
 
+## As built
+
+- `Bid.bidder` is the participant ID as a `String`, like the other IDs in `Lot`. `LotClosedError` carries `closeAt` until UC-08 adds `closedAt` to the lot.
+- `Bid.at` and `LedgerEntry.placedAt` are the event's `occurredAt`. `BidPlaced` doesn't repeat it in its payload.
+- The command's `id` is the client's `commandId`, so a resend is a `duplicate` dispatch and the endpoint returns the current card. `Bidder` (`core/bidding.dart`) reuses the ID only for the same lot, amount and version after an answer was lost; every other tap gets a new UUIDv7.
+- The handler turns a missing participant into `NotParticipantError`, not `AggregateNotFoundError`.
+- An unknown lot ID is `AGGREGATE_NOT_FOUND` from the endpoint.
+- `LiveUpdate` gained `ledgerEntry`. No migration: `LiveUpdate` has no table.
+- The shared concurrency suite in `tarodomain_testing` tests providers' event stores, so it doesn't fit. The race tests use `Future.wait` directly, in the domain on `tarodomain_local` and through the endpoint on PostgreSQL.
+- **Deferred to UC-08:** "bid after `LotClosed`" and the 20× bid-vs-close integration test, because `CloseLot` and `LotClosed` don't exist yet. The domain's `closeAt` check is in, and it's tested at `closeAt` and at `closeAt - 1µs`.
+- Flutter: `BidBar` (`widgets/bid_bar.dart`) is the banner plus the chips. The lot page is still minimal (visual, price, next bid, leader line and description), with `BidBar` in its bottom bar. UC-05 adds the ledger. On `Outbid` or `InvalidIncrement`, the page calls `AuctionController.refresh()`, which refetches the board and merges only newer cards. Every banner stays up for 3 s.
+
 ## Acceptance
 
 - [ ] Collisions always produce exactly one winner and one "Outbid — {name} bid first".

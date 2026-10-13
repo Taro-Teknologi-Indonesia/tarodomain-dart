@@ -9,18 +9,24 @@ import '../core/identity.dart';
 /// Pops with the new [Identity], or null if dismissed. The board stays
 /// visible behind it.
 class JoinSheet extends StatefulWidget {
-  const JoinSheet({required this.code, super.key});
+  const JoinSheet({required this.code, this.message, super.key});
 
   final String code;
 
+  /// Why the sheet is shown, under its title, such as a lost identity.
+  final String? message;
+
   /// Shows the sheet above the keyboard and returns the identity joined.
-  static Future<Identity?> show(BuildContext context, String code) =>
-      showModalBottomSheet<Identity>(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (_) => JoinSheet(code: code),
-      );
+  static Future<Identity?> show(
+    BuildContext context,
+    String code, {
+    String? message,
+  }) => showModalBottomSheet<Identity>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => JoinSheet(code: code, message: message),
+  );
 
   @override
   State<JoinSheet> createState() => _JoinSheetState();
@@ -82,6 +88,10 @@ class _JoinSheetState extends State<JoinSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('Join to bid', style: theme.textTheme.titleLarge),
+          if (widget.message case final message?) ...[
+            const SizedBox(height: 4),
+            Text(message),
+          ],
           const SizedBox(height: 12),
           TextField(
             controller: _name,

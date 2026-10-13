@@ -44,6 +44,34 @@ class LotTableProjection extends Projection {
       );
       await _postLot(card);
     });
+    on<BidPlaced>((e) async {
+      final entry = await LedgerEntry.db.insertRow(
+        session,
+        LedgerEntry(
+          lotId: UuidValue.fromString(e.lotId),
+          sequence: e.sequence,
+          participantId: UuidValue.fromString(e.participantId),
+          bidderName: e.bidderName,
+          amount: e.amount,
+          placedAt: e.occurredAt,
+          retracted: false,
+        ),
+        transaction: _transaction,
+      );
+      final card = await _card(e.lotId);
+      final updated = await LotCard.db.updateRow(
+        session,
+        card.copyWith(
+          currentPrice: e.amount,
+          leaderId: entry.participantId,
+          leaderName: e.bidderName,
+          bidCount: card.bidCount + 1,
+          version: card.version + 1,
+        ),
+        transaction: _transaction,
+      );
+      await _postLot(updated, ledgerEntry: entry);
+    });
   }
 
   /// The request's session.
@@ -57,10 +85,20 @@ class LotTableProjection extends Projection {
 
   Transaction? get _transaction => ServerpodUnitOfWork.transactionOf(session);
 
-  /// Tells the lot's auction watchers it changed, once the command commits.
+  /// The card of the lot [lotId], which its `LotCreated` wrote.
+  Future<LotCard> _card(String lotId) async =>
+      await LotCard.db.findFirstRow(
+        session,
+        where: (t) => t.lotId.equals(UuidValue.fromString(lotId)),
+        transaction: _transaction,
+      ) ??
+      (throw StateError('No card for lot $lotId'));
+
+  /// Tells the lot's auction watchers it changed, with the [ledgerEntry]
+  /// the change added if any, once the command commits.
   ///
   /// A rebuild replays old events, so it posts nothing.
-  Future<void> _postLot(LotCard card) async {
+  Future<void> _postLot(LotCard card, {LedgerEntry? ledgerEntry}) async {
     if (_rebuilding) return;
     await postLive(
       session,
@@ -68,6 +106,7 @@ class LotTableProjection extends Projection {
       LiveUpdate(
         kind: LiveUpdateKind.lotChanged,
         lot: card,
+        ledgerEntry: ledgerEntry,
         serverNow: DateTime.now().toUtc(),
       ),
     );

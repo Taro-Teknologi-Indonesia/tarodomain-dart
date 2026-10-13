@@ -13,18 +13,18 @@
 import 'package:gavel_server/src/generated/protocol.dart' as _imkuj2yl;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'auction_view.dart' as _iwrduo5z;
+import 'ledger_entry.dart' as _ivha9tke;
 import 'live_update_kind.dart' as _i6d34ixx;
 import 'lot_card.dart' as _i7jzpqum;
 
 /// One message on an auction's live channel, `auction:<CODE>`.
-///
-/// The ledger payload is added with its first writer (UC-06).
 abstract class LiveUpdate
     implements _is.SerializableModel, _is.ProtocolSerialization {
   LiveUpdate._({
     required this.kind,
     this.auction,
     this.lot,
+    this.ledgerEntry,
     required this.serverNow,
   });
 
@@ -32,6 +32,7 @@ abstract class LiveUpdate
     required _i6d34ixx.LiveUpdateKind kind,
     _iwrduo5z.AuctionView? auction,
     _i7jzpqum.LotCard? lot,
+    _ivha9tke.LedgerEntry? ledgerEntry,
     required DateTime serverNow,
   }) = _LiveUpdateImpl;
 
@@ -50,6 +51,11 @@ abstract class LiveUpdate
           : _imkuj2yl.Protocol().deserialize<_i7jzpqum.LotCard>(
               jsonSerialization['lot'],
             ),
+      ledgerEntry: jsonSerialization['ledgerEntry'] == null
+          ? null
+          : _imkuj2yl.Protocol().deserialize<_ivha9tke.LedgerEntry>(
+              jsonSerialization['ledgerEntry'],
+            ),
       serverNow: _is.DateTimeJsonExtension.fromJson(
         jsonSerialization['serverNow'],
       ),
@@ -65,6 +71,9 @@ abstract class LiveUpdate
   /// The lot as it is now, when [kind] is `lotChanged`.
   _i7jzpqum.LotCard? lot;
 
+  /// The ledger line the change added, when a bid was placed.
+  _ivha9tke.LedgerEntry? ledgerEntry;
+
   /// The server's clock when it posted, for the client's clock offset.
   DateTime serverNow;
 
@@ -75,6 +84,7 @@ abstract class LiveUpdate
     _i6d34ixx.LiveUpdateKind? kind,
     _iwrduo5z.AuctionView? auction,
     _i7jzpqum.LotCard? lot,
+    _ivha9tke.LedgerEntry? ledgerEntry,
     DateTime? serverNow,
   });
   @override
@@ -84,6 +94,7 @@ abstract class LiveUpdate
       'kind': kind.toJson(),
       if (auction != null) 'auction': auction?.toJson(),
       if (lot != null) 'lot': lot?.toJson(),
+      if (ledgerEntry != null) 'ledgerEntry': ledgerEntry?.toJson(),
       'serverNow': serverNow.toJson(),
     };
   }
@@ -95,6 +106,7 @@ abstract class LiveUpdate
       'kind': kind.toJson(),
       if (auction != null) 'auction': auction?.toJsonForProtocol(),
       if (lot != null) 'lot': lot?.toJsonForProtocol(),
+      if (ledgerEntry != null) 'ledgerEntry': ledgerEntry?.toJsonForProtocol(),
       'serverNow': serverNow.toJson(),
     };
   }
@@ -112,8 +124,15 @@ class _LiveUpdateImpl extends LiveUpdate {
     required _i6d34ixx.LiveUpdateKind kind,
     _iwrduo5z.AuctionView? auction,
     _i7jzpqum.LotCard? lot,
+    _ivha9tke.LedgerEntry? ledgerEntry,
     required DateTime serverNow,
-  }) : super._(kind: kind, auction: auction, lot: lot, serverNow: serverNow);
+  }) : super._(
+         kind: kind,
+         auction: auction,
+         lot: lot,
+         ledgerEntry: ledgerEntry,
+         serverNow: serverNow,
+       );
 
   /// Returns a shallow copy of this [LiveUpdate]
   /// with some or all fields replaced by the given arguments.
@@ -123,6 +142,7 @@ class _LiveUpdateImpl extends LiveUpdate {
     _i6d34ixx.LiveUpdateKind? kind,
     Object? auction = _Undefined,
     Object? lot = _Undefined,
+    Object? ledgerEntry = _Undefined,
     DateTime? serverNow,
   }) {
     return LiveUpdate(
@@ -131,6 +151,9 @@ class _LiveUpdateImpl extends LiveUpdate {
           ? auction
           : this.auction?.copyWith(),
       lot: lot is _i7jzpqum.LotCard? ? lot : this.lot?.copyWith(),
+      ledgerEntry: ledgerEntry is _ivha9tke.LedgerEntry?
+          ? ledgerEntry
+          : this.ledgerEntry?.copyWith(),
       serverNow: serverNow ?? this.serverNow,
     );
   }

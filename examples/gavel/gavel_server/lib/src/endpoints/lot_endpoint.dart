@@ -1,13 +1,15 @@
 import 'package:serverpod/serverpod.dart';
+import 'package:tarodomain/tarodomain.dart';
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart';
 
 import '../domain/auction.dart';
 import '../domain/lot.dart';
 import '../domain/lot_commands.dart';
+import '../domain/participant.dart';
 import '../generated/protocol.dart';
 import '../infra/participant_guard.dart';
 
-/// Adding lots and, from UC-06 on, bidding on them.
+/// Adding lots and bidding on them.
 class LotEndpoint extends Endpoint {
   TaroDomainServerpod get _taro => TaroDomainServerpod.instance;
 
@@ -46,4 +48,55 @@ class LotEndpoint extends Endpoint {
       where: (t) => t.lotId.equals(lotId.value),
     ))!;
   });
+
+  /// Bids [amount] on the lot [lotId] as [participantId], who saw the lot
+  /// at [expectedVersion], and returns the lot's fresh card.
+  ///
+  /// [commandId] comes from the client, so a resend after a lost answer
+  /// places no second bid. The bid's time is the server's.
+  ///
+  /// Throws `NOT_PARTICIPANT` unless [participantKey] is the key of a
+  /// participant of the lot's auction, `LOT_CLOSED` at or after the close,
+  /// `OUTBID` with the leader if the lot changed since [expectedVersion],
+  /// `INVALID_INCREMENT` for a raise off the ladder, and
+  /// `AGGREGATE_NOT_FOUND` for an unknown lot. Nothing is stored on any of
+  /// them.
+  Future<LotCard> placeBid(
+    Session session,
+    UuidValue lotId,
+    UuidValue participantId,
+    String participantKey,
+    int amount,
+    int expectedVersion,
+    UuidValue commandId,
+  ) => rethrowAsTaroDomainException(() async {
+    final card = await _card(session, lotId);
+    await verifyParticipant(
+      session,
+      card.auctionId,
+      participantId,
+      participantKey,
+    );
+    await _taro.dispatch(
+      session,
+      PlaceBid(
+        LotId.fromExisting(lotId.uuid),
+        ParticipantId.fromExisting(participantId.uuid),
+        amount: amount,
+        expectedVersion: expectedVersion,
+        id: commandId,
+      ),
+    );
+    return _card(session, lotId);
+  });
+
+  Future<LotCard> _card(Session session, UuidValue lotId) async =>
+      await LotCard.db.findFirstRow(
+        session,
+        where: (t) => t.lotId.equals(lotId),
+      ) ??
+      (throw AggregateNotFoundError(
+        'Lot ${lotId.uuid} not found',
+        context: {'aggregateType': 'Lot', 'aggregateId': lotId.uuid},
+      ));
 }

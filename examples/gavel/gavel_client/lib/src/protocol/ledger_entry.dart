@@ -12,7 +12,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 
-/// One bid in a lot's ledger. Written from UC-06 on.
+/// One bid in a lot's ledger.
 abstract class LedgerEntry
     implements _isc.SerializableModel, _isc.ProtocolSerialization {
   LedgerEntry._({

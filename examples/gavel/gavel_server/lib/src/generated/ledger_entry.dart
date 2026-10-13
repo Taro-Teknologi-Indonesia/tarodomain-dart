@@ -12,7 +12,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _is;
 
-/// One bid in a lot's ledger. Written from UC-06 on.
+/// One bid in a lot's ledger.
 abstract class LedgerEntry
     implements _is.TableRow<int?>, _is.ProtocolSerialization {
   LedgerEntry._({

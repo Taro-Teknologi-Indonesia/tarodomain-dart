@@ -3,6 +3,7 @@ import 'package:tarodomain/tarodomain.dart';
 import 'auction.dart';
 import 'errors.dart';
 import 'lot.dart';
+import 'participant.dart';
 
 /// Adds a lot to an auction. Its [timestamp] is "now" for the close-time
 /// check, so tests can pin it.
@@ -105,5 +106,71 @@ class AddLotHandler extends CommandHandler<AddLot> {
     );
     await lots.save(lot);
     await auctions.save(auction);
+  }
+}
+
+/// Bids [amount] on a lot as [participantId], who saw the lot at
+/// [expectedVersion]. Its [timestamp] is "now" for the close-time check,
+/// set by the server and never taken from the client.
+///
+/// The caller has already checked the participant's key; the command
+/// carries only the verified ID.
+class PlaceBid extends Command {
+  /// Creates the command. Pass the client's command ID as [id], so a
+  /// resend is recognized as already processed.
+  PlaceBid(
+    this.lotId,
+    this.participantId, {
+    required this.amount,
+    required this.expectedVersion,
+    super.id,
+    super.timestamp,
+  });
+
+  /// The lot bid on.
+  final LotId lotId;
+
+  /// Who bids.
+  final ParticipantId participantId;
+
+  /// The bid, in rupiah.
+  final int amount;
+
+  /// The lot's version the bidder saw: any change since is an outbid.
+  final int expectedVersion;
+}
+
+/// Handles [PlaceBid]: reads the bidder's name from their [Participant] and
+/// places the bid on the [Lot].
+class PlaceBidHandler extends CommandHandler<PlaceBid> {
+  /// Creates the handler.
+  PlaceBidHandler(this.participants, this.lots);
+
+  /// Loads participants, for the bidder's name and auction.
+  final Repository<Participant, ParticipantId> participants;
+
+  /// Loads and saves lots.
+  final Repository<Lot, LotId> lots;
+
+  @override
+  Future<void> handle(PlaceBid command) async {
+    final lot = await lots.load(command.lotId);
+    final Participant participant;
+    try {
+      participant = await participants.load(command.participantId);
+    } on AggregateNotFoundError {
+      throw NotParticipantError();
+    }
+    // The endpoint checked the key against the lot's auction already; this
+    // keeps a direct dispatch honest too.
+    if (participant.auctionId != lot.auctionId) throw NotParticipantError();
+    lot.placeBid(
+      bidder: participant.id.uuid,
+      bidderName: participant.displayName,
+      amount: command.amount,
+      expectedVersion: command.expectedVersion,
+      now: command.timestamp,
+    );
+    await lots.save(lot);
   }
 }

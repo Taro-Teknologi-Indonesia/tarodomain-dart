@@ -193,6 +193,51 @@ class Endpoints extends _is.EndpointDispatch {
                 params['lot'],
               ),
         ),
+        'placeBid': _is.MethodConnector(
+          name: 'placeBid',
+          params: {
+            'lotId': _is.ParameterDescription(
+              name: 'lotId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantId': _is.ParameterDescription(
+              name: 'participantId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantKey': _is.ParameterDescription(
+              name: 'participantKey',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'amount': _is.ParameterDescription(
+              name: 'amount',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+            'expectedVersion': _is.ParameterDescription(
+              name: 'expectedVersion',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+            'commandId': _is.ParameterDescription(
+              name: 'commandId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['lot'] as _i6hhfich.LotEndpoint).placeBid(
+                session,
+                params['lotId'],
+                params['participantId'],
+                params['participantKey'],
+                params['amount'],
+                params['expectedVersion'],
+                params['commandId'],
+              ),
+        ),
       },
     );
     modules['tarodomain_serverpod'] = _i13if8es.Endpoints()

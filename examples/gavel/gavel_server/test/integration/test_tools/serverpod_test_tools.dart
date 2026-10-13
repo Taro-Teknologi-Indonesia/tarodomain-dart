@@ -443,6 +443,49 @@ class _LotEndpoint {
       }
     });
   }
+
+  _ida.Future<_ibsll3cm.LotCard> placeBid(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue lotId,
+    _is.UuidValue participantId,
+    String participantKey,
+    int amount,
+    int expectedVersion,
+    _is.UuidValue commandId,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'lot',
+            method: 'placeBid',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'lot',
+          methodName: 'placeBid',
+          parameters: _ist.testObjectToJson({
+            'lotId': lotId,
+            'participantId': participantId,
+            'participantKey': participantKey,
+            'amount': amount,
+            'expectedVersion': expectedVersion,
+            'commandId': commandId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ibsll3cm.LotCard>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
 }
 
 class _AuctionCloseCallsFutureCall {

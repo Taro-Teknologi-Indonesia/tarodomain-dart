@@ -102,7 +102,7 @@ class EndpointLive extends _isc.EndpointRef {
       caller.callServerEndpoint<void>('live', 'ping', {'code': code});
 }
 
-/// Adding lots and, from UC-06 on, bidding on them.
+/// Adding lots and bidding on them.
 /// {@category Endpoint}
 class EndpointLot extends _isc.EndpointRef {
   EndpointLot(_isc.EndpointCaller caller) : super(caller);
@@ -123,6 +123,34 @@ class EndpointLot extends _isc.EndpointRef {
     'code': code,
     'organizerKey': organizerKey,
     'lot': lot,
+  });
+
+  /// Bids [amount] on the lot [lotId] as [participantId], who saw the lot
+  /// at [expectedVersion], and returns the lot's fresh card.
+  ///
+  /// [commandId] comes from the client, so a resend after a lost answer
+  /// places no second bid. The bid's time is the server's.
+  ///
+  /// Throws `NOT_PARTICIPANT` unless [participantKey] is the key of a
+  /// participant of the lot's auction, `LOT_CLOSED` at or after the close,
+  /// `OUTBID` with the leader if the lot changed since [expectedVersion],
+  /// `INVALID_INCREMENT` for a raise off the ladder, and
+  /// `AGGREGATE_NOT_FOUND` for an unknown lot. Nothing is stored on any of
+  /// them.
+  _ida.Future<_ik2e60uo.LotCard> placeBid(
+    _isc.UuidValue lotId,
+    _isc.UuidValue participantId,
+    String participantKey,
+    int amount,
+    int expectedVersion,
+    _isc.UuidValue commandId,
+  ) => caller.callServerEndpoint<_ik2e60uo.LotCard>('lot', 'placeBid', {
+    'lotId': lotId,
+    'participantId': participantId,
+    'participantKey': participantKey,
+    'amount': amount,
+    'expectedVersion': expectedVersion,
+    'commandId': commandId,
   });
 }
 

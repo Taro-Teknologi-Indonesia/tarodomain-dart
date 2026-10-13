@@ -1,4 +1,4 @@
-### One bid in a lot's ledger. Written from UC-06 on.
+### One bid in a lot's ledger.
 class: LedgerEntry
 table: gavel_ledger_entries
 fields:

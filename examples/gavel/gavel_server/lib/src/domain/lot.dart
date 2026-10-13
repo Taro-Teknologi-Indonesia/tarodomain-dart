@@ -1,5 +1,7 @@
 import 'package:tarodomain/tarodomain.dart';
 
+import 'errors.dart';
+
 /// Identifies a [Lot].
 class LotId extends AggregateId {
   /// A new ID.
@@ -134,8 +136,107 @@ class LotCreated extends LotEvent {
   };
 }
 
-/// One item for sale in an auction, with its kelipatan ladder and, from
-/// UC-06 on, its bids.
+/// A bid was placed on a lot.
+///
+/// [bidderName] is copied from the participant, so the ledger and
+/// `OutbidError` name the leader without a join.
+class BidPlaced extends LotEvent {
+  /// Creates the event.
+  BidPlaced(
+    super.lotId, {
+    required this.participantId,
+    required this.bidderName,
+    required this.amount,
+    required this.sequence,
+  });
+
+  /// Rebuilds the event from [toData]'s output.
+  factory BidPlaced.fromData(Map<String, Object?> data) => BidPlaced(
+    data['lotId']! as String,
+    participantId: data['participantId']! as String,
+    bidderName: data['bidderName']! as String,
+    amount: data['amount']! as int,
+    sequence: data['sequence']! as int,
+  );
+
+  /// Who bid.
+  final String participantId;
+
+  /// The bidder's display name when they bid.
+  final String bidderName;
+
+  /// The bid, in rupiah: the price before it plus one kelipatan step.
+  final int amount;
+
+  /// The bid's place in the lot's ledger, from 1.
+  final int sequence;
+
+  @override
+  String get eventName => 'BidPlaced';
+
+  @override
+  Map<String, Object?> toData() => {
+    'lotId': lotId,
+    'participantId': participantId,
+    'bidderName': bidderName,
+    'amount': amount,
+    'sequence': sequence,
+  };
+}
+
+/// One bid on a [Lot]. Retracted bids stay, marked, so the ledger never
+/// loses a line.
+class Bid {
+  /// Creates the bid.
+  const Bid({
+    required this.sequence,
+    required this.bidder,
+    required this.bidderName,
+    required this.amount,
+    required this.at,
+    this.retracted = false,
+  });
+
+  /// Restores a bid from [toJson]'s output.
+  factory Bid.fromJson(Map<String, Object?> json) => Bid(
+    sequence: json['sequence']! as int,
+    bidder: json['bidder']! as String,
+    bidderName: json['bidderName']! as String,
+    amount: json['amount']! as int,
+    at: DateTime.parse(json['at']! as String),
+    retracted: json['retracted']! as bool,
+  );
+
+  /// The bid's place in the ledger, from 1.
+  final int sequence;
+
+  /// The bidder's participant ID.
+  final String bidder;
+
+  /// The bidder's display name.
+  final String bidderName;
+
+  /// The bid, in rupiah.
+  final int amount;
+
+  /// When the bid was placed, in UTC.
+  final DateTime at;
+
+  /// Whether the bidder took it back (UC-07).
+  final bool retracted;
+
+  /// The bid as JSON, for snapshots.
+  Map<String, Object?> toJson() => {
+    'sequence': sequence,
+    'bidder': bidder,
+    'bidderName': bidderName,
+    'amount': amount,
+    'at': at.toUtc().toIso8601String(),
+    'retracted': retracted,
+  };
+}
+
+/// One item for sale in an auction, with its kelipatan ladder and its bids.
 class Lot extends AggregateRoot<LotId, LotEvent> {
   /// An empty lot, before its events are applied.
   Lot(super.id);
@@ -287,6 +388,71 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
   /// Where the lot is in its life.
   LotStatus status = LotStatus.open;
 
+  /// Every bid, in order, retracted ones included.
+  List<Bid> bids = [];
+
+  /// The leading bid: the latest one not retracted, if any.
+  Bid? get lastValidBid {
+    for (final bid in bids.reversed) {
+      if (!bid.retracted) return bid;
+    }
+    return null;
+  }
+
+  /// The leading bid's amount, or the open bid while there is none.
+  int get currentPrice => lastValidBid?.amount ?? openBid;
+
+  /// Bids [amount] as [bidder], who saw the lot at [expectedVersion].
+  ///
+  /// The checks run in this order, so every race has one answer:
+  ///
+  /// 1. A lot that isn't open, or [now] at or after [closeAt], throws
+  ///    [LotClosedError]: closing beats everything, even a close call that
+  ///    hasn't fired yet.
+  /// 2. A lot that changed since [expectedVersion] throws [OutbidError]
+  ///    with the current leader. Two bids on one version both pass this
+  ///    on their first try; the loser's append conflicts, the pipeline
+  ///    retries it, and the reload lands here.
+  /// 3. A raise that isn't one of [increments] throws
+  ///    [InvalidIncrementError].
+  ///
+  /// Raising your own lead is allowed.
+  void placeBid({
+    required String bidder,
+    required String bidderName,
+    required int amount,
+    required int expectedVersion,
+    required DateTime now,
+  }) {
+    if (status != LotStatus.open || !now.isBefore(closeAt)) {
+      throw LotClosedError(closedAt: closeAt);
+    }
+    if (expectedVersion != version) {
+      final leader = lastValidBid;
+      throw OutbidError(
+        currentPrice: currentPrice,
+        leaderName: leader?.bidderName,
+        leaderId: leader?.bidder,
+        version: version,
+      );
+    }
+    if (!increments.contains(amount - currentPrice)) {
+      throw InvalidIncrementError(
+        allowedIncrements: increments,
+        currentPrice: currentPrice,
+      );
+    }
+    raise(
+      BidPlaced(
+        id.uuid,
+        participantId: bidder,
+        bidderName: bidderName,
+        amount: amount,
+        sequence: bids.length + 1,
+      ),
+    );
+  }
+
   @override
   void apply(LotEvent event) {
     switch (event) {
@@ -298,6 +464,17 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
         buyNowPrice = event.buyNowPrice;
         closeAt = event.closeAt;
         position = event.position;
+      case BidPlaced():
+        bids = [
+          ...bids,
+          Bid(
+            sequence: event.sequence,
+            bidder: event.participantId,
+            bidderName: event.bidderName,
+            amount: event.amount,
+            at: event.occurredAt,
+          ),
+        ];
     }
   }
 
@@ -311,6 +488,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     'closeAt': closeAt.toIso8601String(),
     'position': position,
     'status': status.code,
+    'bids': [for (final bid in bids) bid.toJson()],
   };
 
   @override
@@ -323,5 +501,10 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     closeAt = DateTime.parse(data['closeAt']! as String);
     position = data['position']! as int;
     status = LotStatus.fromCode(data['status']! as String);
+    // Snapshots taken before UC-06 have no bids.
+    bids = [
+      for (final bid in data['bids'] as List? ?? const [])
+        Bid.fromJson((bid as Map).cast()),
+    ];
   }
 }

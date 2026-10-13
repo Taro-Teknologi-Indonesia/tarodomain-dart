@@ -51,6 +51,18 @@ class AuctionController extends ChangeNotifier {
     );
   }
 
+  /// Fetches the board again and takes every lot newer than the one held,
+  /// for when a command's answer says the board is behind and the push
+  /// hasn't caught up yet.
+  Future<void> refresh() async {
+    final snapshot = await live.client.auction.board(code);
+    var changed = false;
+    for (final lot in snapshot.lots) {
+      changed = _take(lot) || changed;
+    }
+    if (changed) notifyListeners();
+  }
+
   /// Takes [card] unless a newer version of it is already held, such as the
   /// card a command returned racing its own live update.
   void merge(LotCard card) {

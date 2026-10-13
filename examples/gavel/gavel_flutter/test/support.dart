@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:gavel_client/gavel_client.dart';
+import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart';
 
 final lotId = UuidValue.fromString('00000000-0000-4000-8000-000000000001');
 final budi = UuidValue.fromString('00000000-0000-4000-8000-0000000000b1');
@@ -35,3 +38,15 @@ LotCard lotCard({
   version: version,
   winnerName: winnerName,
 );
+
+/// The exception the server sends for a domain error [code] with
+/// [context].
+TaroDomainException domainError(String code, [Map<String, Object?>? context]) =>
+    TaroDomainException(
+      code: code,
+      category: 'DOMAIN',
+      retryable: false,
+      httpStatus: 409,
+      message: code,
+      context: context == null ? null : jsonEncode(context),
+    );
