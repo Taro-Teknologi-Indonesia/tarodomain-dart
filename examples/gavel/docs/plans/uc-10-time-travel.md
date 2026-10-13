@@ -57,8 +57,18 @@ Future<LotAsOf> lotAsOf(Session s, UuidValue lotId, DateTime at) async {
 
 ## Acceptance
 
-- [ ] As-of shows the correct price and leader at any T, matching the ledger by eye.
-- [ ] A retraction after T shows as an active bid at T.
-- [ ] No command is possible in as-of mode; LIVE restores the live view.
+- [ ] As-of shows the correct price and leader at any T, matching the ledger by eye. Covered by `test/domain/as_of_test.dart` and `lot_detail_test.dart`; the by-eye rehearsal check is still to do.
+- [x] A retraction after T shows as an active bid at T.
+- [x] No command is possible in as-of mode; LIVE restores the live view.
+
+## As built
+
+The code shipped inside `0c3d818` (the X2 commit) because both sessions shared one index.
+
+- `rehydrate` wasn't needed: `AggregateRoot.loadFromHistory` is public, so `Lot.asOf(id, events, at)` in the domain replays from version 0 and throws `AggregateNotFoundError` before `LotCreated`.
+- `at` counts to the end of its millisecond, because a web client's `DateTime` has no finer grain and a snapped ledger time would otherwise miss its own bid.
+- `LotAsOf` also carries `leaderId` (for the name tag) and `version`.
+- The quick picks are the start of each minute after one with activity, so "22:02" includes everything in 22:01.
+- The AS OF badge and LIVE take the place of the bottom bar, so the chips and RETRACT can't render in as-of mode.
 
 Estimate: 1.5 h.
