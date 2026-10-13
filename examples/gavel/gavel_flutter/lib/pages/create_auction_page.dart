@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:gavel_client/gavel_client.dart';
+import 'package:gavel_client/rules.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -12,13 +14,17 @@ import '../core/organizer_keys.dart';
 /// The organizer's first step: a title and one close time for every lot
 /// (UC-01).
 class CreateAuctionPage extends StatefulWidget {
-  const CreateAuctionPage({super.key});
+  const CreateAuctionPage({@visibleForTesting this.create, super.key});
+
+  /// Sends `auction.create`; the app's client unless a test passes one.
+  final Future<CreatedAuction> Function(String title, DateTime closeAt)? create;
 
   @override
   State<CreateAuctionPage> createState() => _CreateAuctionPageState();
 }
 
 class _CreateAuctionPageState extends State<CreateAuctionPage> {
+  final _form = GlobalKey<FormState>();
   final _title = TextEditingController();
   late DateTime _closeAt = _defaultCloseAt();
   late final Timer _ticker;
@@ -26,6 +32,10 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
 
   /// Inline errors by server field name, from the last submit.
   var _errors = <String, String>{};
+
+  /// Off until the first submit, so errors don't show while the organizer
+  /// is still typing for the first time.
+  var _autovalidate = AutovalidateMode.disabled;
 
   /// An hour from now, on the next whole 5 minutes.
   static DateTime _defaultCloseAt() {
@@ -61,6 +71,7 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
     );
     if (date == null) return;
     setState(() {
+      _errors = {..._errors}..remove('closeAt');
       _closeAt = DateTime(
         date.year,
         date.month,
@@ -83,6 +94,7 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
     );
     if (time == null) return;
     setState(() {
+      _errors = {..._errors}..remove('closeAt');
       _closeAt = DateTime(
         _closeAt.year,
         _closeAt.month,
@@ -93,15 +105,27 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
     });
   }
 
+  /// Drops [field]'s server error once the organizer changes the field.
+  void _clearError(String field) {
+    if (!_errors.containsKey(field)) return;
+    setState(() => _errors = {..._errors}..remove(field));
+  }
+
   Future<void> _submit() async {
+    // Checked now, not when picked: a form left open goes stale. The
+    // server checks again, against its own clock.
+    final closeAtError = AuctionRules.closeAt(_closeAt, now: DateTime.now());
+    final titleValid = _form.currentState!.validate();
+    setState(() {
+      _autovalidate = AutovalidateMode.onUserInteraction;
+      _errors = {'closeAt': ?closeAtError?.message};
+    });
+    if (!titleValid || closeAtError != null) return;
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
-    setState(() {
-      _submitting = true;
-      _errors = {};
-    });
+    setState(() => _submitting = true);
     try {
-      final created = await client.auction.create(
+      final created = await (widget.create ?? client.auction.create)(
         _title.text,
         _closeAt.toUtc(),
       );
@@ -131,11 +155,14 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final remaining = _closeAt.difference(DateTime.now());
+    final now = DateTime.now();
+    final remaining = _closeAt.difference(now);
+    final tooSoon = AuctionRules.closeAt(_closeAt, now: now) != null;
     final closeText =
         'Closes at ${DateFormat.Hm().format(_closeAt)} '
         '${_closeAt.timeZoneName}'
-        '${remaining.isNegative ? ' (in the past)' : ' (in ${formatRemaining(remaining)})'}';
+        '${remaining.isNegative ? ' (in the past)' : ' (in ${formatRemaining(remaining)})'}'
+        '${tooSoon ? ' — at least ${AuctionRules.minimumLeadTime.inMinutes} minutes from now' : ''}';
     return Scaffold(
       appBar: AppBar(title: const Text('New auction')),
       body: Center(
@@ -143,64 +170,76 @@ class _CreateAuctionPageState extends State<CreateAuctionPage> {
           padding: const EdgeInsets.all(16),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _title,
-                  autofocus: true,
-                  maxLength: 80,
-                  decoration: InputDecoration(
-                    labelText: 'Title',
-                    hintText: 'Lelang batu malam Jumat',
-                    errorText: _errors['title'],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('Close time', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickDate,
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(DateFormat.yMMMEd().format(_closeAt)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickTime,
-                        icon: const Icon(Icons.schedule),
-                        label: Text(DateFormat.Hm().format(_closeAt)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(closeText),
-                if (_errors['closeAt'] case final error?)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      error,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      ),
+            child: Form(
+              key: _form,
+              autovalidateMode: _autovalidate,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _title,
+                    autofocus: true,
+                    maxLength: AuctionRules.maxTitleLength,
+                    validator: (title) =>
+                        AuctionRules.title(title ?? '')?.message,
+                    onChanged: (_) => _clearError('title'),
+                    decoration: InputDecoration(
+                      labelText: 'Title',
+                      hintText: 'Lelang batu malam Jumat',
+                      errorText: _errors['title'],
                     ),
                   ),
-                const SizedBox(height: 32),
-                FilledButton(
-                  onPressed: _submitting ? null : _submit,
-                  child: _submitting
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Create auction'),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Text('Close time', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _pickDate,
+                          icon: const Icon(Icons.calendar_today),
+                          label: Text(DateFormat.yMMMEd().format(_closeAt)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _pickTime,
+                          icon: const Icon(Icons.schedule),
+                          label: Text(DateFormat.Hm().format(_closeAt)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    closeText,
+                    style: tooSoon
+                        ? TextStyle(color: theme.colorScheme.error)
+                        : null,
+                  ),
+                  if (_errors['closeAt'] case final error?)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        error,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 32),
+                  FilledButton(
+                    onPressed: _submitting ? null : _submit,
+                    child: _submitting
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Create auction'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

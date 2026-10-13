@@ -210,6 +210,12 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
   /// The most lots one auction takes: a sanity cap, not a business rule.
   static const maxLots = 20;
 
+  /// The join code's characters: no 0/O, 1/I/L.
+  static const codeAlphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+  /// How many characters a join code has.
+  static const codeLength = 6;
+
   /// The auction's title.
   String title = '';
 

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gavel_client/gavel_client.dart';
+import 'package:gavel_client/rules.dart';
 
 import '../core/api.dart';
 import '../core/auction_controller.dart';
@@ -94,8 +95,9 @@ class _OrganizerPageState extends State<OrganizerPage> {
     );
     if (card == null || !mounted) return;
     _auction.merge(card);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('${card.name} is on the board')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${card.name} is on the board')));
   }
 
   @override
@@ -106,6 +108,7 @@ class _OrganizerPageState extends State<OrganizerPage> {
       final auction = _auction.auction;
       final key = _organizerKey;
       final canAdd = key != null && auction?.status == 'OPEN';
+      final full = AuctionRules.lotCount(_auction.lots.length);
       return Scaffold(
         appBar: AppBar(
           title: Text(auction?.title ?? 'Organize ${widget.code}'),
@@ -124,11 +127,18 @@ class _OrganizerPageState extends State<OrganizerPage> {
             ),
           ],
         ),
+        // Gone at the close on the server's clock, not only once its push
+        // arrives; disabled at the lot cap. The server checks both again.
         floatingActionButton: canAdd
-            ? FloatingActionButton.extended(
-                onPressed: () => _addLot(key),
-                icon: const Icon(Icons.add),
-                label: const Text('Add lot'),
+            ? DeadlineBuilder(
+                closeAt: auction!.closeAt,
+                offset: _auction.clockOffset,
+                builder: (context, timeUp) => timeUp
+                    ? const SizedBox.shrink()
+                    : AddLotButton(
+                        lotCount: _auction.lots.length,
+                        onAdd: () => _addLot(key),
+                      ),
               )
             : null,
         body: switch ((_auction.failure, auction)) {
@@ -157,6 +167,11 @@ class _OrganizerPageState extends State<OrganizerPage> {
                   ),
                   actions: [const SizedBox.shrink()],
                 ),
+              if (canAdd && full != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(full.message, style: theme.textTheme.bodySmall),
+                ),
               if (_winnerCodes case final codes? when codes.isNotEmpty)
                 _Winners(lots: _sold, codes: codes),
               Expanded(
@@ -175,6 +190,34 @@ class _OrganizerPageState extends State<OrganizerPage> {
       );
     },
   );
+}
+
+/// The dashboard's Add lot button, greyed out with a tooltip saying why
+/// once the auction has [AuctionRules.maxLots] lots.
+class AddLotButton extends StatelessWidget {
+  const AddLotButton({required this.lotCount, required this.onAdd, super.key});
+
+  /// How many lots the auction has.
+  final int lotCount;
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final full = AuctionRules.lotCount(lotCount);
+    final enabled = full == null;
+    return FloatingActionButton.extended(
+      onPressed: enabled ? onAdd : null,
+      tooltip: full?.message,
+      backgroundColor: enabled ? null : scheme.surfaceContainerHighest,
+      foregroundColor: enabled
+          ? null
+          : scheme.onSurface.withValues(alpha: 0.38),
+      icon: const Icon(Icons.add),
+      label: const Text('Add lot'),
+    );
+  }
 }
 
 /// Each SOLD lot's winner with their tag and winner code (UC-09):

@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gavel_client/gavel_client.dart';
 
+import '../core/clock.dart';
 import '../core/failures.dart';
 import '../core/identity.dart';
 import '../core/money.dart';
@@ -10,16 +12,20 @@ import '../core/retracting.dart';
 ///
 /// A tap asks first, naming the exact amount, because the retraction is
 /// public and permanent: the bid stays in the ledger, struck through.
-/// Every answer ends in a snackbar.
+/// Every answer ends in a snackbar. It goes away at [closeAt] on the
+/// server's clock, before the lot's close is pushed.
 class RetractButton extends StatefulWidget {
   const RetractButton({
     required this.lot,
     required this.bid,
     required this.identity,
+    required this.closeAt,
+    required this.offset,
     required this.send,
     required this.onRetracted,
     required this.onStale,
     required this.onNotParticipant,
+    this.padding = EdgeInsets.zero,
     super.key,
   });
 
@@ -30,6 +36,15 @@ class RetractButton extends StatefulWidget {
 
   /// Who this browser bids as.
   final Identity identity;
+
+  /// When the lot closes, in UTC.
+  final DateTime closeAt;
+
+  /// Server clock minus local clock.
+  final ValueListenable<Duration> offset;
+
+  /// Around the button, and gone with it.
+  final EdgeInsetsGeometry padding;
 
   final SendRetract send;
 
@@ -118,7 +133,15 @@ class _RetractButtonState extends State<RetractButton> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => DeadlineBuilder(
+    closeAt: widget.closeAt,
+    offset: widget.offset,
+    builder: (context, timeUp) => timeUp
+        ? const SizedBox.shrink()
+        : Padding(padding: widget.padding, child: _button(context)),
+  );
+
+  Widget _button(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return OutlinedButton.icon(
       onPressed: _busy ? null : _retract,

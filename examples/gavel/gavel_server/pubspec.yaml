@@ -13,6 +13,9 @@ dependencies:
   tarodomain_serverpod_server: ^0.0.1
 
 dev_dependencies:
+  # The client's input rules, for the parity test (X5).
+  gavel_client:
+    path: ../gavel_client
   lints: ^6.1.0
   serverpod_test: 4.0.4
   tarodomain_local: ^0.0.1

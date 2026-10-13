@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:gavel_client/rules.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/api.dart';
@@ -10,6 +11,7 @@ import '../core/auction_scope.dart';
 import '../core/clock.dart';
 import '../core/failures.dart';
 import '../core/identity.dart';
+import '../core/input_formatters.dart';
 import '../core/live.dart';
 import '../core/organizer_keys.dart';
 import '../core/share.dart';
@@ -280,8 +282,8 @@ class _NotFoundState extends State<_NotFound> {
   }
 
   void _open() {
-    final code = _code.text.trim().toUpperCase();
-    if (code.isNotEmpty) context.go('/a/$code');
+    final code = JoinCodeRules.normalize(_code.text);
+    if (JoinCodeRules.isValid(code)) context.go('/a/$code');
   }
 
   @override
@@ -308,7 +310,8 @@ class _NotFoundState extends State<_NotFound> {
               const SizedBox(height: 24),
               TextField(
                 controller: _code,
-                maxLength: 6,
+                maxLength: JoinCodeRules.length,
+                inputFormatters: [JoinCodeFormatter()],
                 textCapitalization: TextCapitalization.characters,
                 textInputAction: TextInputAction.go,
                 decoration: const InputDecoration(
@@ -317,7 +320,16 @@ class _NotFoundState extends State<_NotFound> {
                 ),
                 onSubmitted: (_) => _open(),
               ),
-              FilledButton(onPressed: _open, child: const Text('Open')),
+              ListenableBuilder(
+                listenable: _code,
+                builder: (context, _) => FilledButton(
+                  onPressed:
+                      JoinCodeRules.isValid(JoinCodeRules.normalize(_code.text))
+                      ? _open
+                      : null,
+                  child: const Text('Open'),
+                ),
+              ),
             ],
           ),
         ),

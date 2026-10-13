@@ -261,18 +261,19 @@ class _LotPageState extends State<LotPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (_retractable(auction, lot, identity) case final bid?)
-                      Padding(
+                    if (_retractable(auction, lot, identity, closeAt)
+                        case final bid?)
+                      RetractButton(
+                        lot: lot,
+                        bid: bid,
+                        identity: identity,
+                        closeAt: closeAt,
+                        offset: auction.clockOffset,
+                        send: _sendRetract,
+                        onRetracted: auction.merge,
+                        onStale: _refresh,
+                        onNotParticipant: _rejoin,
                         padding: const EdgeInsets.only(bottom: 8),
-                        child: RetractButton(
-                          lot: lot,
-                          bid: bid,
-                          identity: identity,
-                          send: _sendRetract,
-                          onRetracted: auction.merge,
-                          onStale: _refresh,
-                          onNotParticipant: _rejoin,
-                        ),
                       ),
                     BidBar(
                       lot: lot,
@@ -296,9 +297,17 @@ class _LotPageState extends State<LotPage> {
     AuctionController auction,
     LotCard lot,
     Identity identity,
+    DateTime closeAt,
   ) {
     final ledger = auction.ledgerFor(lot.lotId);
-    if (ledger == null || !ledger.canRetract(lot, identity.participantId)) {
+    final now = DateTime.now().toUtc().add(auction.clockOffset.value);
+    if (ledger == null ||
+        !ledger.canRetract(
+          lot,
+          identity.participantId,
+          closeAt: closeAt,
+          now: now,
+        )) {
       return null;
     }
     return ledger.lastValid;

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gavel_client/gavel_client.dart';
 import 'package:gavel_flutter/core/auction_controller.dart';
+import 'package:gavel_flutter/core/failures.dart';
 import 'package:gavel_flutter/core/live.dart';
 
 import '../support.dart';
@@ -42,6 +43,14 @@ void main() {
   });
 
   tearDown(() => controller.dispose());
+
+  test('a code that cannot be a join code fails without asking the server', () {
+    final bad = AuctionController(Client('http://localhost:8080/'), 'ABCO34')
+      ..start();
+    addTearDown(bad.dispose);
+
+    expect(bad.failure, isA<AuctionNotFound>());
+  });
 
   test('a snapshot sets the auction and its lots', () {
     controller.apply(snapshot([lotCard()]));

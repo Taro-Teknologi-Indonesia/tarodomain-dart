@@ -9,3 +9,6 @@ environment:
 dependencies:
   serverpod_client: 4.0.4
   tarodomain_serverpod_client: ^0.0.1
+
+dev_dependencies:
+  test: ^1.31.1

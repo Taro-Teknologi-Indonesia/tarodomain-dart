@@ -3,6 +3,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:gavel_client/gavel_client.dart';
+import 'package:gavel_client/rules.dart';
 
 import 'failures.dart';
 import 'live.dart';
@@ -108,8 +109,14 @@ class AuctionController extends ChangeNotifier {
   /// Server clock minus local clock, for countdowns.
   ValueListenable<Duration> get clockOffset => live.clockOffset;
 
-  /// Starts the live feed.
+  /// Starts the live feed, or, for a code that can't be a join code,
+  /// fails with [AuctionNotFound] without asking the server.
   void start() {
+    if (!JoinCodeRules.isValid(code)) {
+      failure = AuctionNotFound(code);
+      notifyListeners();
+      return;
+    }
     _events = live.events().listen(
       apply,
       onError: (Object e) {

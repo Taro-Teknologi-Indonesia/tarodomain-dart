@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:gavel_client/gavel_client.dart';
+import 'package:gavel_client/rules.dart';
 
 import '../core/api.dart';
 import '../core/failures.dart';
 import '../core/identity.dart';
+import '../core/input_formatters.dart';
 
 /// Asks for a display name and joins the auction with join [code].
 ///
 /// Pops with the new [Identity], or null if dismissed. The board stays
 /// visible behind it.
 class JoinSheet extends StatefulWidget {
-  const JoinSheet({required this.code, this.message, super.key});
+  const JoinSheet({
+    required this.code,
+    this.message,
+    @visibleForTesting this.join,
+    super.key,
+  });
 
   final String code;
+
+  /// Sends `auction.join`; the app's client unless a test passes one.
+  final Future<JoinResult> Function(String code, String displayName)? join;
 
   /// Why the sheet is shown, under its title, such as a lost identity.
   final String? message;
@@ -43,11 +54,17 @@ class _JoinSheetState extends State<JoinSheet> {
     super.dispose();
   }
 
+  /// What to show for a display name refused for [reason], whether the
+  /// app or the server refused it.
+  static String _nameError(String? reason) => reason == 'EMPTY'
+      ? 'Enter the name others will see'
+      : 'Use 1 to ${ParticipantRules.maxNameLength} characters';
+
   Future<void> _join() async {
     if (_busy) return;
     final name = _name.text.trim();
-    if (name.isEmpty) {
-      setState(() => _error = 'Enter the name others will see');
+    if (ParticipantRules.displayName(name) case final error?) {
+      setState(() => _error = _nameError(error.reason));
       return;
     }
     setState(() {
@@ -55,7 +72,10 @@ class _JoinSheetState extends State<JoinSheet> {
       _error = null;
     });
     try {
-      final result = await client.auction.join(widget.code, name);
+      final result = await (widget.join ?? client.auction.join)(
+        widget.code,
+        name,
+      );
       final identity = Identity.joined(result);
       await Identities.save(widget.code, identity);
       if (mounted) Navigator.of(context).pop(identity);
@@ -64,7 +84,7 @@ class _JoinSheetState extends State<JoinSheet> {
       setState(() {
         _busy = false;
         _error = switch (GavelFailure.from(e)) {
-          Invalid() => 'Use 1 to 24 characters',
+          Invalid(:final context) => _nameError(context['reason'] as String?),
           AuctionNotFound() => 'This auction no longer exists',
           _ => 'Could not join. Check your connection and try again.',
         };
@@ -96,7 +116,10 @@ class _JoinSheetState extends State<JoinSheet> {
           TextField(
             controller: _name,
             autofocus: true,
-            maxLength: 24,
+            // Counts graphemes, the server runes: the rule above catches
+            // a name of emoji that fits here.
+            maxLength: ParticipantRules.maxNameLength,
+            inputFormatters: [NoControlCharactersFormatter()],
             enabled: !_busy,
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.done,

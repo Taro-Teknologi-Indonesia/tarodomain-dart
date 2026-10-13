@@ -13,9 +13,6 @@ import '../generated/protocol.dart';
 
 final _random = Random.secure();
 
-/// Join code characters: no 0/O, 1/I/L.
-const _codeAlphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const _codeLength = 6;
 const _codeAttempts = 3;
 
 /// Creates an auction called [title] that closes at [closeAt], truncated
@@ -105,6 +102,8 @@ DateTime _toSecond(DateTime t) =>
     DateTime.utc(t.year, t.month, t.day, t.hour, t.minute, t.second);
 
 String _joinCode() => String.fromCharCodes([
-  for (var i = 0; i < _codeLength; i++)
-    _codeAlphabet.codeUnitAt(_random.nextInt(_codeAlphabet.length)),
+  for (var i = 0; i < Auction.codeLength; i++)
+    Auction.codeAlphabet.codeUnitAt(
+      _random.nextInt(Auction.codeAlphabet.length),
+    ),
 ]);

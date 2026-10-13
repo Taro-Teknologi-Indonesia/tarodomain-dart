@@ -15,8 +15,17 @@ extension LedgerRules on List<LedgerEntry> {
   bool hasValidBidBy(UuidValue? me) =>
       me != null && any((e) => !e.retracted && e.participantId == me);
 
-  /// Whether [me] may retract on [lot]: it's open and [me] holds the latest
-  /// valid bid.
-  bool canRetract(LotCard lot, UuidValue? me) =>
-      me != null && lot.status == 'OPEN' && lastValid?.participantId == me;
+  /// Whether [me] may retract on [lot] at [now], on the server's clock:
+  /// it's open, [closeAt] hasn't passed, and [me] holds the latest valid
+  /// bid.
+  bool canRetract(
+    LotCard lot,
+    UuidValue? me, {
+    required DateTime closeAt,
+    required DateTime now,
+  }) =>
+      me != null &&
+      lot.status == 'OPEN' &&
+      now.isBefore(closeAt) &&
+      lastValid?.participantId == me;
 }

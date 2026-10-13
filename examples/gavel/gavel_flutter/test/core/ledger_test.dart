@@ -27,11 +27,22 @@ void main() {
 
   group('canRetract', () {
     final ledger = [ledgerEntry(1), ledgerEntry(2, by: siti, name: 'Siti')];
+    final closeAt = DateTime.utc(2026, 10, 14, 23);
+    final now = closeAt.subtract(const Duration(minutes: 1));
 
     test('only for the owner of the latest valid bid', () {
-      expect(ledger.canRetract(lotCard(), siti), isTrue);
-      expect(ledger.canRetract(lotCard(), budi), isFalse);
-      expect(ledger.canRetract(lotCard(), null), isFalse);
+      expect(
+        ledger.canRetract(lotCard(), siti, closeAt: closeAt, now: now),
+        isTrue,
+      );
+      expect(
+        ledger.canRetract(lotCard(), budi, closeAt: closeAt, now: now),
+        isFalse,
+      );
+      expect(
+        ledger.canRetract(lotCard(), null, closeAt: closeAt, now: now),
+        isFalse,
+      );
     });
 
     test('passes to the previous bidder after a retraction', () {
@@ -40,16 +51,37 @@ void main() {
         ledgerEntry(2, by: siti, name: 'Siti', retracted: true),
       ];
 
-      expect(after.canRetract(lotCard(), budi), isTrue);
-      expect(after.canRetract(lotCard(), siti), isFalse);
+      expect(
+        after.canRetract(lotCard(), budi, closeAt: closeAt, now: now),
+        isTrue,
+      );
+      expect(
+        after.canRetract(lotCard(), siti, closeAt: closeAt, now: now),
+        isFalse,
+      );
     });
 
     test('never once the lot closed', () {
       expect(
-        ledger.canRetract(lotCard(status: 'SOLD', winnerName: 'Siti'), siti),
+        ledger.canRetract(
+          lotCard(status: 'SOLD', winnerName: 'Siti'),
+          siti,
+          closeAt: closeAt,
+          now: now,
+        ),
         isFalse,
       );
     });
+  });
+
+  test('canRetract is false once closeAt passes, though still OPEN', () {
+    final ledger = [ledgerEntry(1, by: siti, name: 'Siti')];
+    final closeAt = DateTime.utc(2026, 10, 14, 23);
+
+    expect(
+      ledger.canRetract(lotCard(), siti, closeAt: closeAt, now: closeAt),
+      isFalse,
+    );
   });
 
   test('hasValidBidBy ignores retracted bids', () {

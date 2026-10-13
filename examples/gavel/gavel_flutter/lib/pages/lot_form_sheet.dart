@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gavel_client/gavel_client.dart';
+import 'package:gavel_client/rules.dart';
 
 import '../core/api.dart';
 import '../core/failures.dart';
@@ -40,8 +41,13 @@ class LotFormSheet extends StatefulWidget {
   const LotFormSheet({
     required this.code,
     required this.organizerKey,
+    @visibleForTesting this.add,
     super.key,
   });
+
+  /// Sends `lot.add`; the app's client unless a test passes one.
+  final Future<LotCard> Function(String code, String organizerKey, NewLot lot)?
+  add;
 
   /// The auction's join code.
   final String code;
@@ -90,6 +96,13 @@ class _LotFormSheetState extends State<LotFormSheet> {
   /// Inline errors by server field name, from the last submit.
   var _errors = <String, String>{};
 
+  /// Set by a submit the rules refused: from then on every change checks
+  /// the whole form again, so fixing the open bid also clears the BN.
+  var _checking = false;
+
+  /// Why the custom step typed can't be added.
+  String? _customStepError;
+
   @override
   void initState() {
     super.initState();
@@ -131,11 +144,23 @@ class _LotFormSheetState extends State<LotFormSheet> {
   ];
 
   void _addCustomStep() {
-    _clearError('increments');
     final thousands = int.tryParse(_customStep.text);
+    if (thousands != null) {
+      // The steps as they'd be: a new custom step replaces the old one.
+      final step = thousands * 1000;
+      final error = LotRules.increments([
+        ..._steps.where((s) => s != _extraStep),
+        step,
+      ]);
+      if (error != null) {
+        setState(() => _customStepError = error.message);
+        return;
+      }
+    }
     setState(() {
       _editingCustomStep = false;
-      if (thousands == null || thousands <= 0) return;
+      _customStepError = null;
+      if (thousands == null) return;
       final step = thousands * 1000;
       if (_extraStep case final old?
           when !LotFormSheet.presetSteps.contains(old)) {
@@ -144,23 +169,52 @@ class _LotFormSheetState extends State<LotFormSheet> {
       _extraStep = LotFormSheet.presetSteps.contains(step) ? null : step;
       _selectedSteps.add(step);
     });
+    _changed('increments');
   }
 
-  /// Drops [field]'s server error once the organizer changes the field.
-  void _clearError(String field) {
-    if (!_errors.containsKey(field)) return;
-    setState(() => _errors = {..._errors}..remove(field));
+  /// The lot as the form holds it, checked by the server's rules.
+  List<FieldError> _check() => LotRules.newLot(
+    name: _name.text,
+    openBid: _openBidValue,
+    buyNowPrice: _buyNowValue,
+    increments: _steps,
+    description: _description.text,
+    imageUrl: _imageUrl.text,
+    tileEmoji: _emoji,
+    tileColor: _color,
+  );
+
+  static Map<String, String> _byField(List<FieldError> errors) => {
+    for (final e in errors) e.field: e.message,
+  };
+
+  /// After [field] changed: checks the form again once a submit was
+  /// refused, else drops [field]'s error.
+  void _changed(String field) {
+    if (_checking) {
+      setState(() => _errors = _byField(_check()));
+    } else if (_errors.containsKey(field)) {
+      setState(() => _errors = {..._errors}..remove(field));
+    }
   }
 
   Future<void> _submit() async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final errors = _check();
+    if (errors.isNotEmpty) {
+      setState(() {
+        _checking = true;
+        _errors = _byField(errors);
+      });
+      return;
+    }
     setState(() {
       _submitting = true;
       _errors = {};
     });
     try {
-      final card = await client.lot.add(
+      final card = await (widget.add ?? client.lot.add)(
         widget.code,
         widget.organizerKey,
         NewLot(
@@ -222,9 +276,9 @@ class _LotFormSheetState extends State<LotFormSheet> {
         children: [
           TextField(
             controller: _name,
-            onChanged: (_) => _clearError('name'),
+            onChanged: (_) => _changed('name'),
             autofocus: true,
-            maxLength: 80,
+            maxLength: LotRules.maxNameLength,
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: 'Name',
@@ -235,7 +289,7 @@ class _LotFormSheetState extends State<LotFormSheet> {
           const SizedBox(height: 8),
           TextField(
             controller: _openBid,
-            onChanged: (_) => _clearError('openBid'),
+            onChanged: (_) => _changed('openBid'),
             keyboardType: TextInputType.number,
             inputFormatters: [_ThousandsFormatter()],
             decoration: InputDecoration(
@@ -249,7 +303,7 @@ class _LotFormSheetState extends State<LotFormSheet> {
           const SizedBox(height: 8),
           TextField(
             controller: _buyNow,
-            onChanged: (_) => _clearError('buyNowPrice'),
+            onChanged: (_) => _changed('buyNowPrice'),
             keyboardType: TextInputType.number,
             inputFormatters: [_ThousandsFormatter()],
             decoration: InputDecoration(
@@ -273,26 +327,33 @@ class _LotFormSheetState extends State<LotFormSheet> {
                   label: Text(formatStep(step)),
                   selected: _selectedSteps.contains(step),
                   onSelected: (on) {
-                    _clearError('increments');
                     setState(
                       () => on
                           ? _selectedSteps.add(step)
                           : _selectedSteps.remove(step),
                     );
+                    _changed('increments');
                   },
                 ),
               if (_editingCustomStep)
                 SizedBox(
-                  width: 140,
+                  width: 160,
                   child: TextField(
                     controller: _customStep,
                     autofocus: true,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
+                    onChanged: (_) {
+                      if (_customStepError != null) {
+                        setState(() => _customStepError = null);
+                      }
+                    },
+                    decoration: InputDecoration(
                       isDense: true,
                       prefixText: '+',
                       suffixText: 'k',
+                      errorText: _customStepError,
+                      errorMaxLines: 2,
                     ),
                     onSubmitted: (_) => _addCustomStep(),
                     onTapOutside: (_) => _addCustomStep(),
@@ -309,12 +370,12 @@ class _LotFormSheetState extends State<LotFormSheet> {
                 ),
             ],
           ),
-          if (_errors['increments'] ?? (_steps.isEmpty ? '' : null)
+          if (_errors['increments'] ?? LotRules.increments(_steps)?.message
               case final error?)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                error.isEmpty ? 'Choose at least one step' : error,
+                error,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.error,
                 ),
@@ -323,10 +384,10 @@ class _LotFormSheetState extends State<LotFormSheet> {
           const SizedBox(height: 24),
           TextField(
             controller: _description,
-            onChanged: (_) => _clearError('description'),
+            onChanged: (_) => _changed('description'),
             minLines: 4,
             maxLines: 10,
-            maxLength: 2000,
+            maxLength: LotRules.maxDescriptionLength,
             decoration: InputDecoration(
               labelText: 'Description',
               hintText: 'Berat: …\nUkuran: …\nAsal: …\nIkatan: …\nKondisi: …',
@@ -341,7 +402,7 @@ class _LotFormSheetState extends State<LotFormSheet> {
               Expanded(
                 child: TextField(
                   controller: _imageUrl,
-                  onChanged: (_) => _clearError('imageUrl'),
+                  onChanged: (_) => _changed('imageUrl'),
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
                     labelText: 'Image URL (optional)',
@@ -377,8 +438,8 @@ class _LotFormSheetState extends State<LotFormSheet> {
                   selected: emoji == _emoji,
                   showCheckmark: false,
                   onSelected: (_) {
-                    _clearError('tileEmoji');
                     setState(() => _emoji = emoji);
+                    _changed('tileEmoji');
                   },
                 ),
             ],
@@ -392,8 +453,8 @@ class _LotFormSheetState extends State<LotFormSheet> {
                   color: color,
                   selected: color == _color,
                   onTap: () {
-                    _clearError('tileColor');
                     setState(() => _color = color);
+                    _changed('tileColor');
                   },
                 ),
             ],

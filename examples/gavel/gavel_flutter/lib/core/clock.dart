@@ -84,3 +84,77 @@ class _CountdownTextState extends State<CountdownText> {
     );
   }
 }
+
+/// Builds with whether [closeAt] has passed on the server's clock, and
+/// again when it does, so a button that can't succeed after the close goes
+/// away on time rather than waiting for the server's push (X5).
+class DeadlineBuilder extends StatefulWidget {
+  const DeadlineBuilder({
+    required this.closeAt,
+    required this.offset,
+    required this.builder,
+    super.key,
+  });
+
+  /// When the auction closes, in UTC.
+  final DateTime closeAt;
+
+  /// Server clock minus local clock.
+  final ValueListenable<Duration> offset;
+
+  final Widget Function(BuildContext context, bool timeUp) builder;
+
+  @override
+  State<DeadlineBuilder> createState() => _DeadlineBuilderState();
+}
+
+class _DeadlineBuilderState extends State<DeadlineBuilder> {
+  var _timeUp = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.offset.addListener(_schedule);
+    _schedule();
+  }
+
+  @override
+  void didUpdateWidget(DeadlineBuilder old) {
+    super.didUpdateWidget(old);
+    if (old.offset != widget.offset) {
+      old.offset.removeListener(_schedule);
+      widget.offset.addListener(_schedule);
+    }
+    if (old.closeAt != widget.closeAt) _schedule();
+  }
+
+  @override
+  void dispose() {
+    widget.offset.removeListener(_schedule);
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  /// Checks [DeadlineBuilder.closeAt] against the server's clock now, and
+  /// again when it arrives.
+  void _schedule() {
+    _timer?.cancel();
+    final serverNow = DateTime.now().toUtc().add(widget.offset.value);
+    final left = widget.closeAt.difference(serverNow);
+    void timeUp(bool value) {
+      if (value == _timeUp) return;
+      if (mounted) {
+        setState(() => _timeUp = value);
+      } else {
+        _timeUp = value;
+      }
+    }
+
+    timeUp(left <= Duration.zero);
+    if (left > Duration.zero) _timer = Timer(left, () => timeUp(true));
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _timeUp);
+}

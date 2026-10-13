@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:gavel_client/rules.dart';
 import 'package:go_router/go_router.dart';
+
+import '../core/input_formatters.dart';
 
 /// Create an auction or enter a join code (UC-01, UC-03).
 class HomePage extends StatefulWidget {
@@ -19,8 +22,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _join() {
-    final code = _code.text.trim().toUpperCase();
-    if (code.length == 6) context.go('/a/$code');
+    final code = JoinCodeRules.normalize(_code.text);
+    if (JoinCodeRules.isValid(code)) context.go('/a/$code');
   }
 
   @override
@@ -89,7 +92,8 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 8),
                         TextField(
                           controller: _code,
-                          maxLength: 6,
+                          maxLength: JoinCodeRules.length,
+                          inputFormatters: [JoinCodeFormatter()],
                           textCapitalization: TextCapitalization.characters,
                           decoration: const InputDecoration(
                             labelText: 'Join code',
@@ -99,9 +103,17 @@ class _HomePageState extends State<HomePage> {
                         ),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: OutlinedButton(
-                            onPressed: _join,
-                            child: const Text('Open the board'),
+                          child: ListenableBuilder(
+                            listenable: _code,
+                            builder: (context, _) => OutlinedButton(
+                              onPressed:
+                                  JoinCodeRules.isValid(
+                                    JoinCodeRules.normalize(_code.text),
+                                  )
+                                  ? _join
+                                  : null,
+                              child: const Text('Open the board'),
+                            ),
                           ),
                         ),
                       ],

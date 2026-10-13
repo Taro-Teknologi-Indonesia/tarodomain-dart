@@ -28,7 +28,7 @@ void main() {
     lost = 0;
   });
 
-  Future<void> pump(WidgetTester tester) {
+  Future<void> pump(WidgetTester tester, {DateTime? closeAt}) {
     answer = Completer();
     return tester.pumpWidget(
       MaterialApp(
@@ -43,6 +43,10 @@ void main() {
               ),
               bid: ledgerEntry(2, by: siti, name: 'Siti', amount: 450000),
               identity: _me,
+              closeAt:
+                  closeAt ??
+                  DateTime.now().toUtc().add(const Duration(hours: 1)),
+              offset: ValueNotifier(Duration.zero),
               send:
                   ({
                     required lotId,
@@ -171,5 +175,18 @@ void main() {
     await tester.pump();
 
     expect(lost, 1);
+  });
+
+  testWidgets('goes away at closeAt on the server clock, before the '
+      'lot shows closed', (tester) async {
+    await pump(
+      tester,
+      closeAt: DateTime.now().toUtc().add(const Duration(seconds: 2)),
+    );
+    expect(find.text('RETRACT Rp 450.000'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('RETRACT Rp 450.000'), findsNothing);
   });
 }
