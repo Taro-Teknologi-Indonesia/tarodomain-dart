@@ -8,7 +8,7 @@ The spec is a git submodule at [`spec/`](spec), pinned to the version this code 
 
 > **Jury: the entry is [`examples/gavel/`](examples/gavel).** The rest of this repo is the framework it runs on.
 
-**Gavel is a live silent auction that closes itself.** Gemstone sellers in Indonesia run auctions (*lelang*) in Facebook comment threads. That leads to arguments over who bid first, deleted comments, and auctions closed by hand whenever the seller checks their phone. With Gavel the crowd stays on Facebook, and the seller pastes one link under the photos. Bidders open it in their phone browser, type a name, and bid. The server keeps a bid ledger that nobody can edit and closes the auction at the deadline, even with the seller's laptop shut.
+**Gavel is a live silent auction that closes itself.** In Indonesia, sellers of gemstones, keris, blades and other collectibles run auctions (*lelang*) in Facebook comment threads. That leads to arguments over who bid first, deleted comments, and auctions closed by hand whenever the seller checks their phone. With Gavel the crowd stays on Facebook, and the seller pastes one link under the photos. Bidders open it in their phone browser, type a name, and bid. The server keeps a bid ledger that nobody can edit and closes the auction at the deadline, even with the seller's laptop shut.
 
 - **Live:** https://gavel-auction.serverpod.space (Flutter web, served by Serverpod on Serverpod Cloud)
 - **Use cases:** [examples/gavel/docs/use-cases.md](examples/gavel/docs/use-cases.md)
