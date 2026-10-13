@@ -31,10 +31,19 @@ class AuctionController extends ChangeNotifier {
   List<LotCard> get lots =>
       [..._lots.values]..sort((a, b) => a.position.compareTo(b.position));
 
+  /// The lot with [lotId], if the board has it.
+  LotCard? lot(UuidValue lotId) => _lots[lotId];
+
+  /// Whether the live stream is connected.
+  ValueListenable<LiveStatus> get status => live.status;
+
+  /// Server clock minus local clock, for countdowns.
+  ValueListenable<Duration> get clockOffset => live.clockOffset;
+
   /// Starts the live feed.
   void start() {
     _events = live.events().listen(
-      _onEvent,
+      apply,
       onError: (Object e) {
         failure = GavelFailure.from(e);
         notifyListeners();
@@ -56,7 +65,11 @@ class AuctionController extends ChangeNotifier {
     return true;
   }
 
-  void _onEvent(LiveEvent event) {
+  /// Folds [event] into the board: a snapshot replaces it, and an update
+  /// replaces a lot only with a newer version of it, so a late or replayed
+  /// update never rolls a price back.
+  @visibleForTesting
+  void apply(LiveEvent event) {
     switch (event) {
       case SnapshotArrived(:final snapshot):
         auction = snapshot.auction;

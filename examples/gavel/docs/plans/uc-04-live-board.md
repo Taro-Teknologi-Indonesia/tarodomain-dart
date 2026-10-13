@@ -55,6 +55,16 @@ No new commands. It reuses `AuctionEndpoint.board(code) → BoardSnapshot { auct
 - Unit test: `AuctionController._apply` ignores an older version and accepts a newer one.
 - Manual: three windows (desktop grid, a phone-sized devtools window and incognito). A bid in one shows up in the others within 1 s.
 
+## As built
+
+- No server change in this step: `LotCreated` already posts its card. `BidPlaced`, `BidRetracted`, `LotClosed` and `AuctionClosed` post from the projections as UC-06/07/08 add those events.
+- One `AuctionController` per code lives in `AuctionScope` (`core/auction_scope.dart`), which a `ShellRoute` puts above `/a/:code`, its lot route and its organizer route. The board, the lot detail and the dashboard share one subscription. `AuctionController.apply` is the merge that `_apply` describes, `@visibleForTesting`.
+- The countdown sits under the title in the app bar. The board passes its identity's `participantId` as `me`, and the big screen gets `LotCardSize.large` with no taps. The dashboard uses `dense`.
+- A closed lot's line reads "Siti won" (or "**You** won") and "No bids — passed".
+- The wide layout is rows of equal-height cards at most 360 px wide, not a `GridView`, so a card is never clipped by a fixed aspect ratio.
+- There's no `Ticker` stream: `CountdownText` keeps its own 250 ms timer, and it's the only timer.
+- Flutter tests run with `melos run test:flutter` (also in CI). `flutter_test` pins `test_api`, so the workspace's `test` constraint is now `^1.31.1`.
+
 ## Acceptance
 
 - [ ] Single column on phones, grid on desktop, and no horizontal scroll at 360 px.

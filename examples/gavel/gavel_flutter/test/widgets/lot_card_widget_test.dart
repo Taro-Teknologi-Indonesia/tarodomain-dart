@@ -1,0 +1,164 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gavel_client/gavel_client.dart';
+import 'package:gavel_flutter/widgets/lot_card_widget.dart';
+import 'package:gavel_flutter/widgets/lot_visual.dart';
+
+import '../support.dart';
+
+Widget _app(LotCard lot, {UuidValue? me}) => MaterialApp(
+  home: Scaffold(
+    body: SingleChildScrollView(
+      child: SizedBox(width: 360, child: LotCardWidget(lot, me: me)),
+    ),
+  ),
+);
+
+/// The visible text, including that of rich text such as "**You** lead".
+String _texts(WidgetTester tester) => tester
+    .widgetList<RichText>(find.byType(RichText))
+    .map((t) => t.text.toPlainText())
+    .join('\n');
+
+void main() {
+  testWidgets('shows the tile when there is no photo', (tester) async {
+    await tester.pumpWidget(_app(lotCard()));
+
+    expect(find.byType(TileVisual), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
+    expect(find.text('🧵'), findsOneWidget);
+  });
+
+  testWidgets('falls back to the tile when the photo fails', (tester) async {
+    await tester.pumpWidget(
+      _app(lotCard(imageUrl: 'https://example.com/batik.jpg')),
+    );
+    expect(find.byType(Image), findsOneWidget);
+
+    // The test HTTP client answers every request with 400.
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(TileVisual), findsOneWidget);
+  });
+
+  testWidgets('shows the open bid while nobody has bid', (tester) async {
+    await tester.pumpWidget(_app(lotCard()));
+
+    expect(find.text('Rp 150.000'), findsOneWidget);
+    expect(find.text('No bids — opens at Rp 150.000'), findsOneWidget);
+    expect(find.text('OPEN'), findsOneWidget);
+  });
+
+  testWidgets('names someone else who leads', (tester) async {
+    final lot = lotCard(
+      version: 2,
+      currentPrice: 175000,
+      leaderId: siti,
+      leaderName: 'Siti',
+    );
+    await tester.pumpWidget(_app(lot, me: budi));
+
+    expect(find.text('Rp 175.000'), findsOneWidget);
+    expect(find.text('Siti leads'), findsOneWidget);
+    expect(_texts(tester), isNot(contains('You lead')));
+  });
+
+  testWidgets('highlights my lead', (tester) async {
+    final lot = lotCard(
+      version: 2,
+      currentPrice: 175000,
+      leaderId: budi,
+      leaderName: 'Budi',
+    );
+    await tester.pumpWidget(_app(lot, me: budi));
+
+    expect(_texts(tester), contains('You lead'));
+    expect(find.text('Budi leads'), findsNothing);
+  });
+
+  testWidgets('shows a sold lot with its winner', (tester) async {
+    final lot = lotCard(
+      version: 3,
+      currentPrice: 200000,
+      status: 'SOLD',
+      leaderId: siti,
+      leaderName: 'Siti',
+      winnerName: 'Siti',
+    );
+    await tester.pumpWidget(_app(lot, me: budi));
+
+    expect(find.text('SOLD'), findsOneWidget);
+    expect(find.text('Siti won'), findsOneWidget);
+  });
+
+  testWidgets('shows a passed lot', (tester) async {
+    await tester.pumpWidget(_app(lotCard(version: 2, status: 'PASSED')));
+
+    expect(find.text('PASSED'), findsOneWidget);
+    expect(find.text('No bids — passed'), findsOneWidget);
+  });
+
+  testWidgets('slides a new price in', (tester) async {
+    await tester.pumpWidget(_app(lotCard()));
+    await tester.pumpWidget(
+      _app(
+        lotCard(
+          version: 2,
+          currentPrice: 175000,
+          leaderId: siti,
+          leaderName: 'Siti',
+        ),
+      ),
+    );
+
+    // Both prices show while the new one slides in, then only the new one.
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Rp 150.000'), findsOneWidget);
+    expect(find.text('Rp 175.000'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('Rp 150.000'), findsNothing);
+    expect(find.text('Rp 175.000'), findsOneWidget);
+  });
+
+  testWidgets('a phone-width list does not overflow', (tester) async {
+    tester.view
+      ..physicalSize = const Size(360, 740)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LotGrid(lots: [lotCard()], empty: 'No lots yet.'),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a desktop grid does not overflow at any width', (tester) async {
+    final lots = [
+      for (var i = 0; i < 5; i++)
+        lotCard().copyWith(
+          lotId: UuidValue.fromString('00000000-0000-4000-8000-00000000000$i'),
+          position: i,
+        ),
+    ];
+    addTearDown(tester.view.reset);
+    for (final width in [600.0, 760.0, 1024.0, 1440.0]) {
+      tester.view
+        ..physicalSize = Size(width, 900)
+        ..devicePixelRatio = 1;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LotGrid(lots: lots, empty: 'No lots yet.'),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull, reason: 'at $width px');
+    }
+  });
+}

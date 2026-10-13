@@ -4,21 +4,91 @@ import 'package:gavel_client/gavel_client.dart';
 import '../core/money.dart';
 import 'lot_visual.dart';
 
+/// How much room a [LotCardWidget] takes: compact on the organizer
+/// dashboard, regular on the board, large on the big screen.
+enum LotCardSize { dense, regular, large }
+
 /// One lot: its visual, name, price, leader and status. The board, the
 /// organizer dashboard and the big screen all show lots with it.
-class LotCardWidget extends StatelessWidget {
-  const LotCardWidget(this.lot, {this.onTap, super.key});
+///
+/// When the price changes, the new one slides in over a short pulse, so a
+/// bid from anywhere is seen arriving.
+class LotCardWidget extends StatefulWidget {
+  const LotCardWidget(
+    this.lot, {
+    this.me,
+    this.size = LotCardSize.regular,
+    this.onTap,
+    super.key,
+  });
 
   final LotCard lot;
+
+  /// The participant this browser bids as, whose lead is highlighted.
+  final UuidValue? me;
+
+  final LotCardSize size;
   final VoidCallback? onTap;
+
+  /// How long the background pulses after a price change.
+  static const flash = Duration(milliseconds: 600);
+
+  @override
+  State<LotCardWidget> createState() => _LotCardWidgetState();
+}
+
+class _LotCardWidgetState extends State<LotCardWidget>
+    with SingleTickerProviderStateMixin {
+  late final _pulse = AnimationController(
+    vsync: this,
+    duration: LotCardWidget.flash,
+  );
+
+  @override
+  void didUpdateWidget(LotCardWidget old) {
+    super.didUpdateWidget(old);
+    if (old.lot.lotId == widget.lot.lotId &&
+        old.lot.currentPrice != widget.lot.currentPrice) {
+      _pulse.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final text = theme.textTheme;
+    final lot = widget.lot;
+    final (title, price, detail, padding) = switch (widget.size) {
+      LotCardSize.dense => (
+        text.titleSmall,
+        text.titleLarge,
+        text.bodySmall,
+        8.0,
+      ),
+      LotCardSize.regular => (
+        text.titleMedium,
+        text.headlineSmall,
+        text.bodySmall,
+        12.0,
+      ),
+      LotCardSize.large => (
+        text.headlineSmall,
+        text.displaySmall,
+        text.titleMedium,
+        16.0,
+      ),
+    };
+    final flash = theme.colorScheme.primaryContainer;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
@@ -31,45 +101,119 @@ class LotCardWidget extends StatelessWidget {
                 color: lot.tileColor,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          lot.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium,
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (context, child) => ColoredBox(
+                // Up fast, then fade out over the rest of the pulse.
+                color: flash.withValues(
+                  alpha: _pulse.isAnimating ? (1 - _pulse.value) * flash.a : 0,
+                ),
+                child: child,
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(padding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            lot.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: title,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        StatusBadge(lot.status),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween(
+                            begin: const Offset(0, 0.4),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      StatusBadge(lot.status),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    formatRupiah(lot.currentPrice),
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      layoutBuilder: (current, previous) => Stack(
+                        alignment: Alignment.centerLeft,
+                        children: [...previous, ?current],
+                      ),
+                      child: Text(
+                        formatRupiah(lot.currentPrice),
+                        key: ValueKey(lot.currentPrice),
+                        style: price?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
                     ),
-                  ),
-                  Text(
-                    lot.leaderName == null
-                        ? 'No bids — opens at ${formatRupiah(lot.openBid)}'
-                        : '${lot.leaderName} leads',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
+                    _Leader(lot: lot, me: widget.me, style: detail),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Who leads [lot], or who won it, or its opening bid while nobody has bid.
+/// "You" stands out when [me] is the one.
+class _Leader extends StatelessWidget {
+  const _Leader({required this.lot, required this.me, required this.style});
+
+  final LotCard lot;
+  final UuidValue? me;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final open = lot.status == 'OPEN';
+    final name = open ? lot.leaderName : lot.winnerName;
+    final isMe = me != null && lot.leaderId == me;
+    if (name == null) {
+      return Text(
+        open
+            ? 'No bids — opens at ${formatRupiah(lot.openBid)}'
+            : 'No bids — passed',
+        style: style,
+      );
+    }
+    if (!isMe) {
+      return Text(
+        open ? '$name leads' : '$name won',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      );
+    }
+    final colors = Theme.of(context).colorScheme;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'You',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: colors.onTertiaryContainer,
+              backgroundColor: colors.tertiaryContainer,
+            ),
+          ),
+          TextSpan(text: open ? ' lead' : ' won'),
+        ],
+      ),
+      style: style,
     );
   }
 }
@@ -106,10 +250,32 @@ class StatusBadge extends StatelessWidget {
 /// [lots] in one column under 600 px and a grid above, or [empty] when
 /// there are none.
 class LotGrid extends StatelessWidget {
-  const LotGrid({required this.lots, required this.empty, super.key});
+  const LotGrid({
+    required this.lots,
+    required this.empty,
+    this.me,
+    this.size = LotCardSize.regular,
+    this.onTap,
+    super.key,
+  });
 
   final List<LotCard> lots;
   final String empty;
+
+  /// The participant this browser bids as, whose leads are highlighted.
+  final UuidValue? me;
+
+  final LotCardSize size;
+  final void Function(LotCard lot)? onTap;
+
+  Widget _card(LotCard lot) => LotCardWidget(
+    lot,
+    // Keeps each card's flash state with its lot as the list changes.
+    key: ValueKey(lot.lotId),
+    me: me,
+    size: size,
+    onTap: onTap == null ? null : () => onTap!(lot),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -129,19 +295,34 @@ class LotGrid extends StatelessWidget {
             padding: padding,
             itemCount: lots.length,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (_, i) => LotCardWidget(lots[i]),
+            itemBuilder: (_, i) => _card(lots[i]),
           );
         }
-        return GridView.builder(
+        // A grid of cards at most 360 px wide. Rows rather than a GridView,
+        // so a card is as tall as its content needs at any width.
+        const spacing = 8.0;
+        final width = constraints.maxWidth - padding.horizontal;
+        final columns = ((width + spacing) / (360 + spacing)).ceil();
+        final rows = (lots.length / columns).ceil();
+        return ListView.separated(
           padding: padding,
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 360,
-            childAspectRatio: 0.92,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
+          itemCount: rows,
+          separatorBuilder: (_, _) => const SizedBox(height: spacing),
+          itemBuilder: (_, row) => IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var col = 0; col < columns; col++) ...[
+                  if (col > 0) const SizedBox(width: spacing),
+                  Expanded(
+                    child: row * columns + col < lots.length
+                        ? _card(lots[row * columns + col])
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ],
+            ),
           ),
-          itemCount: lots.length,
-          itemBuilder: (_, i) => LotCardWidget(lots[i]),
         );
       },
     );

@@ -38,6 +38,15 @@ melos:
       exec:
         command: dart test
         concurrency: 1
-      description: Run tests in every package that has a test folder.
+      description: Run tests in every Dart package that has a test folder.
       packageFilters:
         dirExists: test
+        flutter: false
+    test:flutter:
+      exec:
+        command: flutter test
+        concurrency: 1
+      description: Run tests in every Flutter package that has a test folder.
+      packageFilters:
+        dirExists: test
+        flutter: true

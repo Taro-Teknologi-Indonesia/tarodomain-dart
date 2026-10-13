@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/auction_scope.dart';
 import 'pages/board_page.dart';
 import 'pages/create_auction_page.dart';
 import 'pages/home_page.dart';
@@ -12,25 +13,35 @@ final router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
     GoRoute(path: '/new', builder: (_, _) => const CreateAuctionPage()),
-    GoRoute(
-      path: '/a/:code',
-      builder: (_, state) => BoardPage(
-        // A retyped code is a new board, not an update of this one.
+    // Every page of one auction shares its controller, and so one live
+    // subscription.
+    ShellRoute(
+      builder: (_, state, child) => AuctionScope(
+        // A retyped code is a new auction, not an update of this one.
         key: ValueKey(_code(state)),
         code: _code(state),
-        bigScreen: state.uri.queryParameters['screen'] == 'board',
+        child: child,
       ),
       routes: [
         GoRoute(
-          path: 'lot/:lotId',
-          builder: (_, state) => LotPage(
+          path: '/a/:code',
+          builder: (_, state) => BoardPage(
             code: _code(state),
-            lotId: state.pathParameters['lotId']!,
+            bigScreen: state.uri.queryParameters['screen'] == 'board',
           ),
-        ),
-        GoRoute(
-          path: 'organizer',
-          builder: (_, state) => OrganizerPage(code: _code(state)),
+          routes: [
+            GoRoute(
+              path: 'lot/:lotId',
+              builder: (_, state) => LotPage(
+                code: _code(state),
+                lotId: state.pathParameters['lotId']!,
+              ),
+            ),
+            GoRoute(
+              path: 'organizer',
+              builder: (_, state) => OrganizerPage(code: _code(state)),
+            ),
+          ],
         ),
       ],
     ),

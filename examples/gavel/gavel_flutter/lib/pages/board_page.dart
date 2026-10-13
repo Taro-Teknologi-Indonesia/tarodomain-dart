@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/api.dart';
 import '../core/auction_controller.dart';
+import '../core/auction_scope.dart';
+import '../core/clock.dart';
 import '../core/failures.dart';
 import '../core/identity.dart';
 import '../core/live.dart';
@@ -30,7 +33,8 @@ class BoardPage extends StatefulWidget {
 }
 
 class _BoardPageState extends State<BoardPage> {
-  late final _auction = AuctionController(client, widget.code)..start();
+  /// The auction, shared with its other pages through [AuctionScope].
+  late final AuctionController _auction;
 
   /// Who this browser bids as here, once read from localStorage.
   Identity? _identity;
@@ -45,15 +49,13 @@ class _BoardPageState extends State<BoardPage> {
   @override
   void initState() {
     super.initState();
-    _auction.addListener(_maybePrompt);
+    _auction = AuctionScope.read(context)..addListener(_maybePrompt);
     unawaited(_loadIdentity());
   }
 
   @override
   void dispose() {
-    _auction
-      ..removeListener(_maybePrompt)
-      ..dispose();
+    _auction.removeListener(_maybePrompt);
     super.dispose();
   }
 
@@ -131,12 +133,16 @@ class _BoardPageState extends State<BoardPage> {
       final auction = _auction.auction;
       return Scaffold(
         appBar: AppBar(
-          title: Text(auction?.title ?? 'Auction ${widget.code}'),
+          title: _Title(
+            title: auction?.title ?? 'Auction ${widget.code}',
+            closeAt: auction?.closeAt,
+            offset: _auction.clockOffset,
+          ),
           actions: [
             if (!widget.bigScreen && auction != null) ..._identityActions(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: LiveDot(_auction.live.status),
+              child: LiveDot(_auction.status),
             ),
           ],
         ),
@@ -146,6 +152,11 @@ class _BoardPageState extends State<BoardPage> {
           (_, null) => const Center(child: CircularProgressIndicator()),
           (_, _) => LotGrid(
             lots: _auction.lots,
+            me: _identity?.participantId,
+            size: widget.bigScreen ? LotCardSize.large : LotCardSize.regular,
+            onTap: widget.bigScreen
+                ? null
+                : (lot) => context.go('/a/${widget.code}/lot/${lot.lotId}'),
             empty: 'No lots yet — the organizer is setting up.',
           ),
         },
@@ -181,6 +192,41 @@ class _BoardPageState extends State<BoardPage> {
       return [TextButton(onPressed: _promptJoin, child: const Text('Join'))];
     }
     return const [];
+  }
+}
+
+/// The auction's title over the countdown to its close.
+class _Title extends StatelessWidget {
+  const _Title({
+    required this.title,
+    required this.closeAt,
+    required this.offset,
+  });
+
+  final String title;
+  final DateTime? closeAt;
+  final ValueListenable<Duration> offset;
+
+  @override
+  Widget build(BuildContext context) {
+    final closeAt = this.closeAt;
+    final small = Theme.of(context).textTheme.bodySmall;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(title, overflow: TextOverflow.ellipsis),
+        if (closeAt != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.timer_outlined, size: 14, color: small?.color),
+              const SizedBox(width: 4),
+              CountdownText(closeAt: closeAt, offset: offset, style: small),
+            ],
+          ),
+      ],
+    );
   }
 }
 

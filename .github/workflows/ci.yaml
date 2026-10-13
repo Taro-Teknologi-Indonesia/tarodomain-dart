@@ -23,6 +23,7 @@ jobs:
       # Serverpod tests start an embedded PostgreSQL (config/test.yaml
       # `dataPath`), so no database service is needed.
       - run: dart run melos run test
+      - run: dart run melos run test:flutter
 
   deploy-gavel:
     needs: check

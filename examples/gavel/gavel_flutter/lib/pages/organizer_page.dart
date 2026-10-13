@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../core/api.dart';
 import '../core/auction_controller.dart';
+import '../core/auction_scope.dart';
 import '../core/clock.dart';
 import '../core/failures.dart';
 import '../core/live.dart';
@@ -24,7 +24,8 @@ class OrganizerPage extends StatefulWidget {
 }
 
 class _OrganizerPageState extends State<OrganizerPage> {
-  late final _auction = AuctionController(client, widget.code)..start();
+  /// The auction, shared with its other pages through [AuctionScope].
+  late final AuctionController _auction = AuctionScope.read(context);
   String? _organizerKey;
   var _keyLoaded = false;
 
@@ -39,12 +40,6 @@ class _OrganizerPageState extends State<OrganizerPage> {
         });
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _auction.dispose();
-    super.dispose();
   }
 
   Future<void> _addLot(String organizerKey) async {
@@ -74,7 +69,7 @@ class _OrganizerPageState extends State<OrganizerPage> {
           actions: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: LiveDot(_auction.live.status),
+              child: LiveDot(_auction.status),
             ),
           ],
         ),
@@ -99,7 +94,7 @@ class _OrganizerPageState extends State<OrganizerPage> {
               _ShareHeader(
                 code: widget.code,
                 closeAt: auction.closeAt,
-                offset: _auction.live.clockOffset,
+                offset: _auction.clockOffset,
               ),
               if (_keyLoaded && key == null)
                 MaterialBanner(
@@ -113,6 +108,7 @@ class _OrganizerPageState extends State<OrganizerPage> {
               Expanded(
                 child: LotGrid(
                   lots: _auction.lots,
+                  size: LotCardSize.dense,
                   empty: key == null
                       ? 'No lots yet.'
                       : 'No lots yet — add the first one.',

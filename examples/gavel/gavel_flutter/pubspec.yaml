@@ -19,5 +19,9 @@ dependencies:
   shared_preferences: ^2.5.0
   tarodomain_serverpod_client: ^0.0.1
 
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
 flutter:
   uses-material-design: true
