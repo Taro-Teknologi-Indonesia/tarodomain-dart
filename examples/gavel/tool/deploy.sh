@@ -7,7 +7,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-export PATH="$PATH:$HOME/.pub-cache/bin"
+export PATH="$PATH:$HOME/.pub-cache/bin:$HOME/Library/Application Support/Dart/install/bin"
 
 cd "$root/gavel_server"
 if [[ ! -f scloud.yaml ]]; then
