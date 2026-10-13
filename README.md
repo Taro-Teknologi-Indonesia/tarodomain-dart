@@ -10,6 +10,13 @@ The spec is a git submodule at [`spec/`](spec), pinned to the version this code 
 
 **Gavel is a live silent auction that closes itself.** In Indonesia, sellers of gemstones, keris, blades and other collectibles run auctions (*lelang*) in Facebook comment threads. That leads to arguments over who bid first, deleted comments, and auctions closed by hand whenever the seller checks their phone. With Gavel the crowd stays on Facebook, and the seller pastes one link under the photos. Bidders open it in their phone browser, type a name, and bid. The server keeps a bid ledger that nobody can edit and closes the auction at the deadline, even with the seller's laptop shut.
 
+**A note on sign-in.** Since Gavel's sellers and bidders already live on Facebook, Facebook login would be the natural choice. We couldn't add it: Meta has to review and verify an app before people outside its developer team can log in with Facebook, and that couldn't be done before the hackathon deadline. So Gavel ships with:
+
+- **Organizers:** Serverpod's own auth module (email plus a verification code, JWT sessions). The server refuses to create an auction without a signed-in user.
+- **Bidders:** no account. A bidder types a display name and gets a random participant key kept in that browser. Making people sign up before they can bid would lose most of the crowd coming from a Facebook post.
+
+Facebook login can be added later as one more identity provider in Serverpod's auth module once the app is verified. The design is in [X6 — Organizer sign-in](examples/gavel/docs/plans/x6-organizer-sign-in.md).
+
 - **Live:** https://gavel-auction.serverpod.space (Flutter web, served by Serverpod on Serverpod Cloud)
 - **Use cases:** [examples/gavel/docs/use-cases.md](examples/gavel/docs/use-cases.md)
 - **Per-use-case build plans and design decisions:** [examples/gavel/docs/plans/](examples/gavel/docs/plans/README.md)
@@ -35,15 +42,6 @@ The spec is a git submodule at [`spec/`](spec), pinned to the version this code 
 | Auctions close on time with no client online | Future calls, or an in-process timer sweep where they're unavailable |
 | The app itself | Serverpod web server hosting the Flutter web build, with a fallback route for deep links |
 | Hosting | Serverpod Cloud with managed PostgreSQL, deployed by [`tool/deploy.sh`](examples/gavel/tool/deploy.sh) |
-
-### A note on sign-in
-
-Since Gavel's sellers and bidders already live on Facebook, Facebook login would be the natural choice. We couldn't add it: Meta has to review and verify an app before people outside its developer team can log in with Facebook, and that couldn't be done before the hackathon deadline. So Gavel ships with:
-
-- **Organizers:** Serverpod's own auth module (email plus a verification code, JWT sessions). The server refuses to create an auction without a signed-in user.
-- **Bidders:** no account. A bidder types a display name and gets a random participant key kept in that browser. Making people sign up before they can bid would lose most of the crowd coming from a Facebook post.
-
-Facebook login can be added later as one more identity provider in Serverpod's auth module once the app is verified. The design is in [X6 — Organizer sign-in](examples/gavel/docs/plans/x6-organizer-sign-in.md).
 
 ### Run Gavel locally
 
