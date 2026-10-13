@@ -19,7 +19,10 @@ sealed class GavelFailure {
         leaderId: context['leaderId'] as String?,
         version: context['version'] as int,
       ),
-      'LOT_CLOSED' => LotClosed(DateTime.parse(context['closedAt'] as String)),
+      'LOT_CLOSED' => LotClosed(
+        DateTime.parse(context['closedAt'] as String),
+        winnerName: context['winnerName'] as String?,
+      ),
       'INVALID_INCREMENT' => InvalidIncrement(
         allowedIncrements: [
           for (final step in context['allowedIncrements'] as List) step as int,
@@ -59,9 +62,12 @@ final class Outbid extends GavelFailure {
 
 /// The lot closed before the call arrived.
 final class LotClosed extends GavelFailure {
-  const LotClosed(this.closedAt);
+  const LotClosed(this.closedAt, {this.winnerName});
 
   final DateTime closedAt;
+
+  /// Who the lot was SOLD to, if it was.
+  final String? winnerName;
 }
 
 /// The raise isn't one of the lot's kelipatan steps.

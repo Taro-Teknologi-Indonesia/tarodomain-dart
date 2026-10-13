@@ -91,6 +91,47 @@ class LotEndpoint extends Endpoint {
     return _card(session, lotId);
   });
 
+  /// Buys the lot [lotId] at its Buy Now price as [participantId], who saw
+  /// the lot at [expectedVersion], and returns the lot's fresh card, SOLD
+  /// to them (UC-13). The price comes from the lot, never from the client.
+  ///
+  /// [commandId] comes from the client, so a resend buys once.
+  ///
+  /// Throws `NOT_PARTICIPANT` unless [participantKey] is the key of a
+  /// participant of the lot's auction, `LOT_CLOSED` once the lot is sold
+  /// or past its close, `COMMAND_VALIDATION` with reason `NO_BUY_NOW` for a
+  /// lot with no BN price, `OUTBID` with the leader if the lot changed
+  /// since [expectedVersion], `COMMAND_VALIDATION` with reason
+  /// `BUY_NOW_PASSED` once bidding reached the BN price, and
+  /// `AGGREGATE_NOT_FOUND` for an unknown lot. Nothing is stored on any of
+  /// them.
+  Future<LotCard> buyNow(
+    Session session,
+    UuidValue lotId,
+    UuidValue participantId,
+    String participantKey,
+    int expectedVersion,
+    UuidValue commandId,
+  ) => rethrowAsTaroDomainException(() async {
+    final card = await _card(session, lotId);
+    await verifyParticipant(
+      session,
+      card.auctionId,
+      participantId,
+      participantKey,
+    );
+    await _taro.dispatch(
+      session,
+      BuyNow(
+        LotId.fromExisting(lotId.uuid),
+        ParticipantId.fromExisting(participantId.uuid),
+        expectedVersion: expectedVersion,
+        id: commandId,
+      ),
+    );
+    return _card(session, lotId);
+  });
+
   /// Takes back [participantId]'s bid on the lot [lotId], which must be
   /// the latest valid one, as seen at [expectedVersion], and returns the
   /// lot's fresh card. The bid stays in the ledger, struck through.
@@ -125,6 +166,33 @@ class LotEndpoint extends Endpoint {
         ParticipantId.fromExisting(participantId.uuid),
         expectedVersion: expectedVersion,
         id: commandId,
+      ),
+    );
+    return _card(session, lotId);
+  });
+
+  /// Marks the SOLD lot [lotId]'s winner as not having paid, with an
+  /// optional public [note] (UC-14), and returns the lot's fresh card. The
+  /// sale stays; the mark is a new event after it. Marking twice is a
+  /// no-op.
+  ///
+  /// Throws `NOT_ORGANIZER` for a wrong [organizerKey],
+  /// `COMMAND_VALIDATION` with `NOT_SOLD` unless the lot is SOLD or
+  /// `TOO_LONG` for a long note, and `AGGREGATE_NOT_FOUND` for an unknown
+  /// lot.
+  Future<LotCard> markUnpaid(
+    Session session,
+    UuidValue lotId,
+    String organizerKey,
+    String? note,
+  ) => rethrowAsTaroDomainException(() async {
+    await _card(session, lotId);
+    await _taro.dispatch(
+      session,
+      MarkUnpaid(
+        LotId.fromExisting(lotId.uuid),
+        organizerKey: organizerKey,
+        note: note,
       ),
     );
     return _card(session, lotId);

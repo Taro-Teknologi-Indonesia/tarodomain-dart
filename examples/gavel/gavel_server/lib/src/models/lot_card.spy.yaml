@@ -67,6 +67,15 @@ fields:
 
   ### When the lot closed, in UTC.
   closedAt: DateTime?
+
+  ### Whether the organizer marked the winner as not having paid (UC-14).
+  unpaid: bool, default=false
+
+  ### When the lot was marked unpaid, in UTC.
+  unpaidAt: DateTime?
+
+  ### The organizer's public note on the unpaid mark, if any.
+  unpaidNote: String?
 indexes:
   gavel_lot_cards_lot_idx:
     fields: lotId

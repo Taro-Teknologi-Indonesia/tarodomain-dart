@@ -41,7 +41,11 @@ TaroDomainBuilder registerGavel(
             .event<LotCreated>('LotCreated', LotCreated.fromData)
             .event<BidPlaced>('BidPlaced', BidPlaced.fromData)
             .event<BidRetracted>('BidRetracted', BidRetracted.fromData)
-            .event<LotClosed>('LotClosed', LotClosed.fromData),
+            .event<LotClosed>('LotClosed', LotClosed.fromData)
+            .event<LotMarkedUnpaid>(
+              'LotMarkedUnpaid',
+              LotMarkedUnpaid.fromData,
+            ),
       )
       .aggregate<Participant, ParticipantId>(
         'Participant',
@@ -66,11 +70,19 @@ TaroDomainBuilder registerGavel(
         'PlaceBid',
         (c) => PlaceBidHandler(c.repository(), c.repository()),
       )
+      .command<BuyNow>(
+        'BuyNow',
+        (c) => BuyNowHandler(c.repository(), c.repository()),
+      )
       .command<RetractBid>(
         'RetractBid',
         (c) => RetractBidHandler(c.repository()),
       )
       .command<CloseLot>('CloseLot', (c) => CloseLotHandler(c.repository()))
+      .command<MarkUnpaid>(
+        'MarkUnpaid',
+        (c) => MarkUnpaidHandler(c.repository(), c.repository()),
+      )
       .command<JoinAuction>(
         'JoinAuction',
         (c) => ParticipantHandler<JoinAuction>(c.repository()),

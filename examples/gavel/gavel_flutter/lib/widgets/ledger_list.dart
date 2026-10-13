@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../core/money.dart';
 import '../core/names.dart';
 import '../core/time_travel.dart';
+import 'unpaid.dart';
 
 final _clock = DateFormat('HH:mm:ss');
 
@@ -13,7 +14,8 @@ String formatClock(DateTime at) => _clock.format(at.toLocal());
 
 /// A lot's whole ledger, newest on top (UC-05): every bid with who, how
 /// much and when. Retracted bids stay, struck through: the event log is
-/// the product. A closed lot's closing line sits above them all.
+/// the product. A closed lot's closing line sits above them all, and an
+/// unpaid mark (UC-14) above that.
 ///
 /// As of a past moment (UC-10), rows placed after it are dimmed and a
 /// bid retracted after it stands un-struck: the replay, visible.
@@ -73,10 +75,26 @@ class _LedgerListState extends State<LedgerList> {
   @override
   Widget build(BuildContext context) {
     final closing = _closingLine(widget.lot);
+    final unpaid = closing == null
+        ? null
+        : unpaidLine(widget.lot, asOf: widget.asOf?.at);
     return CustomScrollView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       slivers: [
+        if (unpaid != null)
+          SliverToBoxAdapter(
+            child: ListTile(
+              dense: true,
+              title: Text(
+                unpaid,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade700,
+                ),
+              ),
+            ),
+          ),
         if (closing != null)
           SliverToBoxAdapter(
             child: ListTile(
@@ -132,7 +150,8 @@ class _LedgerListState extends State<LedgerList> {
   }
 }
 
-/// One bid: `#12 · Budi · Rp 250.000 · 22:01:47`. Struck through and muted
+/// One bid: `#12 · Budi · Rp 250.000 · 22:01:47`, with "(BN)" after a
+/// Buy Now's price. Struck through and muted
 /// once retracted, with when, fading into it as the retraction arrives;
 /// highlighted when it's [mine]. A name in [sharedNames] gets its tag.
 /// As of [asOf], a bid placed later is dimmed and one retracted later
@@ -181,7 +200,8 @@ class LedgerRow extends StatelessWidget {
           child: Text(
             '#${entry.sequence} · '
             '${displayName(entry.bidderName, entry.participantId, sharedNames)} · '
-            '${formatRupiah(entry.amount)} · ${formatClock(entry.placedAt)}',
+            '${formatRupiah(entry.amount)}${entry.buyNow ? ' (BN)' : ''} · '
+            '${formatClock(entry.placedAt)}',
           ),
         ),
         subtitle: retracted

@@ -65,6 +65,7 @@ void main() {
     expect(LotRules.maxNameLength, Lot.maxNameLength);
     expect(LotRules.maxDescriptionLength, Lot.maxDescriptionLength);
     expect(LotRules.maxEmojiLength, Lot.maxEmojiLength);
+    expect(LotRules.maxUnpaidNoteLength, Lot.maxUnpaidNoteLength);
     expect(ParticipantRules.maxNameLength, Participant.maxNameLength);
     expect(JoinCodeRules.alphabet, Auction.codeAlphabet);
     expect(JoinCodeRules.length, Auction.codeLength);

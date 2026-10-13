@@ -55,6 +55,7 @@ class LotTableProjection extends Projection {
           amount: e.amount,
           placedAt: e.occurredAt,
           retracted: false,
+          buyNow: e.buyNow,
         ),
         transaction: _transaction,
       );
@@ -118,6 +119,21 @@ class LotTableProjection extends Projection {
             finalPrice: e.finalPrice,
             closeCause: e.cause.code,
             closedAt: e.closedAt,
+            version: card.version + 1,
+          ),
+          transaction: _transaction,
+        ),
+      );
+    });
+    on<LotMarkedUnpaid>((e) async {
+      final card = await _card(e.lotId);
+      await _postLot(
+        await LotCard.db.updateRow(
+          session,
+          card.copyWith(
+            unpaid: true,
+            unpaidAt: e.markedAt,
+            unpaidNote: e.note,
             version: card.version + 1,
           ),
           transaction: _transaction,

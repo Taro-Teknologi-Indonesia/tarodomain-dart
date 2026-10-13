@@ -25,7 +25,8 @@ abstract class LedgerEntry
     required this.placedAt,
     required this.retracted,
     this.retractedAt,
-  });
+    bool? buyNow,
+  }) : buyNow = buyNow ?? false;
 
   factory LedgerEntry({
     int? id,
@@ -37,6 +38,7 @@ abstract class LedgerEntry
     required DateTime placedAt,
     required bool retracted,
     DateTime? retractedAt,
+    bool? buyNow,
   }) = _LedgerEntryImpl;
 
   factory LedgerEntry.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -58,6 +60,9 @@ abstract class LedgerEntry
           : _is.DateTimeJsonExtension.fromJson(
               jsonSerialization['retractedAt'],
             ),
+      buyNow: jsonSerialization['buyNow'] == null
+          ? null
+          : _is.BoolJsonExtension.fromJson(jsonSerialization['buyNow']),
     );
   }
 
@@ -92,6 +97,9 @@ abstract class LedgerEntry
   /// When the bid was taken back, in UTC.
   DateTime? retractedAt;
 
+  /// Whether the bid paid the Buy Now price, closing the lot (UC-13).
+  bool buyNow;
+
   @override
   _is.Table<int?> get table => t;
 
@@ -108,6 +116,7 @@ abstract class LedgerEntry
     DateTime? placedAt,
     bool? retracted,
     DateTime? retractedAt,
+    bool? buyNow,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -122,6 +131,7 @@ abstract class LedgerEntry
       'placedAt': placedAt.toJson(),
       'retracted': retracted,
       if (retractedAt != null) 'retractedAt': retractedAt?.toJson(),
+      'buyNow': buyNow,
     };
   }
 
@@ -138,6 +148,7 @@ abstract class LedgerEntry
       'placedAt': placedAt.toJson(),
       'retracted': retracted,
       if (retractedAt != null) 'retractedAt': retractedAt?.toJson(),
+      'buyNow': buyNow,
     };
   }
 
@@ -182,6 +193,7 @@ class _LedgerEntryImpl extends LedgerEntry {
     required DateTime placedAt,
     required bool retracted,
     DateTime? retractedAt,
+    bool? buyNow,
   }) : super._(
          id: id,
          lotId: lotId,
@@ -192,6 +204,7 @@ class _LedgerEntryImpl extends LedgerEntry {
          placedAt: placedAt,
          retracted: retracted,
          retractedAt: retractedAt,
+         buyNow: buyNow,
        );
 
   /// Returns a shallow copy of this [LedgerEntry]
@@ -208,6 +221,7 @@ class _LedgerEntryImpl extends LedgerEntry {
     DateTime? placedAt,
     bool? retracted,
     Object? retractedAt = _Undefined,
+    bool? buyNow,
   }) {
     return LedgerEntry(
       id: id is int? ? id : this.id,
@@ -219,6 +233,7 @@ class _LedgerEntryImpl extends LedgerEntry {
       placedAt: placedAt ?? this.placedAt,
       retracted: retracted ?? this.retracted,
       retractedAt: retractedAt is DateTime? ? retractedAt : this.retractedAt,
+      buyNow: buyNow ?? this.buyNow,
     );
   }
 }
@@ -250,6 +265,9 @@ class LedgerEntryUpdateTable extends _is.UpdateTable<LedgerEntryTable> {
 
   _is.ColumnValue<DateTime, DateTime> retractedAt(DateTime? value) =>
       _is.ColumnValue(table.retractedAt, value);
+
+  _is.ColumnValue<bool, bool> buyNow(bool value) =>
+      _is.ColumnValue(table.buyNow, value);
 }
 
 class LedgerEntryTable extends _is.Table<int?> {
@@ -264,6 +282,7 @@ class LedgerEntryTable extends _is.Table<int?> {
     placedAt = _is.ColumnDateTime('placedAt', this);
     retracted = _is.ColumnBool('retracted', this);
     retractedAt = _is.ColumnDateTime('retractedAt', this);
+    buyNow = _is.ColumnBool('buyNow', this, hasDefault: true);
   }
 
   late final LedgerEntryUpdateTable updateTable;
@@ -292,6 +311,9 @@ class LedgerEntryTable extends _is.Table<int?> {
   /// When the bid was taken back, in UTC.
   late final _is.ColumnDateTime retractedAt;
 
+  /// Whether the bid paid the Buy Now price, closing the lot (UC-13).
+  late final _is.ColumnBool buyNow;
+
   @override
   List<_is.Column> get columns => [
     id,
@@ -303,6 +325,7 @@ class LedgerEntryTable extends _is.Table<int?> {
     placedAt,
     retracted,
     retractedAt,
+    buyNow,
   ];
 }
 

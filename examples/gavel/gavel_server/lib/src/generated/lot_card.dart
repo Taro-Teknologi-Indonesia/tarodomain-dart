@@ -40,7 +40,10 @@ abstract class LotCard
     this.finalPrice,
     this.closeCause,
     this.closedAt,
-  });
+    bool? unpaid,
+    this.unpaidAt,
+    this.unpaidNote,
+  }) : unpaid = unpaid ?? false;
 
   factory LotCard({
     int? id,
@@ -66,6 +69,9 @@ abstract class LotCard
     int? finalPrice,
     String? closeCause,
     DateTime? closedAt,
+    bool? unpaid,
+    DateTime? unpaidAt,
+    String? unpaidNote,
   }) = _LotCardImpl;
 
   factory LotCard.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -101,6 +107,13 @@ abstract class LotCard
       closedAt: jsonSerialization['closedAt'] == null
           ? null
           : _is.DateTimeJsonExtension.fromJson(jsonSerialization['closedAt']),
+      unpaid: jsonSerialization['unpaid'] == null
+          ? null
+          : _is.BoolJsonExtension.fromJson(jsonSerialization['unpaid']),
+      unpaidAt: jsonSerialization['unpaidAt'] == null
+          ? null
+          : _is.DateTimeJsonExtension.fromJson(jsonSerialization['unpaidAt']),
+      unpaidNote: jsonSerialization['unpaidNote'] as String?,
     );
   }
 
@@ -177,6 +190,15 @@ abstract class LotCard
   /// When the lot closed, in UTC.
   DateTime? closedAt;
 
+  /// Whether the organizer marked the winner as not having paid (UC-14).
+  bool unpaid;
+
+  /// When the lot was marked unpaid, in UTC.
+  DateTime? unpaidAt;
+
+  /// The organizer's public note on the unpaid mark, if any.
+  String? unpaidNote;
+
   @override
   _is.Table<int?> get table => t;
 
@@ -207,6 +229,9 @@ abstract class LotCard
     int? finalPrice,
     String? closeCause,
     DateTime? closedAt,
+    bool? unpaid,
+    DateTime? unpaidAt,
+    String? unpaidNote,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -235,6 +260,9 @@ abstract class LotCard
       if (finalPrice != null) 'finalPrice': finalPrice,
       if (closeCause != null) 'closeCause': closeCause,
       if (closedAt != null) 'closedAt': closedAt?.toJson(),
+      'unpaid': unpaid,
+      if (unpaidAt != null) 'unpaidAt': unpaidAt?.toJson(),
+      if (unpaidNote != null) 'unpaidNote': unpaidNote,
     };
   }
 
@@ -265,6 +293,9 @@ abstract class LotCard
       if (finalPrice != null) 'finalPrice': finalPrice,
       if (closeCause != null) 'closeCause': closeCause,
       if (closedAt != null) 'closedAt': closedAt?.toJson(),
+      'unpaid': unpaid,
+      if (unpaidAt != null) 'unpaidAt': unpaidAt?.toJson(),
+      if (unpaidNote != null) 'unpaidNote': unpaidNote,
     };
   }
 
@@ -323,6 +354,9 @@ class _LotCardImpl extends LotCard {
     int? finalPrice,
     String? closeCause,
     DateTime? closedAt,
+    bool? unpaid,
+    DateTime? unpaidAt,
+    String? unpaidNote,
   }) : super._(
          id: id,
          lotId: lotId,
@@ -347,6 +381,9 @@ class _LotCardImpl extends LotCard {
          finalPrice: finalPrice,
          closeCause: closeCause,
          closedAt: closedAt,
+         unpaid: unpaid,
+         unpaidAt: unpaidAt,
+         unpaidNote: unpaidNote,
        );
 
   /// Returns a shallow copy of this [LotCard]
@@ -377,6 +414,9 @@ class _LotCardImpl extends LotCard {
     Object? finalPrice = _Undefined,
     Object? closeCause = _Undefined,
     Object? closedAt = _Undefined,
+    bool? unpaid,
+    Object? unpaidAt = _Undefined,
+    Object? unpaidNote = _Undefined,
   }) {
     return LotCard(
       id: id is int? ? id : this.id,
@@ -402,6 +442,9 @@ class _LotCardImpl extends LotCard {
       finalPrice: finalPrice is int? ? finalPrice : this.finalPrice,
       closeCause: closeCause is String? ? closeCause : this.closeCause,
       closedAt: closedAt is DateTime? ? closedAt : this.closedAt,
+      unpaid: unpaid ?? this.unpaid,
+      unpaidAt: unpaidAt is DateTime? ? unpaidAt : this.unpaidAt,
+      unpaidNote: unpaidNote is String? ? unpaidNote : this.unpaidNote,
     );
   }
 }
@@ -476,6 +519,15 @@ class LotCardUpdateTable extends _is.UpdateTable<LotCardTable> {
 
   _is.ColumnValue<DateTime, DateTime> closedAt(DateTime? value) =>
       _is.ColumnValue(table.closedAt, value);
+
+  _is.ColumnValue<bool, bool> unpaid(bool value) =>
+      _is.ColumnValue(table.unpaid, value);
+
+  _is.ColumnValue<DateTime, DateTime> unpaidAt(DateTime? value) =>
+      _is.ColumnValue(table.unpaidAt, value);
+
+  _is.ColumnValue<String, String> unpaidNote(String? value) =>
+      _is.ColumnValue(table.unpaidNote, value);
 }
 
 class LotCardTable extends _is.Table<int?> {
@@ -503,6 +555,9 @@ class LotCardTable extends _is.Table<int?> {
     finalPrice = _is.ColumnInt('finalPrice', this);
     closeCause = _is.ColumnString('closeCause', this);
     closedAt = _is.ColumnDateTime('closedAt', this);
+    unpaid = _is.ColumnBool('unpaid', this, hasDefault: true);
+    unpaidAt = _is.ColumnDateTime('unpaidAt', this);
+    unpaidNote = _is.ColumnString('unpaidNote', this);
   }
 
   late final LotCardUpdateTable updateTable;
@@ -573,6 +628,15 @@ class LotCardTable extends _is.Table<int?> {
   /// When the lot closed, in UTC.
   late final _is.ColumnDateTime closedAt;
 
+  /// Whether the organizer marked the winner as not having paid (UC-14).
+  late final _is.ColumnBool unpaid;
+
+  /// When the lot was marked unpaid, in UTC.
+  late final _is.ColumnDateTime unpaidAt;
+
+  /// The organizer's public note on the unpaid mark, if any.
+  late final _is.ColumnString unpaidNote;
+
   @override
   List<_is.Column> get columns => [
     id,
@@ -598,6 +662,9 @@ class LotCardTable extends _is.Table<int?> {
     finalPrice,
     closeCause,
     closedAt,
+    unpaid,
+    unpaidAt,
+    unpaidNote,
   ];
 }
 

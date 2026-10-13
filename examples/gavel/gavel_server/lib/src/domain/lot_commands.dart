@@ -140,11 +140,10 @@ class PlaceBid extends Command {
   final int expectedVersion;
 }
 
-/// Handles [PlaceBid]: reads the bidder's name from their [Participant] and
-/// places the bid on the [Lot].
-class PlaceBidHandler extends CommandHandler<PlaceBid> {
+/// A handler that acts on a [Lot] as one of its auction's participants.
+abstract class BidderHandler<C extends Command> extends CommandHandler<C> {
   /// Creates the handler.
-  PlaceBidHandler(this.participants, this.lots);
+  BidderHandler(this.participants, this.lots);
 
   /// Loads participants, for the bidder's name and auction.
   final Repository<Participant, ParticipantId> participants;
@@ -152,22 +151,85 @@ class PlaceBidHandler extends CommandHandler<PlaceBid> {
   /// Loads and saves lots.
   final Repository<Lot, LotId> lots;
 
-  @override
-  Future<void> handle(PlaceBid command) async {
-    final lot = await lots.load(command.lotId);
+  /// The participant [id], who must belong to [lot]'s auction.
+  ///
+  /// Throws [NotParticipantError] otherwise. The endpoint checked the key
+  /// against the lot's auction already; this keeps a direct dispatch
+  /// honest too.
+  Future<Participant> bidder(ParticipantId id, Lot lot) async {
     final Participant participant;
     try {
-      participant = await participants.load(command.participantId);
+      participant = await participants.load(id);
     } on AggregateNotFoundError {
       throw NotParticipantError();
     }
-    // The endpoint checked the key against the lot's auction already; this
-    // keeps a direct dispatch honest too.
     if (participant.auctionId != lot.auctionId) throw NotParticipantError();
+    return participant;
+  }
+}
+
+/// Handles [PlaceBid]: reads the bidder's name from their [Participant] and
+/// places the bid on the [Lot].
+class PlaceBidHandler extends BidderHandler<PlaceBid> {
+  /// Creates the handler.
+  PlaceBidHandler(super.participants, super.lots);
+
+  @override
+  Future<void> handle(PlaceBid command) async {
+    final lot = await lots.load(command.lotId);
+    final participant = await bidder(command.participantId, lot);
     lot.placeBid(
       bidder: participant.id.uuid,
       bidderName: participant.displayName,
       amount: command.amount,
+      expectedVersion: command.expectedVersion,
+      now: command.timestamp,
+    );
+    await lots.save(lot);
+  }
+}
+
+/// Buys a lot at its Buy Now price as [participantId], who saw the lot at
+/// [expectedVersion] (UC-13). The price comes from the lot, never from the
+/// client. Its [timestamp] is "now" for the close-time check and the
+/// close, set by the server.
+///
+/// The caller has already checked the participant's key; the command
+/// carries only the verified ID.
+class BuyNow extends Command {
+  /// Creates the command. Pass the client's command ID as [id], so a
+  /// resend is recognized as already processed.
+  BuyNow(
+    this.lotId,
+    this.participantId, {
+    required this.expectedVersion,
+    super.id,
+    super.timestamp,
+  });
+
+  /// The lot bought.
+  final LotId lotId;
+
+  /// Who buys.
+  final ParticipantId participantId;
+
+  /// The lot's version the buyer saw: any change since is an outbid.
+  final int expectedVersion;
+}
+
+/// Handles [BuyNow]: reads the buyer's name from their [Participant] and
+/// buys the [Lot], which closes it.
+class BuyNowHandler extends BidderHandler<BuyNow> {
+  /// Creates the handler.
+  BuyNowHandler(super.participants, super.lots);
+
+  @override
+  Future<void> handle(BuyNow command) async {
+    final lot = await lots.load(command.lotId);
+    final participant = await bidder(command.participantId, lot);
+    lot.buyNow(
+      buyer: participant.id.uuid,
+      buyerName: participant.displayName,
       expectedVersion: command.expectedVersion,
       now: command.timestamp,
     );
@@ -247,6 +309,52 @@ class CloseLotHandler extends CommandHandler<CloseLot> {
   Future<void> handle(CloseLot command) async {
     final lot = await lots.load(command.lotId)
       ..close(command.cause, command.timestamp);
+    if (lot.hasUncommittedChanges) await lots.save(lot);
+  }
+}
+
+/// Marks a SOLD lot's winner as not having paid (UC-14). Its [timestamp]
+/// is when, set by the server.
+class MarkUnpaid extends Command {
+  /// Creates the command.
+  MarkUnpaid(
+    this.lotId, {
+    required this.organizerKey,
+    this.note,
+    super.timestamp,
+  });
+
+  /// The SOLD lot.
+  final LotId lotId;
+
+  /// The organizer's secret, checked against the lot's auction. Commands
+  /// aren't stored, so it never reaches the event store.
+  final String organizerKey;
+
+  /// A short public note, or null.
+  final String? note;
+}
+
+/// Handles [MarkUnpaid]: checks the organizer on the lot's [Auction], then
+/// marks the [Lot]. A lot already marked saves nothing.
+class MarkUnpaidHandler extends CommandHandler<MarkUnpaid> {
+  /// Creates the handler.
+  MarkUnpaidHandler(this.auctions, this.lots);
+
+  /// Loads auctions, for the organizer check.
+  final Repository<Auction, AuctionId> auctions;
+
+  /// Loads and saves lots.
+  final Repository<Lot, LotId> lots;
+
+  @override
+  Future<void> handle(MarkUnpaid command) async {
+    final lot = await lots.load(command.lotId);
+    final auction = await auctions.load(AuctionId.fromExisting(lot.auctionId));
+    if (!auction.isOrganizer(command.organizerKey)) {
+      throw NotOrganizerError();
+    }
+    lot.markUnpaid(now: command.timestamp, note: command.note);
     if (lot.hasUncommittedChanges) await lots.save(lot);
   }
 }

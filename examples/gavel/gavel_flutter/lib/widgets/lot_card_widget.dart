@@ -6,6 +6,7 @@ import 'package:gavel_client/gavel_client.dart';
 import '../core/money.dart';
 import '../core/names.dart';
 import 'lot_visual.dart';
+import 'unpaid.dart';
 
 /// How much room a [LotCardWidget] takes: compact on the organizer
 /// dashboard, regular on the board, large on the big screen.
@@ -116,6 +117,7 @@ class _LotCardWidgetState extends State<LotCardWidget>
             ),
             const SizedBox(width: 8),
             StatusBadge(lot.status),
+            if (lot.unpaid) ...[const SizedBox(width: 4), const UnpaidTag()],
           ],
         ),
         const SizedBox(height: 4),

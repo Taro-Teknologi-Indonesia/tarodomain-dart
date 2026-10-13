@@ -46,7 +46,7 @@ class LotPage extends StatefulWidget {
 class _LotPageState extends State<LotPage> {
   late final AuctionController _auction = AuctionScope.read(context);
   late final UuidValue? _lotId = _parse(widget.lotId);
-  final _bidder = Bidder(sendBidWith(client));
+  final _bidder = Bidder(sendBidWith(client), sendBuyNowWith(client));
   final _sendRetract = sendRetractWith(client);
 
   /// Who this browser bids as here, once read from localStorage.
@@ -670,6 +670,16 @@ class ResultBlock extends StatelessWidget {
             color: winner == null ? Colors.grey.shade600 : null,
           ),
         ),
+        if (winner != null && lot.unpaid) ...[
+          const SizedBox(height: 4),
+          Text(
+            '⚠ Winner did not pay',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
         if (winner != null) _Price(lot.finalPrice ?? lot.currentPrice),
         Text(
           winner == null ? closed : '$closed · $how',

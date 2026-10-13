@@ -14,7 +14,7 @@ Built with Flutter web and Serverpod 4, on [TaroDomain](../../README.md) (event 
 4. Retract the leading bid in one window. The bid gets struck through in the other window's ledger, and the previous bid leads again.
 5. Wait for the close (the demo closes every 15 minutes, and a fresh one opens), or browse an earlier closed demo auction to see the outcome and receipts.
 
-Also try: add `?screen=board` to an auction link for the projector view, and pick a past moment on a lot to replay its price "as of" then.
+Also try: add `?screen=board` to an auction link for the projector view, and pick a past moment on a lot to replay its price "as of" then. On a lot with a BN price, **Buy Now** closes it at once for that price. After the close, the organizer can mark a SOLD lot **unpaid**. "Winner did not pay" then shows on the board and the lot page next to the sale, which stays in the record.
 
 ## The problem
 
@@ -82,9 +82,9 @@ The three hard parts:
 **Tests**, from a fresh run:
 
 ```
-gavel_server   $ dart test      +188: All tests passed!   (domain in memory, integration on embedded PostgreSQL)
+gavel_server   $ dart test      +226: All tests passed!   (domain in memory, integration on embedded PostgreSQL)
 gavel_client   $ dart test      +14: All tests passed!
-gavel_flutter  $ flutter test   +104: All tests passed!
+gavel_flutter  $ flutter test   +119: All tests passed!
 ```
 
 **Real parallel bids** against a running server, with no artificial delay anywhere ([`race.dart`](gavel_client/tool/race.dart)). 20 participants read the lot once and all bid the same raise on the same version at the same moment:
@@ -126,7 +126,7 @@ It exits non-zero if any check fails. Its bidders are real participants named `r
 - **No accounts.** A bidder is a name plus a random key kept in that browser. The server stores only the key's hash, so a participant ID copied from the ledger can't be used to bid. Two people can share a name; the receipt tags the winner (`Budi · #3f9c`) and shows a winner code only to the winner and the organizer.
 - **One server instance.** The live push uses `session.messages` locally, so running several instances would need Serverpod's Redis-backed messages.
 - **Images by URL only.** There's no upload; the demo lots use emoji tiles.
-- **Roadmap:** mark a lot unpaid and relist it to the runner-up, Buy Now for bidders, native iOS/Android builds, web push when you're outbid, and an Open Graph preview for the shared link.
+- **Roadmap:** relist an unpaid lot to the runner-up (today it's only marked unpaid, with no undo), native iOS/Android builds, web push when you're outbid, and an Open Graph preview for the shared link.
 
 ## Run locally
 

@@ -177,6 +177,34 @@ class EndpointLot extends _isc.EndpointRef {
     'commandId': commandId,
   });
 
+  /// Buys the lot [lotId] at its Buy Now price as [participantId], who saw
+  /// the lot at [expectedVersion], and returns the lot's fresh card, SOLD
+  /// to them (UC-13). The price comes from the lot, never from the client.
+  ///
+  /// [commandId] comes from the client, so a resend buys once.
+  ///
+  /// Throws `NOT_PARTICIPANT` unless [participantKey] is the key of a
+  /// participant of the lot's auction, `LOT_CLOSED` once the lot is sold
+  /// or past its close, `COMMAND_VALIDATION` with reason `NO_BUY_NOW` for a
+  /// lot with no BN price, `OUTBID` with the leader if the lot changed
+  /// since [expectedVersion], `COMMAND_VALIDATION` with reason
+  /// `BUY_NOW_PASSED` once bidding reached the BN price, and
+  /// `AGGREGATE_NOT_FOUND` for an unknown lot. Nothing is stored on any of
+  /// them.
+  _ida.Future<_ik2e60uo.LotCard> buyNow(
+    _isc.UuidValue lotId,
+    _isc.UuidValue participantId,
+    String participantKey,
+    int expectedVersion,
+    _isc.UuidValue commandId,
+  ) => caller.callServerEndpoint<_ik2e60uo.LotCard>('lot', 'buyNow', {
+    'lotId': lotId,
+    'participantId': participantId,
+    'participantKey': participantKey,
+    'expectedVersion': expectedVersion,
+    'commandId': commandId,
+  });
+
   /// Takes back [participantId]'s bid on the lot [lotId], which must be
   /// the latest valid one, as seen at [expectedVersion], and returns the
   /// lot's fresh card. The bid stays in the ledger, struck through.
@@ -201,6 +229,25 @@ class EndpointLot extends _isc.EndpointRef {
     'participantKey': participantKey,
     'expectedVersion': expectedVersion,
     'commandId': commandId,
+  });
+
+  /// Marks the SOLD lot [lotId]'s winner as not having paid, with an
+  /// optional public [note] (UC-14), and returns the lot's fresh card. The
+  /// sale stays; the mark is a new event after it. Marking twice is a
+  /// no-op.
+  ///
+  /// Throws `NOT_ORGANIZER` for a wrong [organizerKey],
+  /// `COMMAND_VALIDATION` with `NOT_SOLD` unless the lot is SOLD or
+  /// `TOO_LONG` for a long note, and `AGGREGATE_NOT_FOUND` for an unknown
+  /// lot.
+  _ida.Future<_ik2e60uo.LotCard> markUnpaid(
+    _isc.UuidValue lotId,
+    String organizerKey,
+    String? note,
+  ) => caller.callServerEndpoint<_ik2e60uo.LotCard>('lot', 'markUnpaid', {
+    'lotId': lotId,
+    'organizerKey': organizerKey,
+    'note': note,
   });
 
   /// The lot [lotId] with every bid on it, retracted ones included, in

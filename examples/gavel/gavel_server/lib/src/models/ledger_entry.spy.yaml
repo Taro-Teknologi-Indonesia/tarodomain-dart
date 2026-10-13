@@ -25,6 +25,9 @@ fields:
 
   ### When the bid was taken back, in UTC.
   retractedAt: DateTime?
+
+  ### Whether the bid paid the Buy Now price, closing the lot (UC-13).
+  buyNow: bool, default=false
 indexes:
   gavel_ledger_lot_seq_idx:
     fields: lotId, sequence

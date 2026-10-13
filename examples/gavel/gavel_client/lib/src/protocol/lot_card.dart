@@ -40,7 +40,10 @@ abstract class LotCard
     this.finalPrice,
     this.closeCause,
     this.closedAt,
-  });
+    bool? unpaid,
+    this.unpaidAt,
+    this.unpaidNote,
+  }) : unpaid = unpaid ?? false;
 
   factory LotCard({
     int? id,
@@ -66,6 +69,9 @@ abstract class LotCard
     int? finalPrice,
     String? closeCause,
     DateTime? closedAt,
+    bool? unpaid,
+    DateTime? unpaidAt,
+    String? unpaidNote,
   }) = _LotCardImpl;
 
   factory LotCard.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -101,6 +107,13 @@ abstract class LotCard
       closedAt: jsonSerialization['closedAt'] == null
           ? null
           : _isc.DateTimeJsonExtension.fromJson(jsonSerialization['closedAt']),
+      unpaid: jsonSerialization['unpaid'] == null
+          ? null
+          : _isc.BoolJsonExtension.fromJson(jsonSerialization['unpaid']),
+      unpaidAt: jsonSerialization['unpaidAt'] == null
+          ? null
+          : _isc.DateTimeJsonExtension.fromJson(jsonSerialization['unpaidAt']),
+      unpaidNote: jsonSerialization['unpaidNote'] as String?,
     );
   }
 
@@ -175,6 +188,15 @@ abstract class LotCard
   /// When the lot closed, in UTC.
   DateTime? closedAt;
 
+  /// Whether the organizer marked the winner as not having paid (UC-14).
+  bool unpaid;
+
+  /// When the lot was marked unpaid, in UTC.
+  DateTime? unpaidAt;
+
+  /// The organizer's public note on the unpaid mark, if any.
+  String? unpaidNote;
+
   /// Returns a shallow copy of this [LotCard]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
@@ -202,6 +224,9 @@ abstract class LotCard
     int? finalPrice,
     String? closeCause,
     DateTime? closedAt,
+    bool? unpaid,
+    DateTime? unpaidAt,
+    String? unpaidNote,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -230,6 +255,9 @@ abstract class LotCard
       if (finalPrice != null) 'finalPrice': finalPrice,
       if (closeCause != null) 'closeCause': closeCause,
       if (closedAt != null) 'closedAt': closedAt?.toJson(),
+      'unpaid': unpaid,
+      if (unpaidAt != null) 'unpaidAt': unpaidAt?.toJson(),
+      if (unpaidNote != null) 'unpaidNote': unpaidNote,
     };
   }
 
@@ -260,6 +288,9 @@ abstract class LotCard
       if (finalPrice != null) 'finalPrice': finalPrice,
       if (closeCause != null) 'closeCause': closeCause,
       if (closedAt != null) 'closedAt': closedAt?.toJson(),
+      'unpaid': unpaid,
+      if (unpaidAt != null) 'unpaidAt': unpaidAt?.toJson(),
+      if (unpaidNote != null) 'unpaidNote': unpaidNote,
     };
   }
 
@@ -296,6 +327,9 @@ class _LotCardImpl extends LotCard {
     int? finalPrice,
     String? closeCause,
     DateTime? closedAt,
+    bool? unpaid,
+    DateTime? unpaidAt,
+    String? unpaidNote,
   }) : super._(
          id: id,
          lotId: lotId,
@@ -320,6 +354,9 @@ class _LotCardImpl extends LotCard {
          finalPrice: finalPrice,
          closeCause: closeCause,
          closedAt: closedAt,
+         unpaid: unpaid,
+         unpaidAt: unpaidAt,
+         unpaidNote: unpaidNote,
        );
 
   /// Returns a shallow copy of this [LotCard]
@@ -350,6 +387,9 @@ class _LotCardImpl extends LotCard {
     Object? finalPrice = _Undefined,
     Object? closeCause = _Undefined,
     Object? closedAt = _Undefined,
+    bool? unpaid,
+    Object? unpaidAt = _Undefined,
+    Object? unpaidNote = _Undefined,
   }) {
     return LotCard(
       id: id is int? ? id : this.id,
@@ -375,6 +415,9 @@ class _LotCardImpl extends LotCard {
       finalPrice: finalPrice is int? ? finalPrice : this.finalPrice,
       closeCause: closeCause is String? ? closeCause : this.closeCause,
       closedAt: closedAt is DateTime? ? closedAt : this.closedAt,
+      unpaid: unpaid ?? this.unpaid,
+      unpaidAt: unpaidAt is DateTime? ? unpaidAt : this.unpaidAt,
+      unpaidNote: unpaidNote is String? ? unpaidNote : this.unpaidNote,
     );
   }
 }

@@ -166,6 +166,7 @@ class BidPlaced extends LotEvent {
     required this.bidderName,
     required this.amount,
     required this.sequence,
+    this.buyNow = false,
   });
 
   /// Rebuilds the event from [toData]'s output.
@@ -175,6 +176,7 @@ class BidPlaced extends LotEvent {
     bidderName: data['bidderName']! as String,
     amount: data['amount']! as int,
     sequence: data['sequence']! as int,
+    buyNow: data['buyNow'] as bool? ?? false,
   );
 
   /// Who bid.
@@ -189,6 +191,10 @@ class BidPlaced extends LotEvent {
   /// The bid's place in the lot's ledger, from 1.
   final int sequence;
 
+  /// Whether the bid paid the Buy Now price (UC-13), closing the lot.
+  /// Events stored before BN existed have no key and read as false.
+  final bool buyNow;
+
   @override
   String get eventName => 'BidPlaced';
 
@@ -199,6 +205,7 @@ class BidPlaced extends LotEvent {
     'bidderName': bidderName,
     'amount': amount,
     'sequence': sequence,
+    'buyNow': buyNow,
   };
 }
 
@@ -302,6 +309,55 @@ class LotClosed extends LotEvent {
   };
 }
 
+/// The organizer flagged a SOLD lot's winner as not having paid (UC-14).
+///
+/// Appended after the sale, never in place of it: the record shows both.
+/// There is no undo in the MVP; one would be another event.
+class LotMarkedUnpaid extends LotEvent {
+  /// Creates the event.
+  LotMarkedUnpaid(
+    super.lotId, {
+    required this.winnerId,
+    required this.winnerName,
+    required this.markedAt,
+    this.note,
+  });
+
+  /// Rebuilds the event from [toData]'s output.
+  factory LotMarkedUnpaid.fromData(Map<String, Object?> data) =>
+      LotMarkedUnpaid(
+        data['lotId']! as String,
+        winnerId: data['winnerId']! as String,
+        winnerName: data['winnerName']! as String,
+        markedAt: DateTime.parse(data['markedAt']! as String),
+        note: data['note'] as String?,
+      );
+
+  /// The winner who didn't pay.
+  final String winnerId;
+
+  /// The winner's display name.
+  final String winnerName;
+
+  /// When the organizer marked it, in UTC.
+  final DateTime markedAt;
+
+  /// The organizer's short public note, if any.
+  final String? note;
+
+  @override
+  String get eventName => 'LotMarkedUnpaid';
+
+  @override
+  Map<String, Object?> toData() => {
+    'lotId': lotId,
+    'winnerId': winnerId,
+    'winnerName': winnerName,
+    'markedAt': markedAt.toUtc().toIso8601String(),
+    'note': note,
+  };
+}
+
 /// One bid on a [Lot]. Retracted bids stay, marked, so the ledger never
 /// loses a line.
 class Bid {
@@ -313,6 +369,7 @@ class Bid {
     required this.amount,
     required this.at,
     this.retracted = false,
+    this.buyNow = false,
   });
 
   /// Restores a bid from [toJson]'s output.
@@ -323,6 +380,7 @@ class Bid {
     amount: json['amount']! as int,
     at: DateTime.parse(json['at']! as String),
     retracted: json['retracted']! as bool,
+    buyNow: json['buyNow'] as bool? ?? false,
   );
 
   /// The bid's place in the ledger, from 1.
@@ -343,6 +401,9 @@ class Bid {
   /// Whether the bidder took it back (UC-07).
   final bool retracted;
 
+  /// Whether the bid paid the Buy Now price (UC-13).
+  final bool buyNow;
+
   /// This bid, taken back.
   Bid retract() => Bid(
     sequence: sequence,
@@ -351,6 +412,7 @@ class Bid {
     amount: amount,
     at: at,
     retracted: true,
+    buyNow: buyNow,
   );
 
   /// The bid as JSON, for snapshots.
@@ -361,6 +423,7 @@ class Bid {
     'amount': amount,
     'at': at.toUtc().toIso8601String(),
     'retracted': retracted,
+    'buyNow': buyNow,
   };
 }
 
@@ -474,6 +537,9 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
   /// modifiers, not a sentence.
   static const maxEmojiLength = 16;
 
+  /// The longest unpaid note, after trimming.
+  static const maxUnpaidNoteLength = 140;
+
   static final _hexColor = RegExp(r'^#[0-9A-Fa-f]{6}$');
 
   static bool _isWebUrl(String value) {
@@ -540,6 +606,15 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
   /// When the lot closed, once it has.
   DateTime? closedAt;
 
+  /// The winner's participant ID, once SOLD.
+  String? winnerId;
+
+  /// The winner's display name, once SOLD.
+  String? winnerName;
+
+  /// Whether the organizer marked the winner as not having paid (UC-14).
+  bool unpaid = false;
+
   /// Every bid, in order, retracted ones included.
   List<Bid> bids = [];
 
@@ -577,7 +652,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     required DateTime now,
   }) {
     if (status != LotStatus.open || !now.isBefore(closeAt)) {
-      throw LotClosedError(closedAt: closedAt ?? closeAt);
+      throw _closedError();
     }
     if (expectedVersion != version) {
       final leader = lastValidBid;
@@ -605,6 +680,70 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     );
   }
 
+  /// Buys the lot at its [buyNowPrice] as [buyer], who saw the lot at
+  /// [expectedVersion] (UC-13): a bid at the BN price, then the lot closes
+  /// SOLD to [buyer] with cause [LotCloseCause.buyNow], in one append.
+  ///
+  /// The checks run in this order, so every race has one answer:
+  ///
+  /// 1. A lot that isn't open, or [now] at or after [closeAt], throws
+  ///    [LotClosedError]: another BN or the deadline got there first.
+  /// 2. A lot with no BN price throws [CommandValidationError]
+  ///    `NO_BUY_NOW`.
+  /// 3. A lot that changed since [expectedVersion] throws [OutbidError], so
+  ///    the buyer never pays a BN next to a price they didn't see.
+  /// 4. A price already at or above the BN price throws
+  ///    [CommandValidationError] `BUY_NOW_PASSED`: bidding reached it, so
+  ///    BN no longer applies.
+  void buyNow({
+    required String buyer,
+    required String buyerName,
+    required int expectedVersion,
+    required DateTime now,
+  }) {
+    if (status != LotStatus.open || !now.isBefore(closeAt)) {
+      throw _closedError();
+    }
+    final price = buyNowPrice;
+    if (price == null) {
+      throw CommandValidationError(
+        'This lot has no Buy Now price',
+        context: {'reason': 'NO_BUY_NOW'},
+      );
+    }
+    if (expectedVersion != version) {
+      final leader = lastValidBid;
+      throw OutbidError(
+        currentPrice: currentPrice,
+        leaderName: leader?.bidderName,
+        leaderId: leader?.bidder,
+        version: version,
+      );
+    }
+    if (currentPrice >= price) {
+      throw CommandValidationError(
+        'Bidding passed the Buy Now price',
+        context: {'reason': 'BUY_NOW_PASSED'},
+      );
+    }
+    raise(
+      BidPlaced(
+        id.uuid,
+        participantId: buyer,
+        bidderName: buyerName,
+        amount: price,
+        sequence: bids.length + 1,
+        buyNow: true,
+      ),
+    );
+    close(LotCloseCause.buyNow, now);
+  }
+
+  LotClosedError _closedError() => LotClosedError(
+    closedAt: closedAt ?? closeAt,
+    winnerName: status == LotStatus.sold ? lastValidBid?.bidderName : null,
+  );
+
   /// Takes back the latest valid bid as [by], who saw the lot at
   /// [expectedVersion]. The bid before it leads again, or the price goes
   /// back to [openBid].
@@ -626,7 +765,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     required DateTime now,
   }) {
     if (status != LotStatus.open || !now.isBefore(closeAt)) {
-      throw LotClosedError(closedAt: closedAt ?? closeAt);
+      throw _closedError();
     }
     final last = lastValidBid;
     if (last == null) throw RetractNotAllowedError(RetractRefusal.noBids);
@@ -675,6 +814,39 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     );
   }
 
+  /// Marks the SOLD lot's winner as not having paid, at [now], with an
+  /// optional public [note] (UC-14). The caller has checked the organizer.
+  ///
+  /// Throws [CommandValidationError] `NOT_SOLD` unless the lot is SOLD, and
+  /// `TOO_LONG` on `note` for a trimmed [note] over [maxUnpaidNoteLength].
+  /// A lot already marked raises nothing.
+  void markUnpaid({required DateTime now, String? note}) {
+    if (status != LotStatus.sold) {
+      throw CommandValidationError(
+        'Only SOLD lots can be marked unpaid',
+        context: {'reason': 'NOT_SOLD'},
+      );
+    }
+    final trimmed = note?.trim();
+    if (trimmed != null && trimmed.length > maxUnpaidNoteLength) {
+      throw _invalid(
+        'note',
+        'TOO_LONG',
+        'The note must be at most $maxUnpaidNoteLength characters',
+      );
+    }
+    if (unpaid) return;
+    raise(
+      LotMarkedUnpaid(
+        id.uuid,
+        winnerId: winnerId!,
+        winnerName: winnerName!,
+        markedAt: now.toUtc(),
+        note: trimmed == null || trimmed.isEmpty ? null : trimmed,
+      ),
+    );
+  }
+
   @override
   void apply(LotEvent event) {
     switch (event) {
@@ -695,6 +867,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
             bidderName: event.bidderName,
             amount: event.amount,
             at: event.occurredAt,
+            buyNow: event.buyNow,
           ),
         ];
       case BidRetracted():
@@ -705,6 +878,10 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
       case LotClosed():
         status = event.outcome;
         closedAt = event.closedAt;
+        winnerId = event.winnerId;
+        winnerName = event.winnerName;
+      case LotMarkedUnpaid():
+        unpaid = true;
     }
   }
 
@@ -719,6 +896,9 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     'position': position,
     'status': status.code,
     'closedAt': closedAt?.toIso8601String(),
+    'winnerId': winnerId,
+    'winnerName': winnerName,
+    'unpaid': unpaid,
     'bids': [for (final bid in bids) bid.toJson()],
   };
 
@@ -734,6 +914,10 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     status = LotStatus.fromCode(data['status']! as String);
     final closed = data['closedAt'] as String?;
     closedAt = closed == null ? null : DateTime.parse(closed);
+    winnerId = data['winnerId'] as String?;
+    winnerName = data['winnerName'] as String?;
+    // Snapshots taken before UC-14 have no unpaid mark.
+    unpaid = data['unpaid'] as bool? ?? false;
     // Snapshots taken before UC-06 have no bids.
     bids = [
       for (final bid in data['bids'] as List? ?? const [])

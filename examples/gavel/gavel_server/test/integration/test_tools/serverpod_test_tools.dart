@@ -556,6 +556,47 @@ class _LotEndpoint {
     });
   }
 
+  _ida.Future<_ibsll3cm.LotCard> buyNow(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue lotId,
+    _is.UuidValue participantId,
+    String participantKey,
+    int expectedVersion,
+    _is.UuidValue commandId,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'lot',
+            method: 'buyNow',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'lot',
+          methodName: 'buyNow',
+          parameters: _ist.testObjectToJson({
+            'lotId': lotId,
+            'participantId': participantId,
+            'participantKey': participantKey,
+            'expectedVersion': expectedVersion,
+            'commandId': commandId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ibsll3cm.LotCard>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
   _ida.Future<_ibsll3cm.LotCard> retractBid(
     _ist.TestSessionBuilder sessionBuilder,
     _is.UuidValue lotId,
@@ -581,6 +622,43 @@ class _LotEndpoint {
             'participantKey': participantKey,
             'expectedVersion': expectedVersion,
             'commandId': commandId,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ibsll3cm.LotCard>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ibsll3cm.LotCard> markUnpaid(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue lotId,
+    String organizerKey,
+    String? note,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'lot',
+            method: 'markUnpaid',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'lot',
+          methodName: 'markUnpaid',
+          parameters: _ist.testObjectToJson({
+            'lotId': lotId,
+            'organizerKey': organizerKey,
+            'note': note,
           }),
           serializationManager: _serializationManager,
         );

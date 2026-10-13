@@ -89,6 +89,9 @@ abstract final class LotRules {
   /// The longest tile emoji, in UTF-16 code units.
   static const maxEmojiLength = 16;
 
+  /// The longest unpaid note, after trimming (UC-14).
+  static const maxUnpaidNoteLength = 140;
+
   static final _hexColor = RegExp(r'^#[0-9A-Fa-f]{6}$');
 
   /// Every field error of a new lot, in the server's check order. The

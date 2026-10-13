@@ -11,7 +11,9 @@ live:
 lot:
   - add:
   - placeBid:
+  - buyNow:
   - retractBid:
+  - markUnpaid:
   - detail:
   - winnerCode:
   - asOf:

@@ -14,6 +14,7 @@ import '../core/live.dart';
 import '../core/names.dart';
 import '../core/organizer_keys.dart';
 import '../widgets/lot_card_widget.dart';
+import '../widgets/unpaid.dart';
 import 'lot_form_sheet.dart';
 
 /// The organizer's dashboard: the auction's lots, live, and adding more
@@ -100,6 +101,32 @@ class _OrganizerPageState extends State<OrganizerPage> {
     ).showSnackBar(SnackBar(content: Text('${card.name} is on the board')));
   }
 
+  /// Marks [lot]'s winner as not having paid, once the organizer confirms
+  /// (UC-14).
+  Future<void> _markUnpaid(String organizerKey, LotCard lot) async {
+    final (:confirmed, :note) = await confirmMarkUnpaid(context, lot);
+    if (!confirmed || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final card = await client.lot.markUnpaid(lot.lotId, organizerKey, note);
+      _auction.merge(card);
+      messenger.showSnackBar(
+        SnackBar(content: Text('${card.name} is marked unpaid')),
+      );
+    } on Object catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(switch (GavelFailure.from(e)) {
+            NotOrganizer() => 'Only the organizer can mark a lot unpaid',
+            Invalid(:final message) => message,
+            Unexpected() => "Couldn't reach the server — try again",
+            _ => 'Something went wrong — try again',
+          }),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _auction,
@@ -172,8 +199,15 @@ class _OrganizerPageState extends State<OrganizerPage> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: Text(full.message, style: theme.textTheme.bodySmall),
                 ),
-              if (_winnerCodes case final codes? when codes.isNotEmpty)
-                _Winners(lots: _sold, codes: codes),
+              if ((_winnerCodes, key) case (
+                final codes?,
+                final key?,
+              ) when codes.isNotEmpty)
+                _Winners(
+                  lots: _sold,
+                  codes: codes,
+                  onMarkUnpaid: (lot) => _markUnpaid(key, lot),
+                ),
               Expanded(
                 child: LotGrid(
                   lots: _auction.lots,
@@ -222,14 +256,21 @@ class AddLotButton extends StatelessWidget {
 
 /// Each SOLD lot's winner with their tag and winner code (UC-09):
 /// "Natural Pirus Hubei — Budi · #3f9c · code 7KQ-2XM". The seller asks a
-/// buyer for the code and hands the lot over only on a match.
+/// buyer for the code and hands the lot over only on a match. A winner who
+/// didn't pay can be marked unpaid (UC-14); a marked lot shows its tag.
 class _Winners extends StatelessWidget {
-  const _Winners({required this.lots, required this.codes});
+  const _Winners({
+    required this.lots,
+    required this.codes,
+    required this.onMarkUnpaid,
+  });
 
   final List<LotCard> lots;
 
   /// Winner codes by lot ID.
   final Map<String, String> codes;
+
+  final void Function(LotCard lot) onMarkUnpaid;
 
   @override
   Widget build(BuildContext context) {
@@ -257,11 +298,24 @@ class _Winners extends StatelessWidget {
                 for (final lot in lots)
                   if ((lot.winnerName, lot.leaderId, codes[lot.lotId.uuid])
                       case (final name?, final id?, final code?))
-                    SelectableText(
-                      '${lot.name} — ${tagged(name, id)} · code $code',
-                      style: const TextStyle(
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SelectableText(
+                            '${lot.name} — ${tagged(name, id)} · code $code',
+                            style: const TextStyle(
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ),
+                        if (lot.unpaid)
+                          const UnpaidTag()
+                        else
+                          TextButton(
+                            onPressed: () => onMarkUnpaid(lot),
+                            child: const Text('Mark unpaid'),
+                          ),
+                      ],
                     ),
               ],
             ),

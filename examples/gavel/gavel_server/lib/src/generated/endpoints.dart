@@ -267,6 +267,45 @@ class Endpoints extends _is.EndpointDispatch {
                 params['commandId'],
               ),
         ),
+        'buyNow': _is.MethodConnector(
+          name: 'buyNow',
+          params: {
+            'lotId': _is.ParameterDescription(
+              name: 'lotId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantId': _is.ParameterDescription(
+              name: 'participantId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantKey': _is.ParameterDescription(
+              name: 'participantKey',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'expectedVersion': _is.ParameterDescription(
+              name: 'expectedVersion',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+            'commandId': _is.ParameterDescription(
+              name: 'commandId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['lot'] as _i6hhfich.LotEndpoint).buyNow(
+                session,
+                params['lotId'],
+                params['participantId'],
+                params['participantKey'],
+                params['expectedVersion'],
+                params['commandId'],
+              ),
+        ),
         'retractBid': _is.MethodConnector(
           name: 'retractBid',
           params: {
@@ -304,6 +343,33 @@ class Endpoints extends _is.EndpointDispatch {
                 params['participantKey'],
                 params['expectedVersion'],
                 params['commandId'],
+              ),
+        ),
+        'markUnpaid': _is.MethodConnector(
+          name: 'markUnpaid',
+          params: {
+            'lotId': _is.ParameterDescription(
+              name: 'lotId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'organizerKey': _is.ParameterDescription(
+              name: 'organizerKey',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'note': _is.ParameterDescription(
+              name: 'note',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['lot'] as _i6hhfich.LotEndpoint).markUnpaid(
+                session,
+                params['lotId'],
+                params['organizerKey'],
+                params['note'],
               ),
         ),
         'detail': _is.MethodConnector(

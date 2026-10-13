@@ -25,7 +25,8 @@ abstract class LedgerEntry
     required this.placedAt,
     required this.retracted,
     this.retractedAt,
-  });
+    bool? buyNow,
+  }) : buyNow = buyNow ?? false;
 
   factory LedgerEntry({
     int? id,
@@ -37,6 +38,7 @@ abstract class LedgerEntry
     required DateTime placedAt,
     required bool retracted,
     DateTime? retractedAt,
+    bool? buyNow,
   }) = _LedgerEntryImpl;
 
   factory LedgerEntry.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -60,6 +62,9 @@ abstract class LedgerEntry
           : _isc.DateTimeJsonExtension.fromJson(
               jsonSerialization['retractedAt'],
             ),
+      buyNow: jsonSerialization['buyNow'] == null
+          ? null
+          : _isc.BoolJsonExtension.fromJson(jsonSerialization['buyNow']),
     );
   }
 
@@ -92,6 +97,9 @@ abstract class LedgerEntry
   /// When the bid was taken back, in UTC.
   DateTime? retractedAt;
 
+  /// Whether the bid paid the Buy Now price, closing the lot (UC-13).
+  bool buyNow;
+
   /// Returns a shallow copy of this [LedgerEntry]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
@@ -105,6 +113,7 @@ abstract class LedgerEntry
     DateTime? placedAt,
     bool? retracted,
     DateTime? retractedAt,
+    bool? buyNow,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -119,6 +128,7 @@ abstract class LedgerEntry
       'placedAt': placedAt.toJson(),
       'retracted': retracted,
       if (retractedAt != null) 'retractedAt': retractedAt?.toJson(),
+      'buyNow': buyNow,
     };
   }
 
@@ -135,6 +145,7 @@ abstract class LedgerEntry
       'placedAt': placedAt.toJson(),
       'retracted': retracted,
       if (retractedAt != null) 'retractedAt': retractedAt?.toJson(),
+      'buyNow': buyNow,
     };
   }
 
@@ -157,6 +168,7 @@ class _LedgerEntryImpl extends LedgerEntry {
     required DateTime placedAt,
     required bool retracted,
     DateTime? retractedAt,
+    bool? buyNow,
   }) : super._(
          id: id,
          lotId: lotId,
@@ -167,6 +179,7 @@ class _LedgerEntryImpl extends LedgerEntry {
          placedAt: placedAt,
          retracted: retracted,
          retractedAt: retractedAt,
+         buyNow: buyNow,
        );
 
   /// Returns a shallow copy of this [LedgerEntry]
@@ -183,6 +196,7 @@ class _LedgerEntryImpl extends LedgerEntry {
     DateTime? placedAt,
     bool? retracted,
     Object? retractedAt = _Undefined,
+    bool? buyNow,
   }) {
     return LedgerEntry(
       id: id is int? ? id : this.id,
@@ -194,6 +208,7 @@ class _LedgerEntryImpl extends LedgerEntry {
       placedAt: placedAt ?? this.placedAt,
       retracted: retracted ?? this.retracted,
       retractedAt: retractedAt is DateTime? ? retractedAt : this.retractedAt,
+      buyNow: buyNow ?? this.buyNow,
     );
   }
 }

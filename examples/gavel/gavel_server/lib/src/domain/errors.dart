@@ -25,13 +25,17 @@ final class OutbidError extends DomainError {
   String get code => 'OUTBID';
 }
 
-/// The lot closed before the bid or retraction arrived.
+/// The lot closed before the bid, retraction or Buy Now arrived.
 final class LotClosedError extends DomainError {
-  /// Creates the error for a lot that closed at [closedAt].
-  LotClosedError({required DateTime closedAt})
+  /// Creates the error for a lot that closed at [closedAt], SOLD to
+  /// [winnerName] if it was, so a losing buyer reads who got it first.
+  LotClosedError({required DateTime closedAt, String? winnerName})
     : super(
         'The lot closed at ${closedAt.toUtc().toIso8601String()}',
-        context: {'closedAt': closedAt.toUtc().toIso8601String()},
+        context: {
+          'closedAt': closedAt.toUtc().toIso8601String(),
+          'winnerName': ?winnerName,
+        },
       );
 
   @override
