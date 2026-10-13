@@ -1,6 +1,7 @@
 import 'package:tarodomain/tarodomain.dart';
 
 import 'auction.dart';
+import 'auction_close_saga.dart';
 import 'auction_commands.dart';
 import 'lot.dart';
 import 'lot_commands.dart';
@@ -26,7 +27,12 @@ TaroDomainBuilder registerGavel(
         (a) => a
             .factory(Auction.new)
             .event<AuctionCreated>('AuctionCreated', AuctionCreated.fromData)
-            .event<LotRegistered>('LotRegistered', LotRegistered.fromData),
+            .event<LotRegistered>('LotRegistered', LotRegistered.fromData)
+            .event<AuctionClosed>('AuctionClosed', AuctionClosed.fromData)
+            .event<AuctionFinalized>(
+              'AuctionFinalized',
+              AuctionFinalized.fromData,
+            ),
       )
       .aggregate<Lot, LotId>(
         'Lot',
@@ -34,7 +40,8 @@ TaroDomainBuilder registerGavel(
             .factory(Lot.new)
             .event<LotCreated>('LotCreated', LotCreated.fromData)
             .event<BidPlaced>('BidPlaced', BidPlaced.fromData)
-            .event<BidRetracted>('BidRetracted', BidRetracted.fromData),
+            .event<BidRetracted>('BidRetracted', BidRetracted.fromData)
+            .event<LotClosed>('LotClosed', LotClosed.fromData),
       )
       .aggregate<Participant, ParticipantId>(
         'Participant',
@@ -49,6 +56,8 @@ TaroDomainBuilder registerGavel(
             ),
       )
       .command<CreateAuction>('CreateAuction', auction)
+      .command<CloseAuction>('CloseAuction', auction)
+      .command<FinalizeAuction>('FinalizeAuction', auction)
       .command<AddLot>(
         'AddLot',
         (c) => AddLotHandler(c.repository(), c.repository()),
@@ -61,8 +70,12 @@ TaroDomainBuilder registerGavel(
         'RetractBid',
         (c) => RetractBidHandler(c.repository()),
       )
+      .command<CloseLot>('CloseLot', (c) => CloseLotHandler(c.repository()))
       .command<JoinAuction>(
         'JoinAuction',
         (c) => ParticipantHandler<JoinAuction>(c.repository()),
-      );
+      )
+      // Closing normally completes within the close's own dispatch; the
+      // timeout only catches a lot that never reports back.
+      .saga(AuctionCloseSaga.new, timeout: const Duration(seconds: 30));
 }

@@ -32,6 +32,24 @@ enum LotStatus {
       values.firstWhere((s) => s.code == code);
 }
 
+/// Why a lot closed.
+enum LotCloseCause {
+  /// The auction's close time passed (UC-08).
+  deadline('DEADLINE'),
+
+  /// A bidder paid the Buy Now price (UC-13).
+  buyNow('BUY_NOW');
+
+  const LotCloseCause(this.code);
+
+  /// The value stored in events and the read model.
+  final String code;
+
+  /// The cause whose [code] is [code].
+  static LotCloseCause fromCode(String code) =>
+      values.firstWhere((c) => c.code == code);
+}
+
 /// Events of a [Lot]. Each carries the lot ID, so projections can key their
 /// read models by it.
 sealed class LotEvent extends DomainEvent {
@@ -217,6 +235,70 @@ class BidRetracted extends LotEvent {
     'lotId': lotId,
     'participantId': participantId,
     'retractedSequence': retractedSequence,
+  };
+}
+
+/// A lot closed: SOLD to its leading bid, or PASSED with none.
+class LotClosed extends LotEvent {
+  /// Creates the event.
+  LotClosed(
+    super.lotId, {
+    required this.auctionId,
+    required this.outcome,
+    required this.cause,
+    required this.closedAt,
+    this.winnerId,
+    this.winnerName,
+    this.finalPrice,
+  });
+
+  /// Rebuilds the event from [toData]'s output.
+  factory LotClosed.fromData(Map<String, Object?> data) => LotClosed(
+    data['lotId']! as String,
+    auctionId: data['auctionId']! as String,
+    outcome: LotStatus.fromCode(data['outcome']! as String),
+    cause: LotCloseCause.fromCode(data['cause']! as String),
+    closedAt: DateTime.parse(data['closedAt']! as String),
+    winnerId: data['winnerId'] as String?,
+    winnerName: data['winnerName'] as String?,
+    finalPrice: data['finalPrice'] as int?,
+  );
+
+  /// The auction the lot belongs to.
+  final String auctionId;
+
+  /// SOLD or PASSED.
+  final LotStatus outcome;
+
+  /// Why the lot closed.
+  final LotCloseCause cause;
+
+  /// When the lot closed, in UTC: the auction's close time for a deadline
+  /// close, however late the trigger fired.
+  final DateTime closedAt;
+
+  /// The winner's participant ID, once SOLD.
+  final String? winnerId;
+
+  /// The winner's display name, once SOLD.
+  final String? winnerName;
+
+  /// The winning price, in rupiah, once SOLD.
+  final int? finalPrice;
+
+  @override
+  String get eventName => 'LotClosed';
+
+  @override
+  Map<String, Object?> toData() => {
+    'lotId': lotId,
+    'auctionId': auctionId,
+    'outcome': outcome.code,
+    'cause': cause.code,
+    'closedAt': closedAt.toUtc().toIso8601String(),
+    'winnerId': winnerId,
+    'winnerName': winnerName,
+    'finalPrice': finalPrice,
   };
 }
 
@@ -434,6 +516,9 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
   /// Where the lot is in its life.
   LotStatus status = LotStatus.open;
 
+  /// When the lot closed, once it has.
+  DateTime? closedAt;
+
   /// Every bid, in order, retracted ones included.
   List<Bid> bids = [];
 
@@ -471,7 +556,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     required DateTime now,
   }) {
     if (status != LotStatus.open || !now.isBefore(closeAt)) {
-      throw LotClosedError(closedAt: closeAt);
+      throw LotClosedError(closedAt: closedAt ?? closeAt);
     }
     if (expectedVersion != version) {
       final leader = lastValidBid;
@@ -520,7 +605,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     required DateTime now,
   }) {
     if (status != LotStatus.open || !now.isBefore(closeAt)) {
-      throw LotClosedError(closedAt: closeAt);
+      throw LotClosedError(closedAt: closedAt ?? closeAt);
     }
     final last = lastValidBid;
     if (last == null) throw RetractNotAllowedError(RetractRefusal.noBids);
@@ -540,6 +625,31 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
         id.uuid,
         participantId: by,
         retractedSequence: last.sequence,
+      ),
+    );
+  }
+
+  /// Closes the lot for [cause] at [now]: SOLD to the leading bid, or
+  /// PASSED with none.
+  ///
+  /// A lot already SOLD or PASSED raises nothing, so a retry, a second
+  /// trigger or a lot already bought is a no-op. A [LotCloseCause.deadline]
+  /// close is dated at [closeAt], not [now], so the record reads the
+  /// advertised time even when the trigger fires late.
+  void close(LotCloseCause cause, DateTime now) {
+    if (status != LotStatus.open) return;
+    final at = cause == LotCloseCause.deadline ? closeAt : now;
+    final winner = lastValidBid;
+    raise(
+      LotClosed(
+        id.uuid,
+        auctionId: auctionId,
+        outcome: winner == null ? LotStatus.passed : LotStatus.sold,
+        cause: cause,
+        closedAt: at,
+        winnerId: winner?.bidder,
+        winnerName: winner?.bidderName,
+        finalPrice: winner?.amount,
       ),
     );
   }
@@ -571,6 +681,9 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
           for (final bid in bids)
             bid.sequence == event.retractedSequence ? bid.retract() : bid,
         ];
+      case LotClosed():
+        status = event.outcome;
+        closedAt = event.closedAt;
     }
   }
 
@@ -584,6 +697,7 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     'closeAt': closeAt.toIso8601String(),
     'position': position,
     'status': status.code,
+    'closedAt': closedAt?.toIso8601String(),
     'bids': [for (final bid in bids) bid.toJson()],
   };
 
@@ -597,6 +711,8 @@ class Lot extends AggregateRoot<LotId, LotEvent> {
     closeAt = DateTime.parse(data['closeAt']! as String);
     position = data['position']! as int;
     status = LotStatus.fromCode(data['status']! as String);
+    final closed = data['closedAt'] as String?;
+    closedAt = closed == null ? null : DateTime.parse(closed);
     // Snapshots taken before UC-06 have no bids.
     bids = [
       for (final bid in data['bids'] as List? ?? const [])

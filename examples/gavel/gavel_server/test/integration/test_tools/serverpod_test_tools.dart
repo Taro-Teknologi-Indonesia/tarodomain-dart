@@ -578,6 +578,19 @@ class _AuctionCloseCallsFutureCall {
       await _localUniqueSession.close();
     }
   }
+
+  Future<void> sweep(_ist.TestSessionBuilder sessionBuilder) async {
+    var _localUniqueSession =
+        (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild();
+    try {
+      await _ixqh6y26.AuctionCloseCallsSweepFutureCall().invoke(
+        _localUniqueSession,
+        null,
+      );
+    } finally {
+      await _localUniqueSession.close();
+    }
+  }
 }
 
 class _TaroDomainCallsFutureCall {

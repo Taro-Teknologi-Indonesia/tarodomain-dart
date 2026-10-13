@@ -39,6 +39,19 @@ class AuctionTableProjection extends Projection {
         ),
       );
     });
+    on<AuctionClosed>((e) => _setStatus(e.auctionId, AuctionStatus.closing));
+    on<AuctionFinalized>((e) => _setStatus(e.auctionId, AuctionStatus.closed));
+  }
+
+  Future<void> _setStatus(String auctionId, AuctionStatus status) async {
+    final view = await _find(auctionId);
+    await _postAuction(
+      await AuctionView.db.updateRow(
+        session,
+        view.copyWith(status: status.code),
+        transaction: _transaction,
+      ),
+    );
   }
 
   Future<AuctionView> _find(String auctionId) async =>

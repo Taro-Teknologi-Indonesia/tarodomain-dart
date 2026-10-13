@@ -12,8 +12,10 @@ import '../core/failures.dart';
 import '../core/identity.dart';
 import '../core/live.dart';
 import '../core/organizer_keys.dart';
+import '../core/share.dart';
 import '../widgets/join_sheet.dart';
 import '../widgets/lot_card_widget.dart';
+import '../widgets/won_banner.dart';
 
 /// An auction's live board (UC-04), or its big-screen mode (UC-11).
 ///
@@ -136,6 +138,7 @@ class _BoardPageState extends State<BoardPage> {
           title: _Title(
             title: auction?.title ?? 'Auction ${widget.code}',
             closeAt: auction?.closeAt,
+            closed: auction?.status == 'CLOSED',
             offset: _auction.clockOffset,
           ),
           actions: [
@@ -150,14 +153,32 @@ class _BoardPageState extends State<BoardPage> {
           (AuctionNotFound(), _) => _NotFound(code: widget.code),
           (final GavelFailure failure, _) => Center(child: Text('$failure')),
           (_, null) => const Center(child: CircularProgressIndicator()),
-          (_, _) => LotGrid(
-            lots: _auction.lots,
-            me: _identity?.participantId,
-            size: widget.bigScreen ? LotCardSize.large : LotCardSize.regular,
-            onTap: widget.bigScreen
-                ? null
-                : (lot) => context.go('/a/${widget.code}/lot/${lot.lotId}'),
-            empty: 'No lots yet — the organizer is setting up.',
+          (_, _) => Column(
+            children: [
+              if (!widget.bigScreen)
+                for (final lot in _auction.lots)
+                  if (wonBy(lot, _identity?.participantId))
+                    WonBanner(
+                      key: ValueKey(lot.lotId),
+                      lot: lot,
+                      onShare: () =>
+                          copyLotLink(context, widget.code, lot.lotId.uuid),
+                    ),
+              Expanded(
+                child: LotGrid(
+                  lots: _auction.lots,
+                  me: _identity?.participantId,
+                  size: widget.bigScreen
+                      ? LotCardSize.large
+                      : LotCardSize.regular,
+                  onTap: widget.bigScreen
+                      ? null
+                      : (lot) =>
+                            context.go('/a/${widget.code}/lot/${lot.lotId}'),
+                  empty: 'No lots yet — the organizer is setting up.',
+                ),
+              ),
+            ],
           ),
         },
       );
@@ -200,11 +221,13 @@ class _Title extends StatelessWidget {
   const _Title({
     required this.title,
     required this.closeAt,
+    required this.closed,
     required this.offset,
   });
 
   final String title;
   final DateTime? closeAt;
+  final bool closed;
   final ValueListenable<Duration> offset;
 
   @override
@@ -222,7 +245,12 @@ class _Title extends StatelessWidget {
             children: [
               Icon(Icons.timer_outlined, size: 14, color: small?.color),
               const SizedBox(width: 4),
-              CountdownText(closeAt: closeAt, offset: offset, style: small),
+              CountdownText(
+                closeAt: closeAt,
+                offset: offset,
+                closed: closed,
+                style: small,
+              ),
             ],
           ),
       ],

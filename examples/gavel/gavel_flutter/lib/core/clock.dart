@@ -15,11 +15,13 @@ String formatRemaining(Duration remaining) {
 
 /// The time left until [closeAt] on the server's clock: the local clock
 /// plus [offset], so a phone that is off by 30 seconds still agrees with
-/// everyone else. Red under a minute, "Closed" after.
+/// everyone else. Red under a minute, then "Closing…" until the server
+/// says the auction is [closed] (UC-08).
 class CountdownText extends StatefulWidget {
   const CountdownText({
     required this.closeAt,
     required this.offset,
+    this.closed = false,
     this.style,
     super.key,
   });
@@ -29,6 +31,9 @@ class CountdownText extends StatefulWidget {
 
   /// Server clock minus local clock.
   final ValueListenable<Duration> offset;
+
+  /// Whether the auction is CLOSED: every lot's outcome is in.
+  final bool closed;
 
   final TextStyle? style;
 
@@ -58,12 +63,16 @@ class _CountdownTextState extends State<CountdownText> {
   Widget build(BuildContext context) {
     final now = DateTime.now().toUtc().add(widget.offset.value);
     final remaining = widget.closeAt.difference(now);
-    final closed = remaining <= Duration.zero;
+    final timeUp = widget.closed || remaining <= Duration.zero;
     final style = widget.style ?? DefaultTextStyle.of(context).style;
     return Text(
-      closed ? 'Closed' : formatRemaining(remaining),
+      switch (timeUp) {
+        false => formatRemaining(remaining),
+        true when widget.closed => 'Closed',
+        true => 'Closing…',
+      },
       style: style.copyWith(
-        color: !closed && remaining < const Duration(minutes: 1)
+        color: !timeUp && remaining < const Duration(minutes: 1)
             ? Theme.of(context).colorScheme.error
             : null,
         fontFeatures: const [FontFeature.tabularFigures()],

@@ -91,6 +91,17 @@ Integration:
 
 Manual (video): set closeAt to about 3 minutes ahead, **close the organizer laptop lid** (or kill the organizer tab) on camera, and watch the phone flip to SOLD.
 
+## As built
+
+- Under strong consistency a command the saga dispatches joins the outer unit of work, so one `CloseAuction` closes the auction, every lot and finalizes it in **one transaction**. A conflict with a final-second bid on any lot restarts the whole close, which then sees the bid. The integration test checks this: two concurrent closes give one `AuctionClosed`, one `AuctionFinalized` and one `LotClosed` per lot.
+- The Buy Now gap uses the simple fallback: `compensateWhen<SagaTimeout>` closes the remaining lots again (no-ops when they're already closed) and always issues `FinalizeAuction`. No `LotCard` query is injected. A domain test drives that path end to end.
+- `AuctionClosed` has no `cause`, because only the deadline closes an auction. `LotCloseCause` is `DEADLINE | BUY_NOW`, as UC-13 plans.
+- `Lot` now keeps `closedAt`, and `LotClosedError` reports it (falling back to `closeAt`).
+- No schema change. The winner is the card's `leaderId` once it's SOLD, so the Flutter "you won" check is `status == 'SOLD' && leaderId == me` (`wonBy`).
+- With future calls enabled, `scheduleJobs` (renamed from `scheduleTaroDomainJobs`) also schedules `auctionCloseCalls.sweep` every 5 s under `gavel-auction-close-sweep`. Without them the timer sweep from UC-01 now dispatches for real. Serverpod 4.0.4 has `callAtTime`, which UC-01 already uses.
+- The integration test doesn't relax the 5-minute rule. It backdates the `CreateAuction` timestamp so `closeAt` is 2 s away, then calls `closeDueAuctions` directly.
+- Flutter: `CountdownText` shows "Closing…" past `closeAt` until the auction is CLOSED. `WonBanner` sits at the top of the lot page and above the board grid (not on the big screen), and "Share result" copies the lot link until UC-09. Everyone else already sees "SOLD to Sari — Rp 450.000" on the lot page and "Sari won" on the card.
+
 ## Acceptance
 
 - [ ] All lots are terminal within about 5 s after closeAt with no client involved.

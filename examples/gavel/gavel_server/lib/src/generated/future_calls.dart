@@ -59,6 +59,7 @@ class FutureCalls extends _is.FutureCallDispatch<_FutureCallRef> {
   void initialize(_is.FutureCallManager futureCallManager, String serverId) {
     var registeredFutureCalls = <String, _is.InvokableFutureCall>{
       'AuctionCloseCallsCloseFutureCall': AuctionCloseCallsCloseFutureCall(),
+      'AuctionCloseCallsSweepFutureCall': AuctionCloseCallsSweepFutureCall(),
       'TaroDomainCallsCatchUpFutureCall': TaroDomainCallsCatchUpFutureCall(),
       'TaroDomainCallsSagaTimeoutsFutureCall':
           TaroDomainCallsSagaTimeoutsFutureCall(),
@@ -184,6 +185,10 @@ class _AuctionCloseCallsFutureCallDispatcher {
     var object = _ijzrfwlf.AuctionCloseCallsCloseModel(auctionId: auctionId);
     return _invokeFutureCall('AuctionCloseCallsCloseFutureCall', object);
   }
+
+  Future<void> sweep() {
+    return _invokeFutureCall('AuctionCloseCallsSweepFutureCall', null);
+  }
 }
 
 class _TaroDomainCallsFutureCallDispatcher {
@@ -216,6 +221,19 @@ class AuctionCloseCallsCloseFutureCall
     if (object != null) {
       await _ij043ien.AuctionCloseCalls().close(session, object.auctionId);
     }
+  }
+}
+
+/// Closes every OPEN auction past its close time, every 5 seconds: the
+/// safety net for a restart over a deadline or a lost scheduled close.
+class AuctionCloseCallsSweepFutureCall extends _is.FutureCall
+    implements _is.InvokableFutureCall {
+  @override
+  _ida.Future<void> invoke(
+    _is.Session session,
+    _is.SerializableModel? object,
+  ) async {
+    await _ij043ien.AuctionCloseCalls().sweep(session);
   }
 }
 

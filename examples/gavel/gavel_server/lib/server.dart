@@ -40,19 +40,25 @@ Future<void> run(List<String> args) async {
     exit(1);
   }
   if (futureCalls) {
-    await scheduleTaroDomainJobs(pod);
+    await scheduleJobs(pod);
   } else {
     startTimerJobs(pod);
   }
 }
 
-/// Schedules TaroDomain's recurring jobs, replacing any scheduled by an
-/// earlier start.
-Future<void> scheduleTaroDomainJobs(Serverpod pod) async {
+/// Schedules the recurring jobs, TaroDomain's and the auction-close sweep,
+/// replacing any scheduled by an earlier start.
+Future<void> scheduleJobs(Serverpod pod) async {
   final calls = pod.futureCalls;
   for (final job in ['catch-up', 'saga-timeouts', 'cleanup']) {
     await calls.cancel('tarodomain-$job');
   }
+  await calls.cancel('gavel-auction-close-sweep');
+  await calls
+      .callRecurring(identifier: 'gavel-auction-close-sweep')
+      .every(const Duration(seconds: 5))
+      .auctionCloseCalls
+      .sweep();
   await calls
       .callRecurring(identifier: 'tarodomain-catch-up')
       .every(const Duration(seconds: 5))

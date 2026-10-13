@@ -16,6 +16,7 @@ LotCard lotCard({
   UuidValue? leaderId,
   String? leaderName,
   String? winnerName,
+  int? finalPrice,
   int? buyNowPrice,
   String? closeCause,
   DateTime? closedAt,
@@ -39,6 +40,7 @@ LotCard lotCard({
   status: status,
   version: version,
   winnerName: winnerName,
+  finalPrice: finalPrice,
   closeCause: closeCause,
   closedAt: closedAt,
 );

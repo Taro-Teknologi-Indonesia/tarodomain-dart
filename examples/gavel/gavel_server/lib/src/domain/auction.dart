@@ -109,6 +109,43 @@ class LotRegistered extends AuctionEvent {
   Map<String, Object?> toData() => {'auctionId': auctionId, 'lotId': lotId};
 }
 
+/// An auction's close time passed and its lots are closing (UC-08).
+class AuctionClosed extends AuctionEvent {
+  /// Creates the event.
+  AuctionClosed(super.auctionId, {required this.lotIds});
+
+  /// Rebuilds the event from [toData]'s output.
+  factory AuctionClosed.fromData(Map<String, Object?> data) => AuctionClosed(
+    data['auctionId']! as String,
+    lotIds: [for (final id in data['lotIds']! as List) id as String],
+  );
+
+  /// The lots to close, in the order they were added.
+  final List<String> lotIds;
+
+  @override
+  String get eventName => 'AuctionClosed';
+
+  @override
+  Map<String, Object?> toData() => {'auctionId': auctionId, 'lotIds': lotIds};
+}
+
+/// Every lot of an auction is closed (UC-08).
+class AuctionFinalized extends AuctionEvent {
+  /// Creates the event.
+  AuctionFinalized(super.auctionId);
+
+  /// Rebuilds the event from [toData]'s output.
+  factory AuctionFinalized.fromData(Map<String, Object?> data) =>
+      AuctionFinalized(data['auctionId']! as String);
+
+  @override
+  String get eventName => 'AuctionFinalized';
+
+  @override
+  Map<String, Object?> toData() => {'auctionId': auctionId};
+}
+
 /// An auction: a title, a join code and one close time for all its lots.
 class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
   /// An empty auction, before its events are applied.
@@ -203,6 +240,30 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
     raise(LotRegistered(id.uuid, lotId: lotId));
   }
 
+  /// Closes the auction at [now], its close time having passed. Its lots
+  /// close next, through `AuctionCloseSaga`.
+  ///
+  /// An auction already closing or closed raises nothing, so a retry or a
+  /// second trigger is a no-op. Throws [CommandValidationError] `TOO_EARLY`
+  /// if [now] is before [closeAt].
+  void close(DateTime now) {
+    if (status != AuctionStatus.open) return;
+    if (now.isBefore(closeAt)) {
+      throw CommandValidationError(
+        'The auction closes at ${closeAt.toIso8601String()}',
+        context: {'field': 'closeAt', 'reason': 'TOO_EARLY'},
+      );
+    }
+    raise(AuctionClosed(id.uuid, lotIds: lotIds));
+  }
+
+  /// Marks the closing auction closed, once its lots are. A no-op on an
+  /// auction that is open or already closed.
+  void finalize() {
+    if (status != AuctionStatus.closing) return;
+    raise(AuctionFinalized(id.uuid));
+  }
+
   @override
   void apply(AuctionEvent event) {
     switch (event) {
@@ -213,6 +274,10 @@ class Auction extends AggregateRoot<AuctionId, AuctionEvent> {
         organizerKeyHash = event.organizerKeyHash;
       case LotRegistered():
         lotIds = [...lotIds, event.lotId];
+      case AuctionClosed():
+        status = AuctionStatus.closing;
+      case AuctionFinalized():
+        status = AuctionStatus.closed;
     }
   }
 

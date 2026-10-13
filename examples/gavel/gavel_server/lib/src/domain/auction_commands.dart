@@ -31,6 +31,25 @@ class CreateAuction extends Command {
   final String organizerKeyHash;
 }
 
+/// Closes an auction whose close time has passed (UC-08). Its [timestamp]
+/// is "now" for the close-time check.
+class CloseAuction extends Command {
+  /// Creates the command.
+  CloseAuction(this.auctionId, {super.timestamp});
+
+  /// The auction to close.
+  final AuctionId auctionId;
+}
+
+/// Marks a closing auction closed, once its lots are (UC-08).
+class FinalizeAuction extends Command {
+  /// Creates the command.
+  FinalizeAuction(this.auctionId);
+
+  /// The auction to finalize.
+  final AuctionId auctionId;
+}
+
 /// Handles the [Auction] commands.
 class AuctionHandler<C extends Command>
     extends AggregateCommandHandler<C, Auction, AuctionId> {
@@ -57,6 +76,14 @@ class AuctionHandler<C extends Command>
             now: command.timestamp,
           ),
         );
+      case CloseAuction(:final auctionId):
+        final auction = await load(auctionId)
+          ..close(command.timestamp);
+        if (auction.hasUncommittedChanges) await save(auction);
+      case FinalizeAuction(:final auctionId):
+        final auction = await load(auctionId)
+          ..finalize();
+        if (auction.hasUncommittedChanges) await save(auction);
     }
   }
 }

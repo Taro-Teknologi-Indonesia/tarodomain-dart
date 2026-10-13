@@ -221,3 +221,32 @@ class RetractBidHandler extends CommandHandler<RetractBid> {
     await lots.save(lot);
   }
 }
+
+/// Closes a lot for [cause] (UC-08). Its [timestamp] is "now", the close
+/// time of a cause other than the deadline.
+class CloseLot extends Command {
+  /// Creates the command.
+  CloseLot(this.lotId, this.cause, {super.timestamp});
+
+  /// The lot to close.
+  final LotId lotId;
+
+  /// Why it closes.
+  final LotCloseCause cause;
+}
+
+/// Handles [CloseLot] on the [Lot]. A lot already closed saves nothing.
+class CloseLotHandler extends CommandHandler<CloseLot> {
+  /// Creates the handler.
+  CloseLotHandler(this.lots);
+
+  /// Loads and saves lots.
+  final Repository<Lot, LotId> lots;
+
+  @override
+  Future<void> handle(CloseLot command) async {
+    final lot = await lots.load(command.lotId)
+      ..close(command.cause, command.timestamp);
+    if (lot.hasUncommittedChanges) await lots.save(lot);
+  }
+}

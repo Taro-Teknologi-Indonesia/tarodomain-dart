@@ -107,6 +107,23 @@ class LotTableProjection extends Projection {
       );
       await _postLot(updated, ledgerEntry: entry);
     });
+    on<LotClosed>((e) async {
+      final card = await _card(e.lotId);
+      await _postLot(
+        await LotCard.db.updateRow(
+          session,
+          card.copyWith(
+            status: e.outcome.code,
+            winnerName: e.winnerName,
+            finalPrice: e.finalPrice,
+            closeCause: e.cause.code,
+            closedAt: e.closedAt,
+            version: card.version + 1,
+          ),
+          transaction: _transaction,
+        ),
+      );
+    });
   }
 
   /// The request's session.

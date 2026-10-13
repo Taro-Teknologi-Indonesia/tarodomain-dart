@@ -94,6 +94,7 @@ class _OrganizerPageState extends State<OrganizerPage> {
               _ShareHeader(
                 code: widget.code,
                 closeAt: auction.closeAt,
+                closed: auction.status == 'CLOSED',
                 offset: _auction.clockOffset,
               ),
               if (_keyLoaded && key == null)
@@ -127,11 +128,13 @@ class _ShareHeader extends StatelessWidget {
   const _ShareHeader({
     required this.code,
     required this.closeAt,
+    required this.closed,
     required this.offset,
   });
 
   final String code;
   final DateTime closeAt;
+  final bool closed;
   final ValueListenable<Duration> offset;
 
   String get _link => '${Uri.base.origin}/a/$code';
@@ -177,6 +180,7 @@ class _ShareHeader extends StatelessWidget {
         CountdownText(
           closeAt: closeAt,
           offset: offset,
+          closed: closed,
           style: theme.textTheme.titleLarge,
         ),
       ],

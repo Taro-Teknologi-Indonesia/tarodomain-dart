@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:gavel_client/gavel_client.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,11 +15,13 @@ import '../core/live.dart';
 import '../core/money.dart';
 import '../core/organizer_keys.dart';
 import '../core/retracting.dart';
+import '../core/share.dart';
 import '../widgets/bid_bar.dart';
 import '../widgets/join_sheet.dart';
 import '../widgets/ledger_list.dart';
 import '../widgets/lot_visual.dart';
 import '../widgets/retract_button.dart';
+import '../widgets/won_banner.dart';
 
 /// One lot (UC-05): its visual, price and status, and the full ledger, with
 /// the kelipatan chips in a bottom bar the thumb reaches (UC-06), and
@@ -101,14 +102,7 @@ class _LotPageState extends State<LotPage> {
   }
 
   /// Copies the lot's URL, the receipt a winner pastes back (UC-09).
-  Future<void> _share() async {
-    final url = Uri.base.resolve('/a/${widget.code}/lot/${widget.lotId}');
-    await Clipboard.setData(ClipboardData(text: url.toString()));
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Link copied')));
-  }
+  Future<void> _share() => copyLotLink(context, widget.code, widget.lotId);
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +121,7 @@ class _LotPageState extends State<LotPage> {
               child: CountdownText(
                 closeAt: closeAt,
                 offset: auction.clockOffset,
+                closed: auction.auction?.status == 'CLOSED',
               ),
             ),
           IconButton(
@@ -146,6 +141,7 @@ class _LotPageState extends State<LotPage> {
               ledger: auction.ledgerFor(lot.lotId),
               closeAt: closeAt,
               me: _identity?.participantId,
+              onShare: _share,
             )
           : Center(
               child: loading
@@ -230,6 +226,7 @@ class LotDetailBody extends StatelessWidget {
     required this.ledger,
     required this.closeAt,
     this.me,
+    this.onShare,
     super.key,
   });
 
@@ -243,6 +240,9 @@ class LotDetailBody extends StatelessWidget {
 
   /// Who this browser bids as, if it joined.
   final UuidValue? me;
+
+  /// Shares the result, from the banner of a lot [me] won.
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +275,11 @@ class LotDetailBody extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 16),
           children: [
+            if (onShare case final onShare? when wonBy(lot, me))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: WonBanner(lot: lot, onShare: onShare),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
