@@ -6,7 +6,7 @@ The spec is a git submodule at [`spec/`](spec), pinned to the version this code 
 
 ## Serverpod hackathon entry: Gavel
 
-> **Jury: the entry is [`examples/gavel/`](examples/gavel).** The rest of this repo is the framework it runs on.
+> **Jury: start with [`examples/gavel/README.md`](examples/gavel/README.md)**: the live link, a 2-minute try-it, the Serverpod mapping and the proof. The rest of this repo is the framework Gavel runs on.
 
 **Gavel is a live silent auction that closes itself.** In Indonesia, sellers of gemstones, keris, blades and other collectibles run auctions (*lelang*) in Facebook comment threads. That leads to arguments over who bid first, deleted comments, and auctions closed by hand whenever the seller checks their phone. With Gavel the crowd stays on Facebook, and the seller pastes one link under the photos. Bidders open it in their phone browser, type a name, and bid. The server keeps a bid ledger that nobody can edit and closes the auction at the deadline, even with the seller's laptop shut.
 
