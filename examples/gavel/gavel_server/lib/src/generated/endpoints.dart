@@ -15,6 +15,7 @@ import 'package:serverpod/serverpod.dart' as _is;
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart'
     as _i13if8es;
 import '../endpoints/auction_endpoint.dart' as _iyn8i9y2;
+import '../endpoints/live_endpoint.dart' as _ixgr9pqx;
 export 'future_calls.dart' show ServerpodFutureCallsGetter;
 
 class Endpoints extends _is.EndpointDispatch {
@@ -23,6 +24,7 @@ class Endpoints extends _is.EndpointDispatch {
     var endpoints = <String, _is.Endpoint>{
       'auction': _iyn8i9y2.AuctionEndpoint()
         ..initialize(server, 'auction', null),
+      'live': _ixgr9pqx.LiveEndpoint()..initialize(server, 'live', null),
     };
     connectors['auction'] = _is.EndpointConnector(
       name: 'auction',
@@ -60,6 +62,48 @@ class Endpoints extends _is.EndpointDispatch {
           },
           call: (_is.Session session, Map<String, dynamic> params) async =>
               (endpoints['auction'] as _iyn8i9y2.AuctionEndpoint).board(
+                session,
+                params['code'],
+              ),
+        ),
+      },
+    );
+    connectors['live'] = _is.EndpointConnector(
+      name: 'live',
+      endpoint: endpoints['live']!,
+      methodConnectors: {
+        'ping': _is.MethodConnector(
+          name: 'ping',
+          params: {
+            'code': _is.ParameterDescription(
+              name: 'code',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['live'] as _ixgr9pqx.LiveEndpoint).ping(
+                session,
+                params['code'],
+              ),
+        ),
+        'watch': _is.MethodStreamConnector(
+          name: 'watch',
+          params: {
+            'code': _is.ParameterDescription(
+              name: 'code',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          streamParams: {},
+          returnType: _is.MethodStreamReturnType.streamType,
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+                Map<String, Stream> streamParams,
+              ) => (endpoints['live'] as _ixgr9pqx.LiveEndpoint).watch(
                 session,
                 params['code'],
               ),

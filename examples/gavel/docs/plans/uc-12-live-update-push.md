@@ -65,6 +65,14 @@ class LiveConnection {
 - Integration: a command that throws inside the projection produces no message.
 - Manual (**the hour-2 gate**): run the server, open two browser windows (one incognito) on `/a/TEST`, call `ping`, and see both windows flash within 1 s.
 
+## As built
+
+- `LiveUpdate` has only `auction` for now. UC-02 adds `lot: LotCard?` and UC-05 adds `ledgerEntry: LedgerEntry?`, along with their read models.
+- `channelFor` and `postLive` are in `lib/src/infra/live_channels.dart`. The auction projection posts `auctionChanged` on `AuctionCreated`, and posts nothing during a rebuild.
+- `ping` works in development and test mode only.
+- `LiveConnection.events()` emits a `SnapshotArrived` first and again after every reconnect, then `UpdateArrived`. Version filtering is left to the board merge (UC-04).
+- The hour-2 gate needs a real auction code, because the board shows "not found" for `TEST`. Create an auction, open `/a/<CODE>` in two windows, then call `ping` with that code.
+
 ## Acceptance
 
 - [ ] Two separate browser windows receive the same update in under 1 s.

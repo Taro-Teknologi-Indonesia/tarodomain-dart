@@ -4,6 +4,7 @@ import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart';
 
 import '../domain/auction.dart';
 import '../generated/protocol.dart';
+import 'live_channels.dart';
 
 /// Keeps the `gavel_auctions` table up to date.
 ///
@@ -13,8 +14,8 @@ import '../generated/protocol.dart';
 class AuctionTableProjection extends Projection {
   /// Creates the projection on [session].
   AuctionTableProjection(this.session, {required super.processedEvents}) {
-    on<AuctionCreated>(
-      (e) => AuctionView.db.insertRow(
+    on<AuctionCreated>((e) async {
+      final view = await AuctionView.db.insertRow(
         session,
         AuctionView(
           auctionId: UuidValue.fromString(e.auctionId),
@@ -25,8 +26,9 @@ class AuctionTableProjection extends Projection {
           lotCount: 0,
         ),
         transaction: _transaction,
-      ),
-    );
+      );
+      await _postAuction(view);
+    });
   }
 
   /// The request's session.
@@ -35,14 +37,39 @@ class AuctionTableProjection extends Projection {
   @override
   String get name => 'auctions';
 
+  /// Whether a rebuild is replaying events.
+  bool _rebuilding = false;
+
   Transaction? get _transaction => ServerpodUnitOfWork.transactionOf(session);
+
+  /// Tells the auction's watchers it changed, once the command commits.
+  ///
+  /// A rebuild replays old events, so it posts nothing.
+  Future<void> _postAuction(AuctionView view) async {
+    if (_rebuilding) return;
+    await postLive(
+      session,
+      view.code,
+      LiveUpdate(
+        kind: LiveUpdateKind.auctionChanged,
+        auction: view,
+        serverNow: DateTime.now().toUtc(),
+      ),
+    );
+  }
 
   @override
   Future<void> onRebuildStart() async {
+    _rebuilding = true;
     await AuctionView.db.deleteWhere(
       session,
       where: (_) => Constant.bool(true),
       transaction: _transaction,
     );
+  }
+
+  @override
+  Future<void> onRebuildComplete() async {
+    _rebuilding = false;
   }
 }

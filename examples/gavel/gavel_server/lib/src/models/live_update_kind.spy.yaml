@@ -1,0 +1,10 @@
+### What a `LiveUpdate` carries.
+enum: LiveUpdateKind
+serialized: byName
+values:
+  ### A lot changed: created, bid on, retracted or closed (UC-02 on).
+  - lotChanged
+  ### The auction changed: created, its lot count or its status.
+  - auctionChanged
+  ### A connectivity check with no payload (the UC-12 hour-2 gate).
+  - ping

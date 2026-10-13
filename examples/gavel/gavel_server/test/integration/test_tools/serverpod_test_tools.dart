@@ -18,6 +18,7 @@ import 'package:gavel_server/src/generated/created_auction.dart' as _ig1hii49;
 import 'package:gavel_server/src/generated/future_calls.dart' as _ixqh6y26;
 import 'package:gavel_server/src/generated/future_calls_generated_models/auction_close_calls_close_model.dart'
     as _i9bis1h2;
+import 'package:gavel_server/src/generated/live_update.dart' as _isnlnvta;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_test/serverpod_test.dart' as _ist;
 import 'package:gavel_server/src/generated/protocol.dart';
@@ -156,6 +157,8 @@ class TestEndpoints {
   late final futureCalls = _FutureCalls();
 
   late final _AuctionEndpoint auction;
+
+  late final _LiveEndpoint live;
 }
 
 class _InternalTestEndpoints extends TestEndpoints
@@ -166,6 +169,7 @@ class _InternalTestEndpoints extends TestEndpoints
     _is.EndpointDispatch endpoints,
   ) {
     auction = _AuctionEndpoint(endpoints, serializationManager);
+    live = _LiveEndpoint(endpoints, serializationManager);
   }
 }
 
@@ -241,6 +245,75 @@ class _AuctionEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_i7biazhv.BoardSnapshot>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _LiveEndpoint {
+  _LiveEndpoint(this._endpointDispatch, this._serializationManager);
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Stream<_isnlnvta.LiveUpdate> watch(
+    _ist.TestSessionBuilder sessionBuilder,
+    String code,
+  ) {
+    var _localTestStreamManager =
+        _ist.TestStreamManager<_isnlnvta.LiveUpdate>();
+    _ist.callStreamFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'live',
+            method: 'watch',
+          );
+      var _localCallContext = await _endpointDispatch
+          .getMethodStreamCallContext(
+            createSessionCallback: (_) => _localUniqueSession,
+            endpointPath: 'live',
+            methodName: 'watch',
+            arguments: {'code': code},
+            requestedInputStreams: [],
+            serializationManager: _serializationManager,
+          );
+      await _localTestStreamManager.callStreamMethod(
+        _localCallContext,
+        _localUniqueSession,
+        {},
+      );
+    }, _localTestStreamManager.outputStreamController);
+    return _localTestStreamManager.outputStreamController.stream;
+  }
+
+  _ida.Future<void> ping(
+    _ist.TestSessionBuilder sessionBuilder,
+    String code,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'live',
+            method: 'ping',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'live',
+          methodName: 'ping',
+          parameters: _ist.testObjectToJson({'code': code}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<void>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

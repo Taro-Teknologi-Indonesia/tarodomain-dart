@@ -13,6 +13,7 @@
 import 'dart:async' as _ida;
 import 'package:gavel_client/src/protocol/board_snapshot.dart' as _icq9digg;
 import 'package:gavel_client/src/protocol/created_auction.dart' as _ivm7o2d2;
+import 'package:gavel_client/src/protocol/live_update.dart' as _i9po14mf;
 import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart'
@@ -49,6 +50,28 @@ class EndpointAuction extends _isc.EndpointRef {
       });
 }
 
+/// Live updates of one auction, pushed to every subscribed browser.
+/// {@category Endpoint}
+class EndpointLive extends _isc.EndpointRef {
+  EndpointLive(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'live';
+
+  /// Streams every [LiveUpdate] of the auction with join [code] until the
+  /// client disconnects.
+  _ida.Stream<_i9po14mf.LiveUpdate> watch(String code) =>
+      caller.callStreamingServerEndpoint<
+        _ida.Stream<_i9po14mf.LiveUpdate>,
+        _i9po14mf.LiveUpdate
+      >('live', 'watch', {'code': code}, {});
+
+  /// Posts a `ping` to the auction with join [code], to check that every
+  /// watcher gets it. Development mode only.
+  _ida.Future<void> ping(String code) =>
+      caller.callServerEndpoint<void>('live', 'ping', {'code': code});
+}
+
 class Modules {
   Modules(Client client) {
     tarodomain_serverpod = _ispsicqs.Caller(client);
@@ -80,15 +103,21 @@ class Client extends _isc.ServerpodClientShared {
          httpClientOverride: httpClientOverride,
        ) {
     auction = EndpointAuction(this);
+    live = EndpointLive(this);
     modules = Modules(this);
   }
 
   late final EndpointAuction auction;
 
+  late final EndpointLive live;
+
   late final Modules modules;
 
   @override
-  Map<String, _isc.EndpointRef> get endpointRefLookup => {'auction': auction};
+  Map<String, _isc.EndpointRef> get endpointRefLookup => {
+    'auction': auction,
+    'live': live,
+  };
 
   @override
   Map<String, _isc.ModuleEndpointCaller> get moduleLookup => {

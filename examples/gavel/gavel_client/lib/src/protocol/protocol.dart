@@ -17,9 +17,13 @@ import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart'
 import 'auction_view.dart' as _iwrduo5z;
 import 'board_snapshot.dart' as _i5fz6h4w;
 import 'created_auction.dart' as _ij286fs9;
+import 'live_update.dart' as _irca74ja;
+import 'live_update_kind.dart' as _i6d34ixx;
 export 'auction_view.dart';
 export 'board_snapshot.dart';
 export 'created_auction.dart';
+export 'live_update.dart';
+export 'live_update_kind.dart';
 export 'client.dart';
 
 class Protocol extends _isc.SerializationManager {
@@ -62,6 +66,12 @@ class Protocol extends _isc.SerializationManager {
     if (t == _ij286fs9.CreatedAuction) {
       return _ij286fs9.CreatedAuction.fromJson(data) as T;
     }
+    if (t == _irca74ja.LiveUpdate) {
+      return _irca74ja.LiveUpdate.fromJson(data) as T;
+    }
+    if (t == _i6d34ixx.LiveUpdateKind) {
+      return _i6d34ixx.LiveUpdateKind.fromJson(data) as T;
+    }
     if (t == _isc.getType<_iwrduo5z.AuctionView?>()) {
       return (data != null ? _iwrduo5z.AuctionView.fromJson(data) : null) as T;
     }
@@ -71,6 +81,13 @@ class Protocol extends _isc.SerializationManager {
     }
     if (t == _isc.getType<_ij286fs9.CreatedAuction?>()) {
       return (data != null ? _ij286fs9.CreatedAuction.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_irca74ja.LiveUpdate?>()) {
+      return (data != null ? _irca74ja.LiveUpdate.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i6d34ixx.LiveUpdateKind?>()) {
+      return (data != null ? _i6d34ixx.LiveUpdateKind.fromJson(data) : null)
           as T;
     }
     try {
@@ -84,6 +101,8 @@ class Protocol extends _isc.SerializationManager {
       _iwrduo5z.AuctionView => 'AuctionView',
       _i5fz6h4w.BoardSnapshot => 'BoardSnapshot',
       _ij286fs9.CreatedAuction => 'CreatedAuction',
+      _irca74ja.LiveUpdate => 'LiveUpdate',
+      _i6d34ixx.LiveUpdateKind => 'LiveUpdateKind',
       _ => null,
     };
   }
@@ -104,6 +123,10 @@ class Protocol extends _isc.SerializationManager {
         return 'BoardSnapshot';
       case _ij286fs9.CreatedAuction():
         return 'CreatedAuction';
+      case _irca74ja.LiveUpdate():
+        return 'LiveUpdate';
+      case _i6d34ixx.LiveUpdateKind():
+        return 'LiveUpdateKind';
     }
     className = _ispsicqs.Protocol().getClassNameForObject(data);
     if (className != null) {
@@ -128,6 +151,12 @@ class Protocol extends _isc.SerializationManager {
     }
     if (dataClassName == 'CreatedAuction') {
       return deserialize<_ij286fs9.CreatedAuction>(data['data']);
+    }
+    if (dataClassName == 'LiveUpdate') {
+      return deserialize<_irca74ja.LiveUpdate>(data['data']);
+    }
+    if (dataClassName == 'LiveUpdateKind') {
+      return deserialize<_i6d34ixx.LiveUpdateKind>(data['data']);
     }
     if (dataClassName.startsWith('tarodomain_serverpod.')) {
       data['className'] = dataClassName.substring(21);

@@ -20,9 +20,13 @@ import 'board_snapshot.dart' as _i5fz6h4w;
 import 'created_auction.dart' as _ij286fs9;
 import 'future_calls_generated_models/auction_close_calls_close_model.dart'
     as _ijzrfwlf;
+import 'live_update.dart' as _irca74ja;
+import 'live_update_kind.dart' as _i6d34ixx;
 export 'auction_view.dart';
 export 'board_snapshot.dart';
 export 'created_auction.dart';
+export 'live_update.dart';
+export 'live_update_kind.dart';
 
 class Protocol extends _is.DatabaseSerializationManager {
   Protocol._();
@@ -170,6 +174,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _ijzrfwlf.AuctionCloseCallsCloseModel) {
       return _ijzrfwlf.AuctionCloseCallsCloseModel.fromJson(data) as T;
     }
+    if (t == _irca74ja.LiveUpdate) {
+      return _irca74ja.LiveUpdate.fromJson(data) as T;
+    }
+    if (t == _i6d34ixx.LiveUpdateKind) {
+      return _i6d34ixx.LiveUpdateKind.fromJson(data) as T;
+    }
     if (t == _is.getType<_iwrduo5z.AuctionView?>()) {
       return (data != null ? _iwrduo5z.AuctionView.fromJson(data) : null) as T;
     }
@@ -187,6 +197,13 @@ class Protocol extends _is.DatabaseSerializationManager {
               : null)
           as T;
     }
+    if (t == _is.getType<_irca74ja.LiveUpdate?>()) {
+      return (data != null ? _irca74ja.LiveUpdate.fromJson(data) : null) as T;
+    }
+    if (t == _is.getType<_i6d34ixx.LiveUpdateKind?>()) {
+      return (data != null ? _i6d34ixx.LiveUpdateKind.fromJson(data) : null)
+          as T;
+    }
     try {
       return _i13if8es.Protocol().deserialize<T>(data, t);
     } on _is.DeserializationTypeNotFoundException catch (_) {}
@@ -202,6 +219,8 @@ class Protocol extends _is.DatabaseSerializationManager {
       _i5fz6h4w.BoardSnapshot => 'BoardSnapshot',
       _ij286fs9.CreatedAuction => 'CreatedAuction',
       _ijzrfwlf.AuctionCloseCallsCloseModel => 'AuctionCloseCallsCloseModel',
+      _irca74ja.LiveUpdate => 'LiveUpdate',
+      _i6d34ixx.LiveUpdateKind => 'LiveUpdateKind',
       _ => null,
     };
   }
@@ -224,6 +243,10 @@ class Protocol extends _is.DatabaseSerializationManager {
         return 'CreatedAuction';
       case _ijzrfwlf.AuctionCloseCallsCloseModel():
         return 'AuctionCloseCallsCloseModel';
+      case _irca74ja.LiveUpdate():
+        return 'LiveUpdate';
+      case _i6d34ixx.LiveUpdateKind():
+        return 'LiveUpdateKind';
     }
     className = _i13if8es.Protocol().getClassNameForObject(data);
     if (className != null) {
@@ -255,6 +278,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (dataClassName == 'AuctionCloseCallsCloseModel') {
       return deserialize<_ijzrfwlf.AuctionCloseCallsCloseModel>(data['data']);
+    }
+    if (dataClassName == 'LiveUpdate') {
+      return deserialize<_irca74ja.LiveUpdate>(data['data']);
+    }
+    if (dataClassName == 'LiveUpdateKind') {
+      return deserialize<_i6d34ixx.LiveUpdateKind>(data['data']);
     }
     if (dataClassName.startsWith('tarodomain_serverpod.')) {
       data['className'] = dataClassName.substring(21);
