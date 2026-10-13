@@ -18,6 +18,7 @@ import 'package:gavel_server/src/generated/created_auction.dart' as _ig1hii49;
 import 'package:gavel_server/src/generated/future_calls.dart' as _ixqh6y26;
 import 'package:gavel_server/src/generated/future_calls_generated_models/auction_close_calls_close_model.dart'
     as _i9bis1h2;
+import 'package:gavel_server/src/generated/join_result.dart' as _i9wld784;
 import 'package:gavel_server/src/generated/live_update.dart' as _isnlnvta;
 import 'package:gavel_server/src/generated/lot_card.dart' as _ibsll3cm;
 import 'package:gavel_server/src/generated/new_lot.dart' as _ipyv8n10;
@@ -250,6 +251,78 @@ class _AuctionEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_i7biazhv.BoardSnapshot>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_i9wld784.JoinResult> join(
+    _ist.TestSessionBuilder sessionBuilder,
+    String code,
+    String displayName,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'auction',
+            method: 'join',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'auction',
+          methodName: 'join',
+          parameters: _ist.testObjectToJson({
+            'code': code,
+            'displayName': displayName,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i9wld784.JoinResult>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<bool> checkParticipant(
+    _ist.TestSessionBuilder sessionBuilder,
+    String code,
+    _is.UuidValue participantId,
+    String participantKey,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'auction',
+            method: 'checkParticipant',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'auction',
+          methodName: 'checkParticipant',
+          parameters: _ist.testObjectToJson({
+            'code': code,
+            'participantId': participantId,
+            'participantKey': participantKey,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<bool>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

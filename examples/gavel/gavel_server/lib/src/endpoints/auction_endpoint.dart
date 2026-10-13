@@ -8,10 +8,13 @@ import '../domain/auction.dart';
 import '../domain/auction_commands.dart';
 import '../domain/errors.dart';
 import '../domain/keys.dart';
+import '../domain/participant.dart';
+import '../domain/participant_commands.dart';
 import '../generated/future_calls.dart';
 import '../generated/protocol.dart';
+import '../infra/participant_guard.dart';
 
-/// Creating and reading auctions.
+/// Creating, reading and joining auctions.
 class AuctionEndpoint extends Endpoint {
   TaroDomainServerpod get _taro => TaroDomainServerpod.instance;
 
@@ -72,15 +75,10 @@ class AuctionEndpoint extends Endpoint {
   /// Throws `AUCTION_NOT_FOUND` if no auction has the code.
   Future<BoardSnapshot> board(Session session, String code) =>
       rethrowAsTaroDomainException(() async {
-        final normalized = code.trim().toUpperCase();
-        final auction = await AuctionView.db.findFirstRow(
-          session,
-          where: (t) => t.code.equals(normalized),
-        );
-        if (auction == null) throw AuctionNotFoundError(normalized);
+        final auction = await findAuction(session, code);
         final lots = await LotCard.db.find(
           session,
-          where: (t) => t.code.equals(normalized),
+          where: (t) => t.code.equals(auction.code),
           orderBy: (t) => t.position,
         );
         return BoardSnapshot(
@@ -89,6 +87,61 @@ class AuctionEndpoint extends Endpoint {
           serverNow: DateTime.now().toUtc(),
         );
       });
+
+  /// Joins the auction with join [code] as [displayName].
+  ///
+  /// Works on a closed auction too: the record outlives the event, and the
+  /// client renders it read-only. The returned participant key is sent
+  /// only this once.
+  ///
+  /// Throws `AUCTION_NOT_FOUND` for an unknown code and
+  /// `COMMAND_VALIDATION` on `displayName` for a bad name.
+  Future<JoinResult> join(Session session, String code, String displayName) =>
+      rethrowAsTaroDomainException(() async {
+        final auction = await findAuction(session, code);
+        final participantId = ParticipantId.generate();
+        final participantKey = _secret();
+        await _taro.dispatch(
+          session,
+          JoinAuction(
+            participantId,
+            auctionId: auction.auctionId.uuid,
+            displayName: displayName,
+            keyHash: hashKey(participantKey),
+          ),
+        );
+        return JoinResult(
+          participantId: participantId.value,
+          participantKey: participantKey,
+          displayName: displayName.trim(),
+          auction: auction,
+        );
+      });
+
+  /// Whether [participantId] joined the auction with join [code] and
+  /// [participantKey] is their key: the client's check of the identity it
+  /// kept.
+  Future<bool> checkParticipant(
+    Session session,
+    String code,
+    UuidValue participantId,
+    String participantKey,
+  ) async {
+    try {
+      final auction = await findAuction(session, code);
+      await verifyParticipant(
+        session,
+        auction.auctionId,
+        participantId,
+        participantKey,
+      );
+      return true;
+    } on AuctionNotFoundError {
+      return false;
+    } on NotParticipantError {
+      return false;
+    }
+  }
 
   /// Dispatches [command] with a new random join code, again with another
   /// one if the code is taken, and returns the code that was used.

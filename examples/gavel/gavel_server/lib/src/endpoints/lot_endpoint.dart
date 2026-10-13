@@ -2,10 +2,10 @@ import 'package:serverpod/serverpod.dart';
 import 'package:tarodomain_serverpod_server/tarodomain_serverpod_server.dart';
 
 import '../domain/auction.dart';
-import '../domain/errors.dart';
 import '../domain/lot.dart';
 import '../domain/lot_commands.dart';
 import '../generated/protocol.dart';
+import '../infra/participant_guard.dart';
 
 /// Adding lots and, from UC-06 on, bidding on them.
 class LotEndpoint extends Endpoint {
@@ -22,12 +22,7 @@ class LotEndpoint extends Endpoint {
     String organizerKey,
     NewLot lot,
   ) => rethrowAsTaroDomainException(() async {
-    final normalized = code.trim().toUpperCase();
-    final auction = await AuctionView.db.findFirstRow(
-      session,
-      where: (t) => t.code.equals(normalized),
-    );
-    if (auction == null) throw AuctionNotFoundError(normalized);
+    final auction = await findAuction(session, code);
 
     final lotId = LotId.generate();
     await _taro.dispatch(

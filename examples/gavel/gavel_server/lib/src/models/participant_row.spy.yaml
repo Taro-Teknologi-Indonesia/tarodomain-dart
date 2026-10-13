@@ -1,0 +1,23 @@
+### The current state of a `Participant`, stored by `ParticipantRepository`
+### instead of its events.
+class: ParticipantRow
+serverOnly: true
+table: gavel_participants
+fields:
+  ### The participant ID.
+  id: UuidValue?, defaultPersist=random_v7
+
+  ### The auction joined.
+  auctionId: UuidValue
+
+  ### The name shown to the other bidders.
+  displayName: String
+
+  ### The SHA-256 of the participant key. The key itself is never stored.
+  keyHash: String
+
+  ### The aggregate version, for optimistic concurrency.
+  version: int
+indexes:
+  gavel_participants_auction_idx:
+    fields: auctionId

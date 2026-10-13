@@ -15,7 +15,9 @@ A bidder taps the link in the Facebook app, the page opens in the phone browser,
   - `factory Participant.join(id, auctionId, displayName, keyHash)`: the trimmed name must be 1–24 chars with no control chars, else `CommandValidationError(field: 'displayName')`. It raises `ParticipantJoined`. `keyHash` goes into state, and so into the row; it's left out of the event payload because the event log is public history.
   - `bool hasKey(String key)` compares `sha256(key)` to `keyHash` in constant time, the same helper the organizer key uses (put it in `domain/secret_key.dart`).
   - `Participant.fromRow(ParticipantRow row)` uses `restoreVersion(row.version)`.
+    - **Decided (step 4):** `ParticipantRow` is generated Serverpod code, so the domain has `Participant.restore(id, auctionId:, displayName:, keyHash:, version:)` and the repository maps the row. The hash helpers already lived in `domain/keys.dart` (`hashKey`, `keyMatches`), so there's no `secret_key.dart`.
 - `ParticipantRepository extends ServerpodStateRepository<Participant, ParticipantId, ParticipantRow>` (in `infra/`, because it imports Serverpod).
+  - **Decided (step 4):** `registerGavel(builder, participants: …)` takes the repository factory. The server passes `ParticipantRepository.new`; the domain tests get `InMemoryParticipantRepository`, a pure-Dart state repository that keeps the key hash, so the participant is state-based in both.
 - Command `JoinAuction(participantId, auctionId, displayName, keyHash)`, handled by `ParticipantHandler` (`AggregateCommandHandler`) with consistency strong.
 - The **domain check that the auction exists** happens in the endpoint (read model lookup), and not in the handler. The participant aggregate doesn't need the auction aggregate.
 
@@ -52,6 +54,7 @@ Future<bool> checkParticipant(Session s, String code, UuidValue participantId, S
 
 - `join` generates `participantKey` with `Random.secure()` (32 bytes, base64url), dispatches `JoinAuction` with its hash, and returns the plain key **once**. The server can't recover it later.
 - The shared `_verifyParticipant` helper (see [00-foundation §4](00-foundation.md)) lives in a small mixin used by `AuctionEndpoint` and `LotEndpoint`.
+  - **Decided (step 4):** top-level `findAuction` and `verifyParticipant` in `infra/participant_guard.dart` instead of a mixin, so Serverpod's generator never mistakes a helper for an endpoint method. `verifyParticipant` hashes the key even for an unknown ID. `checkParticipant` returns false for an unknown code too.
 
 - `join` on a **CLOSED** auction still succeeds (ext. 1b), because the record outlives the event. The client simply renders read-only. A join without a name is also fine for closed auctions: the client can skip the prompt and browse.
 - Normalize `code` with `trim().toUpperCase()` everywhere.
@@ -79,7 +82,7 @@ Future<bool> checkParticipant(Session s, String code, UuidValue participantId, S
 - [ ] An unknown code shows the friendly not-found page.
 - [ ] A closed auction is browsable read-only without being forced to join.
 - [ ] A refresh keeps identity; incognito is a different participant.
-- [ ] Knowing someone's `participantId` (it's visible in the ledger) isn't enough to act as them.
+- [x] Knowing someone's `participantId` (it's visible in the ledger) isn't enough to act as them.
 - [ ] Works at 360 px width; the name field isn't covered by the keyboard.
 
 Estimate: 1 h.

@@ -13,6 +13,7 @@
 import 'dart:async' as _ida;
 import 'package:gavel_client/src/protocol/board_snapshot.dart' as _icq9digg;
 import 'package:gavel_client/src/protocol/created_auction.dart' as _ivm7o2d2;
+import 'package:gavel_client/src/protocol/join_result.dart' as _igr184mp;
 import 'package:gavel_client/src/protocol/live_update.dart' as _i9po14mf;
 import 'package:gavel_client/src/protocol/lot_card.dart' as _ik2e60uo;
 import 'package:gavel_client/src/protocol/new_lot.dart' as _iw77avg8;
@@ -22,7 +23,7 @@ import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart'
     as _ispsicqs;
 import 'protocol.dart' as _il2as5qe;
 
-/// Creating and reading auctions.
+/// Creating, reading and joining auctions.
 /// {@category Endpoint}
 class EndpointAuction extends _isc.EndpointRef {
   EndpointAuction(_isc.EndpointCaller caller) : super(caller);
@@ -50,6 +51,33 @@ class EndpointAuction extends _isc.EndpointRef {
       caller.callServerEndpoint<_icq9digg.BoardSnapshot>('auction', 'board', {
         'code': code,
       });
+
+  /// Joins the auction with join [code] as [displayName].
+  ///
+  /// Works on a closed auction too: the record outlives the event, and the
+  /// client renders it read-only. The returned participant key is sent
+  /// only this once.
+  ///
+  /// Throws `AUCTION_NOT_FOUND` for an unknown code and
+  /// `COMMAND_VALIDATION` on `displayName` for a bad name.
+  _ida.Future<_igr184mp.JoinResult> join(String code, String displayName) =>
+      caller.callServerEndpoint<_igr184mp.JoinResult>('auction', 'join', {
+        'code': code,
+        'displayName': displayName,
+      });
+
+  /// Whether [participantId] joined the auction with join [code] and
+  /// [participantKey] is their key: the client's check of the identity it
+  /// kept.
+  _ida.Future<bool> checkParticipant(
+    String code,
+    _isc.UuidValue participantId,
+    String participantKey,
+  ) => caller.callServerEndpoint<bool>('auction', 'checkParticipant', {
+    'code': code,
+    'participantId': participantId,
+    'participantKey': participantKey,
+  });
 }
 
 /// Live updates of one auction, pushed to every subscribed browser.

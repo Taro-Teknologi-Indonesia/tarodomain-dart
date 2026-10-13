@@ -1,0 +1,15 @@
+### What `AuctionEndpoint.join` returns to a new bidder.
+class: JoinResult
+fields:
+  ### The new participant. Public: it appears on lot cards and the ledger.
+  participantId: UuidValue
+
+  ### The participant's secret. The server keeps only its hash, so this is
+  ### the one time it is sent.
+  participantKey: String
+
+  ### The name shown to the other bidders, trimmed.
+  displayName: String
+
+  ### The auction joined.
+  auction: AuctionView

@@ -69,6 +69,55 @@ class Endpoints extends _is.EndpointDispatch {
                 params['code'],
               ),
         ),
+        'join': _is.MethodConnector(
+          name: 'join',
+          params: {
+            'code': _is.ParameterDescription(
+              name: 'code',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'displayName': _is.ParameterDescription(
+              name: 'displayName',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['auction'] as _iyn8i9y2.AuctionEndpoint).join(
+                session,
+                params['code'],
+                params['displayName'],
+              ),
+        ),
+        'checkParticipant': _is.MethodConnector(
+          name: 'checkParticipant',
+          params: {
+            'code': _is.ParameterDescription(
+              name: 'code',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'participantId': _is.ParameterDescription(
+              name: 'participantId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'participantKey': _is.ParameterDescription(
+              name: 'participantKey',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['auction'] as _iyn8i9y2.AuctionEndpoint)
+                  .checkParticipant(
+                    session,
+                    params['code'],
+                    params['participantId'],
+                    params['participantKey'],
+                  ),
+        ),
       },
     );
     connectors['live'] = _is.EndpointConnector(

@@ -1,6 +1,8 @@
 auction:
   - create:
   - board:
+  - join:
+  - checkParticipant:
 live:
   - watch:
   - ping:

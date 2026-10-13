@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 import 'pages/board_page.dart';
@@ -14,6 +15,8 @@ final router = GoRouter(
     GoRoute(
       path: '/a/:code',
       builder: (_, state) => BoardPage(
+        // A retyped code is a new board, not an update of this one.
+        key: ValueKey(_code(state)),
         code: _code(state),
         bigScreen: state.uri.queryParameters['screen'] == 'board',
       ),

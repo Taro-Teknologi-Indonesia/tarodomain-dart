@@ -4,12 +4,21 @@ import 'auction.dart';
 import 'auction_commands.dart';
 import 'lot.dart';
 import 'lot_commands.dart';
+import 'participant.dart';
+import 'participant_commands.dart';
 
 /// Registers Gavel's aggregates and commands on [builder], with no provider
 /// or read model, so the domain tests run it on `tarodomain_local`.
-TaroDomainBuilder registerGavel(TaroDomainBuilder builder) {
+///
+/// [participants] stores the state-based [Participant]; it defaults to an
+/// [InMemoryParticipantRepository] shared by the runtime's repositories.
+TaroDomainBuilder registerGavel(
+  TaroDomainBuilder builder, {
+  StateRepositoryFactory<Participant, ParticipantId>? participants,
+}) {
   AuctionHandler<C> auction<C extends Command>(CommandContext c) =>
       AuctionHandler<C>(c.repository());
+  final rows = <String, (Map<String, Object?>, int)>{};
 
   return builder
       .aggregate<Auction, AuctionId>(
@@ -25,9 +34,25 @@ TaroDomainBuilder registerGavel(TaroDomainBuilder builder) {
             .factory(Lot.new)
             .event<LotCreated>('LotCreated', LotCreated.fromData),
       )
+      .aggregate<Participant, ParticipantId>(
+        'Participant',
+        (a) => a
+            .stateRepository(
+              participants ??
+                  (c) => InMemoryParticipantRepository(c.eventBus, rows),
+            )
+            .event<ParticipantJoined>(
+              'ParticipantJoined',
+              ParticipantJoined.fromData,
+            ),
+      )
       .command<CreateAuction>('CreateAuction', auction)
       .command<AddLot>(
         'AddLot',
         (c) => AddLotHandler(c.repository(), c.repository()),
+      )
+      .command<JoinAuction>(
+        'JoinAuction',
+        (c) => ParticipantHandler<JoinAuction>(c.repository()),
       );
 }

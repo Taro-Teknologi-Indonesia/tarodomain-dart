@@ -17,6 +17,7 @@ import 'package:tarodomain_serverpod_client/tarodomain_serverpod_client.dart'
 import 'auction_view.dart' as _iwrduo5z;
 import 'board_snapshot.dart' as _i5fz6h4w;
 import 'created_auction.dart' as _ij286fs9;
+import 'join_result.dart' as _irdkvnmr;
 import 'ledger_entry.dart' as _ivha9tke;
 import 'live_update.dart' as _irca74ja;
 import 'live_update_kind.dart' as _i6d34ixx;
@@ -25,6 +26,7 @@ import 'new_lot.dart' as _i7vyupo4;
 export 'auction_view.dart';
 export 'board_snapshot.dart';
 export 'created_auction.dart';
+export 'join_result.dart';
 export 'ledger_entry.dart';
 export 'live_update.dart';
 export 'live_update_kind.dart';
@@ -72,6 +74,9 @@ class Protocol extends _isc.SerializationManager {
     if (t == _ij286fs9.CreatedAuction) {
       return _ij286fs9.CreatedAuction.fromJson(data) as T;
     }
+    if (t == _irdkvnmr.JoinResult) {
+      return _irdkvnmr.JoinResult.fromJson(data) as T;
+    }
     if (t == _ivha9tke.LedgerEntry) {
       return _ivha9tke.LedgerEntry.fromJson(data) as T;
     }
@@ -97,6 +102,9 @@ class Protocol extends _isc.SerializationManager {
     if (t == _isc.getType<_ij286fs9.CreatedAuction?>()) {
       return (data != null ? _ij286fs9.CreatedAuction.fromJson(data) : null)
           as T;
+    }
+    if (t == _isc.getType<_irdkvnmr.JoinResult?>()) {
+      return (data != null ? _irdkvnmr.JoinResult.fromJson(data) : null) as T;
     }
     if (t == _isc.getType<_ivha9tke.LedgerEntry?>()) {
       return (data != null ? _ivha9tke.LedgerEntry.fromJson(data) : null) as T;
@@ -134,6 +142,7 @@ class Protocol extends _isc.SerializationManager {
       _iwrduo5z.AuctionView => 'AuctionView',
       _i5fz6h4w.BoardSnapshot => 'BoardSnapshot',
       _ij286fs9.CreatedAuction => 'CreatedAuction',
+      _irdkvnmr.JoinResult => 'JoinResult',
       _ivha9tke.LedgerEntry => 'LedgerEntry',
       _irca74ja.LiveUpdate => 'LiveUpdate',
       _i6d34ixx.LiveUpdateKind => 'LiveUpdateKind',
@@ -159,6 +168,8 @@ class Protocol extends _isc.SerializationManager {
         return 'BoardSnapshot';
       case _ij286fs9.CreatedAuction():
         return 'CreatedAuction';
+      case _irdkvnmr.JoinResult():
+        return 'JoinResult';
       case _ivha9tke.LedgerEntry():
         return 'LedgerEntry';
       case _irca74ja.LiveUpdate():
@@ -193,6 +204,9 @@ class Protocol extends _isc.SerializationManager {
     }
     if (dataClassName == 'CreatedAuction') {
       return deserialize<_ij286fs9.CreatedAuction>(data['data']);
+    }
+    if (dataClassName == 'JoinResult') {
+      return deserialize<_irdkvnmr.JoinResult>(data['data']);
     }
     if (dataClassName == 'LedgerEntry') {
       return deserialize<_ivha9tke.LedgerEntry>(data['data']);
