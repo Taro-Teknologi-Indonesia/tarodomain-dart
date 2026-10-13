@@ -25,14 +25,13 @@ abstract final class Brand {
   static const outbidTint = Color(0xFFFFEDD5);
 
   static const sans = 'Plus Jakarta Sans';
-  static const serif = 'Playfair Display';
 
-  /// The serif of headlines and the wordmark.
+  /// The heavy, tight sans of headlines and the wordmark.
   static const display = TextStyle(
-    fontFamily: serif,
-    fontWeight: FontWeight.w700,
+    fontFamily: sans,
+    fontWeight: FontWeight.w800,
     height: 1.12,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   );
 
   /// Tabular figures, so a ticking price or clock doesn't jiggle.

@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../theme.dart';
 
-/// The gavel in a gold tile beside the serif wordmark.
+/// The gavel in a gold tile beside the wordmark.
 class GavelLogo extends StatelessWidget {
   const GavelLogo({this.size = 32, this.onDark = true, super.key});
 
