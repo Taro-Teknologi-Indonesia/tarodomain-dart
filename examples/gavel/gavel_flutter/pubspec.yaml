@@ -1,0 +1,23 @@
+name: gavel_flutter
+description: Gavel's Flutter web app, served by gavel_server.
+publish_to: none
+version: 0.1.0+1
+resolution: workspace
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  gavel_client: any
+  go_router: ^17.0.0
+  intl: any
+  serverpod_flutter: 4.0.4
+  shared_preferences: ^2.5.0
+  tarodomain_serverpod_client: ^0.0.1
+
+flutter:
+  uses-material-design: true

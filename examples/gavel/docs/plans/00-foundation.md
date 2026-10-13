@@ -25,6 +25,7 @@ examples/gavel/
 
 - Add `gavel_server` and `gavel_client` to the root `pubspec.yaml` `workspace:` list, like `bank_account_serverpod`.
 - `gavel_flutter`: try adding it to the workspace too (needs `flutter pub get` at the root to resolve). If that fights with the Dart-only melos scripts, keep it outside the workspace with `path:` dependencies on `gavel_client`. Decide within the first 30 min and don't revisit.
+  - **Decided (step 0):** it's in the workspace. `flutter_test` is left out because it pins a `test_api` that conflicts with the workspace's `test 1.33.0`; the plan has no widget tests anyway (§7).
 - The domain stays in `gavel_server/lib/src/domain` (no separate `gavel_domain` package) to save time. It must not import `serverpod` so that unit tests run on `tarodomain_local`, which is fast.
 
 ## 3. Server stack
@@ -123,7 +124,7 @@ All live in `domain/errors.dart` as `final class … extends DomainError` with a
   - `/a/:code/organizer` dashboard
   - `/a/:code?screen=board` big screen
 - Layout: single column under 600 px and a grid above it. Chips sit in a bottom bar on phones so the thumb can reach them.
-- **Serving:** `flutter build web --release` → copy `build/web` to `gavel_server/web/app`. Serve it from Serverpod's web server with a static route plus an **SPA fallback to `index.html`** for `/a/*`. Check the exact route class (`StaticRoute` / `FlutterRoute` / `RouteStaticDirectory`) in Serverpod 4.0.4 during the foundation step. If deep-link fallback fights back, switch to the hash URL strategy (`/#/a/CODE`), because Facebook's link wrapper keeps fragments.
+- **Serving:** `flutter build web --release` → copy `build/web` to `gavel_server/web/app`. Serve it from Serverpod's web server with a static route plus an **SPA fallback to `index.html`** for `/a/*`. **Verified (step 0):** Serverpod 4.0.4's `FlutterRoute(Directory('web/app'), enableWasmHeaders: false)` serves the files and falls back to `index.html`, so `/a/CODE` deep links work. If deep-link fallback fights back, switch to the hash URL strategy (`/#/a/CODE`), because Facebook's link wrapper keeps fragments.
 - Client URL: `Client(Uri.base.origin + '/api/')` or whatever port mapping the hosting uses. Keep it in one `config.dart`.
 
 ## 7. Testing strategy

@@ -13,6 +13,9 @@ workspace:
   - examples/bank_account
   - examples/bank_account_serverpod/bank_account_serverpod_server
   - examples/bank_account_serverpod/bank_account_serverpod_client
+  - examples/gavel/gavel_server
+  - examples/gavel/gavel_client
+  - examples/gavel/gavel_flutter
 
 dev_dependencies:
   lints: ^6.1.0
