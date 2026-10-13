@@ -33,7 +33,11 @@ melos:
       run: dart format --output=none --set-exit-if-changed .
       description: Fail if any file is not formatted.
     test:
-      exec: dart test
+      # One package at a time: the Serverpod packages each start an embedded
+      # PostgreSQL on port 9090, and workspace packages share .dart_tool.
+      exec:
+        command: dart test
+        concurrency: 1
       description: Run tests in every package that has a test folder.
       packageFilters:
         dirExists: test

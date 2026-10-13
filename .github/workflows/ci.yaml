@@ -10,12 +10,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
+      # The workspace includes gavel_flutter, so pub needs the Flutter SDK.
+      # Flutter 3.47.7 ships Dart 3.13.5.
+      - uses: subosito/flutter-action@v2
         with:
-          sdk: 3.13.5
-      - run: dart pub get
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - run: flutter pub get
       - run: dart run melos run format:check
       - run: dart run melos run analyze
       # Serverpod tests start an embedded PostgreSQL (config/test.yaml
       # `dataPath`), so no database service is needed.
       - run: dart run melos run test
+
+  deploy-gavel:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-gavel
+      cancel-in-progress: false
+    env:
+      SERVERPOD_CLOUD_TOKEN: ${{ secrets.SERVERPOD_CLOUD_TOKEN }}
+    steps:
+      - name: Skip without a Serverpod Cloud token
+        if: env.SERVERPOD_CLOUD_TOKEN == ''
+        run: echo "::notice::SERVERPOD_CLOUD_TOKEN is not set; skipping the Gavel deploy."
+      - uses: actions/checkout@v4
+        if: env.SERVERPOD_CLOUD_TOKEN != ''
+      - uses: subosito/flutter-action@v2
+        if: env.SERVERPOD_CLOUD_TOKEN != ''
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - if: env.SERVERPOD_CLOUD_TOKEN != ''
+        run: |
+          dart pub global activate serverpod_cli 4.0.4
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+      - if: env.SERVERPOD_CLOUD_TOKEN != ''
+        run: flutter pub get
+      # The scloud.yaml pre-deploy hooks run `serverpod generate` and build
+      # the Flutter web app into gavel_server/web/app.
+      - name: Deploy Gavel to Serverpod Cloud
+        if: env.SERVERPOD_CLOUD_TOKEN != ''
+        working-directory: examples/gavel/gavel_server
+        run: >-
+          serverpod cloud deploy
+          --token "$SERVERPOD_CLOUD_TOKEN"
+          --non-interactive --yes --no-auto-cli-upgrade
