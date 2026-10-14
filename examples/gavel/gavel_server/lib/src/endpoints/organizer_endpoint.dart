@@ -2,6 +2,7 @@ import 'package:serverpod/serverpod.dart';
 
 import '../generated/protocol.dart';
 import '../infra/auction_creation.dart';
+import '../infra/my_auctions.dart';
 
 /// What only a signed-in organizer can do (X6).
 ///
@@ -27,4 +28,10 @@ class OrganizerEndpoint extends Endpoint {
     closeAt: closeAt,
     organizerUserId: session.authenticated!.userIdentifier,
   );
+
+  /// The signed-in organizer's auctions with their sales so far: running
+  /// ones (OPEN or CLOSING) first, soonest close first, then closed ones,
+  /// most recent close first.
+  Future<MyAuctions> myAuctions(Session session) =>
+      listMyAuctions(session, session.authenticated!.userIdentifier);
 }

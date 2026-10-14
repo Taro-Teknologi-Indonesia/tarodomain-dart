@@ -31,6 +31,8 @@ import 'live_update_kind.dart' as _i6d34ixx;
 import 'lot_as_of.dart' as _i7b5dmd2;
 import 'lot_card.dart' as _i7jzpqum;
 import 'lot_detail.dart' as _ivoeyyyp;
+import 'my_auction.dart' as _itazwe3y;
+import 'my_auctions.dart' as _i95tnm7b;
 import 'new_lot.dart' as _i7vyupo4;
 import 'participant_row.dart' as _ioa4m2zs;
 export 'auction_view.dart';
@@ -43,6 +45,8 @@ export 'live_update_kind.dart';
 export 'lot_as_of.dart';
 export 'lot_card.dart';
 export 'lot_detail.dart';
+export 'my_auction.dart';
+export 'my_auctions.dart';
 export 'new_lot.dart';
 export 'participant_row.dart';
 
@@ -110,6 +114,12 @@ class Protocol extends _is.DatabaseSerializationManager {
           dartType: 'bool',
           columnDefault: 'false',
         ),
+        _isp.ColumnDefinition(
+          name: 'organizerUserId',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
       ],
       foreignKeys: [],
       indexes: [
@@ -146,6 +156,23 @@ class Protocol extends _is.DatabaseSerializationManager {
             _isp.IndexElementDefinition(
               type: _isp.IndexElementDefinitionType.column,
               definition: 'status',
+            ),
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'closeAt',
+            ),
+          ],
+          type: 'btree',
+          isUnique: false,
+          isPrimary: false,
+        ),
+        _isp.IndexDefinition(
+          indexName: 'gavel_auctions_organizer_close_idx',
+          tableSpace: null,
+          elements: [
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'organizerUserId',
             ),
             _isp.IndexElementDefinition(
               type: _isp.IndexElementDefinitionType.column,
@@ -569,6 +596,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _ivoeyyyp.LotDetail) {
       return _ivoeyyyp.LotDetail.fromJson(data) as T;
     }
+    if (t == _itazwe3y.MyAuction) {
+      return _itazwe3y.MyAuction.fromJson(data) as T;
+    }
+    if (t == _i95tnm7b.MyAuctions) {
+      return _i95tnm7b.MyAuctions.fromJson(data) as T;
+    }
     if (t == _i7vyupo4.NewLot) {
       return _i7vyupo4.NewLot.fromJson(data) as T;
     }
@@ -614,6 +647,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _is.getType<_ivoeyyyp.LotDetail?>()) {
       return (data != null ? _ivoeyyyp.LotDetail.fromJson(data) : null) as T;
     }
+    if (t == _is.getType<_itazwe3y.MyAuction?>()) {
+      return (data != null ? _itazwe3y.MyAuction.fromJson(data) : null) as T;
+    }
+    if (t == _is.getType<_i95tnm7b.MyAuctions?>()) {
+      return (data != null ? _i95tnm7b.MyAuctions.fromJson(data) : null) as T;
+    }
     if (t == _is.getType<_i7vyupo4.NewLot?>()) {
       return (data != null ? _i7vyupo4.NewLot.fromJson(data) : null) as T;
     }
@@ -633,6 +672,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == List<_ivha9tke.LedgerEntry>) {
       return (data as List)
               .map((e) => deserialize<_ivha9tke.LedgerEntry>(e))
+              .toList()
+          as T;
+    }
+    if (t == List<_itazwe3y.MyAuction>) {
+      return (data as List)
+              .map((e) => deserialize<_itazwe3y.MyAuction>(e))
               .toList()
           as T;
     }
@@ -670,6 +715,8 @@ class Protocol extends _is.DatabaseSerializationManager {
       _i7b5dmd2.LotAsOf => 'LotAsOf',
       _i7jzpqum.LotCard => 'LotCard',
       _ivoeyyyp.LotDetail => 'LotDetail',
+      _itazwe3y.MyAuction => 'MyAuction',
+      _i95tnm7b.MyAuctions => 'MyAuctions',
       _i7vyupo4.NewLot => 'NewLot',
       _ioa4m2zs.ParticipantRow => 'ParticipantRow',
       _ => null,
@@ -708,6 +755,10 @@ class Protocol extends _is.DatabaseSerializationManager {
         return 'LotCard';
       case _ivoeyyyp.LotDetail():
         return 'LotDetail';
+      case _itazwe3y.MyAuction():
+        return 'MyAuction';
+      case _i95tnm7b.MyAuctions():
+        return 'MyAuctions';
       case _i7vyupo4.NewLot():
         return 'NewLot';
       case _ioa4m2zs.ParticipantRow():
@@ -776,6 +827,12 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (dataClassName == 'LotDetail') {
       return deserialize<_ivoeyyyp.LotDetail>(data['data']);
+    }
+    if (dataClassName == 'MyAuction') {
+      return deserialize<_itazwe3y.MyAuction>(data['data']);
+    }
+    if (dataClassName == 'MyAuctions') {
+      return deserialize<_i95tnm7b.MyAuctions>(data['data']);
     }
     if (dataClassName == 'NewLot') {
       return deserialize<_i7vyupo4.NewLot>(data['data']);

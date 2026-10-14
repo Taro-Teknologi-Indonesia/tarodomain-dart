@@ -23,6 +23,7 @@ import 'package:gavel_server/src/generated/live_update.dart' as _isnlnvta;
 import 'package:gavel_server/src/generated/lot_as_of.dart' as _i3ox6xq2;
 import 'package:gavel_server/src/generated/lot_card.dart' as _ibsll3cm;
 import 'package:gavel_server/src/generated/lot_detail.dart' as _i9io6m2h;
+import 'package:gavel_server/src/generated/my_auctions.dart' as _ix9ipqqk;
 import 'package:gavel_server/src/generated/new_lot.dart' as _ipyv8n10;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
@@ -1102,6 +1103,36 @@ class _OrganizerEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_ig1hii49.CreatedAuction>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ix9ipqqk.MyAuctions> myAuctions(
+    _ist.TestSessionBuilder sessionBuilder,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'organizer',
+            method: 'myAuctions',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'organizer',
+          methodName: 'myAuctions',
+          parameters: _ist.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ix9ipqqk.MyAuctions>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

@@ -1,0 +1,14 @@
+### One of the signed-in organizer's auctions, as My auctions lists it.
+class: MyAuction
+fields:
+  ### The auction.
+  auction: AuctionView
+
+  ### How many of its lots are SOLD.
+  soldCount: int
+
+  ### The sum of the SOLD lots' final prices, in rupiah.
+  soldTotal: int
+
+  ### How many SOLD lots were marked unpaid (UC-14).
+  unpaidCount: int

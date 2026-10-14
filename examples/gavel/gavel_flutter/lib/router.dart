@@ -10,6 +10,7 @@ import 'pages/create_auction_page.dart';
 import 'pages/demo_page.dart';
 import 'pages/home_page.dart';
 import 'pages/lot_page.dart';
+import 'pages/my_auctions_page.dart';
 import 'pages/organizer_page.dart';
 import 'pages/sign_in_page.dart';
 
@@ -19,12 +20,19 @@ final router = GoRouter(
   refreshListenable: client.auth.authInfoListenable,
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomePage()),
-    // Only creating an auction needs an account; bidders never sign in.
+    // Only the organizer's pages need an account; bidders never sign in.
     GoRoute(
       path: '/new',
       redirect: (_, state) =>
           requireSignIn(client.auth.isAuthenticated, state.uri),
       builder: (_, _) => const CreateAuctionPage(),
+    ),
+    // The signed-in organizer's auctions, from any browser (UC-15).
+    GoRoute(
+      path: '/mine',
+      redirect: (_, state) =>
+          requireSignIn(client.auth.isAuthenticated, state.uri),
+      builder: (_, _) => const MyAuctionsPage(),
     ),
     GoRoute(
       path: '/sign-in',

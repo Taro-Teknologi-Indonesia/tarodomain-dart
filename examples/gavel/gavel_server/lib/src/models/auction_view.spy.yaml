@@ -23,6 +23,10 @@ fields:
   ### Whether this is the rolling public demo (X2), which the server opens
   ### itself.
   isDemo: bool, default=false
+
+  ### The signed-in organizer who created the auction (X6), or null for
+  ### the demo and auctions created before X6. Never sent to clients.
+  organizerUserId: String?, scope=serverOnly
 indexes:
   gavel_auctions_code_idx:
     fields: code
@@ -32,3 +36,5 @@ indexes:
     unique: true
   gavel_auctions_status_close_idx:
     fields: status, closeAt
+  gavel_auctions_organizer_close_idx:
+    fields: organizerUserId, closeAt

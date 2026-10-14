@@ -253,7 +253,7 @@ If step 1 or 3 fails and can't be fixed quickly, drop X6 and keep the organizer 
 
 ## Later (not this plan)
 
-- **My auctions:** planned in [uc-15-my-auctions.md](uc-15-my-auctions.md): a server-only `organizerUserId` column on `AuctionView`, an `organizer.myAuctions()` call and a `/mine` page linked from the home page.
+- **My auctions:** done in [uc-15-my-auctions.md](uc-15-my-auctions.md): a server-only `organizerUserId` column on `AuctionView`, an `organizer.myAuctions()` call and a `/mine` page linked from the home page.
 - **Organizer rights by account:** AddLot, MarkUnpaid and the winner codes accept the signed-in creator as well as the key. The dashboard then works in any browser the organizer signs into, which ends the "Read-only — open from the browser that created this auction" case.
 - **Google sign-in** as a second provider, for one-tap sign-in.
 - **Cookie-based web auth** (`httpOnly` tokens) once the app and the API share a cookie domain.

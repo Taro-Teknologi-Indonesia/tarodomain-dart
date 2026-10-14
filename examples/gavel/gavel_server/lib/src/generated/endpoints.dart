@@ -627,6 +627,13 @@ class Endpoints extends _is.EndpointDispatch {
                 params['closeAt'],
               ),
         ),
+        'myAuctions': _is.MethodConnector(
+          name: 'myAuctions',
+          params: {},
+          call: (_is.Session session, Map<String, dynamic> params) async =>
+              (endpoints['organizer'] as _iqabi5q3.OrganizerEndpoint)
+                  .myAuctions(session),
+        ),
       },
     );
     modules['serverpod_auth_idp'] = _iais.Endpoints()

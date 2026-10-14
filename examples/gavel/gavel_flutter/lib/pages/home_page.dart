@@ -224,13 +224,27 @@ class _Hero extends StatelessWidget {
                       // out of (X6). From here no redirect follows.
                       ValueListenableBuilder(
                         valueListenable: session,
-                        builder: (_, signedIn, _) => signedIn != null
-                            ? TextButton(
-                                onPressed: client.auth.signOutDevice,
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Sign out'),
+                        builder: (context, signedIn, _) => signedIn != null
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Their auctions, from any browser
+                                  // (UC-15).
+                                  TextButton(
+                                    onPressed: () => context.go('/mine'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('My auctions'),
+                                  ),
+                                  TextButton(
+                                    onPressed: client.auth.signOutDevice,
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Sign out'),
+                                  ),
+                                ],
                               )
                             : const SizedBox.shrink(),
                       ),

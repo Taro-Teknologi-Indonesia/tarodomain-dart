@@ -18,6 +18,7 @@ import 'package:gavel_client/src/protocol/live_update.dart' as _i9po14mf;
 import 'package:gavel_client/src/protocol/lot_as_of.dart' as _inzqluk9;
 import 'package:gavel_client/src/protocol/lot_card.dart' as _ik2e60uo;
 import 'package:gavel_client/src/protocol/lot_detail.dart' as _izswfryi;
+import 'package:gavel_client/src/protocol/my_auctions.dart' as _i5vumg4u;
 import 'package:gavel_client/src/protocol/new_lot.dart' as _iw77avg8;
 import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
@@ -511,6 +512,12 @@ class EndpointOrganizer extends _isc.EndpointRef {
     'create',
     {'title': title, 'closeAt': closeAt},
   );
+
+  /// The signed-in organizer's auctions with their sales so far: running
+  /// ones (OPEN or CLOSING) first, soonest close first, then closed ones,
+  /// most recent close first.
+  _ida.Future<_i5vumg4u.MyAuctions> myAuctions() => caller
+      .callServerEndpoint<_i5vumg4u.MyAuctions>('organizer', 'myAuctions', {});
 }
 
 class Modules {

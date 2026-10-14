@@ -24,6 +24,7 @@ abstract class AuctionView
     required this.status,
     required this.lotCount,
     bool? isDemo,
+    this.organizerUserId,
   }) : isDemo = isDemo ?? false;
 
   factory AuctionView({
@@ -35,6 +36,7 @@ abstract class AuctionView
     required String status,
     required int lotCount,
     bool? isDemo,
+    String? organizerUserId,
   }) = _AuctionViewImpl;
 
   factory AuctionView.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -51,6 +53,7 @@ abstract class AuctionView
       isDemo: jsonSerialization['isDemo'] == null
           ? null
           : _is.BoolJsonExtension.fromJson(jsonSerialization['isDemo']),
+      organizerUserId: jsonSerialization['organizerUserId'] as String?,
     );
   }
 
@@ -83,6 +86,10 @@ abstract class AuctionView
   /// itself.
   bool isDemo;
 
+  /// The signed-in organizer who created the auction (X6), or null for
+  /// the demo and auctions created before X6. Never sent to clients.
+  String? organizerUserId;
+
   @override
   _is.Table<int?> get table => t;
 
@@ -98,6 +105,7 @@ abstract class AuctionView
     String? status,
     int? lotCount,
     bool? isDemo,
+    String? organizerUserId,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -111,6 +119,7 @@ abstract class AuctionView
       'status': status,
       'lotCount': lotCount,
       'isDemo': isDemo,
+      if (organizerUserId != null) 'organizerUserId': organizerUserId,
     };
   }
 
@@ -169,6 +178,7 @@ class _AuctionViewImpl extends AuctionView {
     required String status,
     required int lotCount,
     bool? isDemo,
+    String? organizerUserId,
   }) : super._(
          id: id,
          auctionId: auctionId,
@@ -178,6 +188,7 @@ class _AuctionViewImpl extends AuctionView {
          status: status,
          lotCount: lotCount,
          isDemo: isDemo,
+         organizerUserId: organizerUserId,
        );
 
   /// Returns a shallow copy of this [AuctionView]
@@ -193,6 +204,7 @@ class _AuctionViewImpl extends AuctionView {
     String? status,
     int? lotCount,
     bool? isDemo,
+    Object? organizerUserId = _Undefined,
   }) {
     return AuctionView(
       id: id is int? ? id : this.id,
@@ -203,6 +215,9 @@ class _AuctionViewImpl extends AuctionView {
       status: status ?? this.status,
       lotCount: lotCount ?? this.lotCount,
       isDemo: isDemo ?? this.isDemo,
+      organizerUserId: organizerUserId is String?
+          ? organizerUserId
+          : this.organizerUserId,
     );
   }
 }
@@ -231,6 +246,9 @@ class AuctionViewUpdateTable extends _is.UpdateTable<AuctionViewTable> {
 
   _is.ColumnValue<bool, bool> isDemo(bool value) =>
       _is.ColumnValue(table.isDemo, value);
+
+  _is.ColumnValue<String, String> organizerUserId(String? value) =>
+      _is.ColumnValue(table.organizerUserId, value);
 }
 
 class AuctionViewTable extends _is.Table<int?> {
@@ -243,6 +261,7 @@ class AuctionViewTable extends _is.Table<int?> {
     status = _is.ColumnString('status', this);
     lotCount = _is.ColumnInt('lotCount', this);
     isDemo = _is.ColumnBool('isDemo', this, hasDefault: true);
+    organizerUserId = _is.ColumnString('organizerUserId', this);
   }
 
   late final AuctionViewUpdateTable updateTable;
@@ -269,6 +288,10 @@ class AuctionViewTable extends _is.Table<int?> {
   /// itself.
   late final _is.ColumnBool isDemo;
 
+  /// The signed-in organizer who created the auction (X6), or null for
+  /// the demo and auctions created before X6. Never sent to clients.
+  late final _is.ColumnString organizerUserId;
+
   @override
   List<_is.Column> get columns => [
     id,
@@ -279,6 +302,7 @@ class AuctionViewTable extends _is.Table<int?> {
     status,
     lotCount,
     isDemo,
+    organizerUserId,
   ];
 }
 

@@ -88,11 +88,11 @@ Future<MyAuctions> myAuctions(Session session) =>
   ```sql
   -- UC-15: fill the creator from the auction's own AuctionCreated event.
   UPDATE "gavel_auctions" a
-  SET "organizerUserId" = e."payload"::jsonb ->> 'organizerUserId'
+  SET "organizerUserId" = e."payload"::jsonb -> 'data' ->> 'organizerUserId'
   FROM "tarodomain_events" e
   WHERE e."eventType" = 'AuctionCreated'
-    AND (e."payload"::jsonb ->> 'auctionId')::uuid = a."auctionId"
-    AND e."payload"::jsonb ->> 'organizerUserId' IS NOT NULL;
+    AND (e."payload"::jsonb -> 'data' ->> 'auctionId')::uuid = a."auctionId"
+    AND e."payload"::jsonb -> 'data' ->> 'organizerUserId' IS NOT NULL;
   ```
 
   `tool/deploy.sh` applies it like the earlier migrations. It's idempotent, so a rerun is harmless.
@@ -165,19 +165,26 @@ Manual, before deploying:
 
 ## Acceptance
 
-- [ ] Signed in, **My auctions** on the home page lists the organizer's own auctions under Running and History, and nobody else's.
-- [ ] History rows show sold count, total and unpaid count.
-- [ ] The same list appears in any browser the organizer signs into; rows without the key say "View only on this device".
-- [ ] Signed out, `/mine` goes to sign-in and comes back to the list.
-- [ ] `organizer.myAuctions` without a token gets 401.
-- [ ] The board and the live push never carry `organizerUserId`.
-- [ ] Auctions created after X6 but before this migration show up (backfill).
+- [x] Signed in, **My auctions** on the home page lists the organizer's own auctions under Running and History, and nobody else's.
+- [x] History rows show sold count, total and unpaid count.
+- [x] The same list appears in any browser the organizer signs into; rows without the key say "View only on this device".
+- [x] Signed out, `/mine` goes to sign-in and comes back to the list.
+- [x] `organizer.myAuctions` without a token gets 401.
+- [x] The board and the live push never carry `organizerUserId`.
+- [x] Auctions created after X6 but before this migration show up (backfill).
 
 ## Verify first (about 15 min, before writing code)
 
 1. `scope=serverOnly` works on a field of a **table** class in Serverpod 4.0.4: the column is generated and the client's `AuctionView` has no such field. If it doesn't, move the creator into its own server-only table (`gavel_auction_creators`: `auctionId`, `organizerUserId`) written by the same projection, and join in `listMyAuctions`.
 2. `tarodomain_events.payload` for an `AuctionCreated` is exactly `toData()` as JSON (no envelope), and `eventType` is `'AuctionCreated'`. Run the backfill's `SELECT` part on a local DB with one signed-in auction. Adjust the JSON path if it's wrapped.
 3. `inSet` on a `String` column exists in the 4.0.4 ORM (it does for `UuidValue` and `int`).
+
+## What the build found
+
+- `scope=serverOnly` works on a table field in 4.0.4: the column is generated, the client's `AuctionView` has no such field, and the server's `toJsonForProtocol()` leaves it out. The privacy test checks `toJsonForProtocol()`, which is what goes on the wire; the server's `toJson()` still has it.
+- The event payload is the whole serialized event (`eventType`, `eventVersion`, the envelope, and `data`), so the backfill reads `payload -> 'data'`. The integration test runs the `UPDATE` straight from `migration.sql`.
+- `inSet` is on every column type, `String` included.
+- `LiveDot` shows the live connection, which this list doesn't have. A running row shows the countdown instead, which turns into "Closing…" past the close.
 
 ## Later (not this plan)
 

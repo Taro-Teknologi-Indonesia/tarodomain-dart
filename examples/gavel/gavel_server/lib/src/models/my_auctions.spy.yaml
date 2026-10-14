@@ -1,0 +1,8 @@
+### The signed-in organizer's auctions, with the server's clock.
+class: MyAuctions
+fields:
+  ### Running ones first, then closed ones (see `OrganizerEndpoint.myAuctions`).
+  auctions: List<MyAuction>
+
+  ### The server's clock when it answered, for the countdowns.
+  serverNow: DateTime

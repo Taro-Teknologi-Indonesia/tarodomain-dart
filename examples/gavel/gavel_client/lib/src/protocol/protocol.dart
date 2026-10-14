@@ -28,6 +28,8 @@ import 'live_update_kind.dart' as _i6d34ixx;
 import 'lot_as_of.dart' as _i7b5dmd2;
 import 'lot_card.dart' as _i7jzpqum;
 import 'lot_detail.dart' as _ivoeyyyp;
+import 'my_auction.dart' as _itazwe3y;
+import 'my_auctions.dart' as _i95tnm7b;
 import 'new_lot.dart' as _i7vyupo4;
 export 'auction_view.dart';
 export 'board_snapshot.dart';
@@ -39,6 +41,8 @@ export 'live_update_kind.dart';
 export 'lot_as_of.dart';
 export 'lot_card.dart';
 export 'lot_detail.dart';
+export 'my_auction.dart';
+export 'my_auctions.dart';
 export 'new_lot.dart';
 export 'client.dart';
 
@@ -103,6 +107,12 @@ class Protocol extends _isc.SerializationManager {
     if (t == _ivoeyyyp.LotDetail) {
       return _ivoeyyyp.LotDetail.fromJson(data) as T;
     }
+    if (t == _itazwe3y.MyAuction) {
+      return _itazwe3y.MyAuction.fromJson(data) as T;
+    }
+    if (t == _i95tnm7b.MyAuctions) {
+      return _i95tnm7b.MyAuctions.fromJson(data) as T;
+    }
     if (t == _i7vyupo4.NewLot) {
       return _i7vyupo4.NewLot.fromJson(data) as T;
     }
@@ -139,6 +149,12 @@ class Protocol extends _isc.SerializationManager {
     if (t == _isc.getType<_ivoeyyyp.LotDetail?>()) {
       return (data != null ? _ivoeyyyp.LotDetail.fromJson(data) : null) as T;
     }
+    if (t == _isc.getType<_itazwe3y.MyAuction?>()) {
+      return (data != null ? _itazwe3y.MyAuction.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i95tnm7b.MyAuctions?>()) {
+      return (data != null ? _i95tnm7b.MyAuctions.fromJson(data) : null) as T;
+    }
     if (t == _isc.getType<_i7vyupo4.NewLot?>()) {
       return (data != null ? _i7vyupo4.NewLot.fromJson(data) : null) as T;
     }
@@ -154,6 +170,12 @@ class Protocol extends _isc.SerializationManager {
     if (t == List<_ivha9tke.LedgerEntry>) {
       return (data as List)
               .map((e) => deserialize<_ivha9tke.LedgerEntry>(e))
+              .toList()
+          as T;
+    }
+    if (t == List<_itazwe3y.MyAuction>) {
+      return (data as List)
+              .map((e) => deserialize<_itazwe3y.MyAuction>(e))
               .toList()
           as T;
     }
@@ -187,6 +209,8 @@ class Protocol extends _isc.SerializationManager {
       _i7b5dmd2.LotAsOf => 'LotAsOf',
       _i7jzpqum.LotCard => 'LotCard',
       _ivoeyyyp.LotDetail => 'LotDetail',
+      _itazwe3y.MyAuction => 'MyAuction',
+      _i95tnm7b.MyAuctions => 'MyAuctions',
       _i7vyupo4.NewLot => 'NewLot',
       _ => null,
     };
@@ -222,6 +246,10 @@ class Protocol extends _isc.SerializationManager {
         return 'LotCard';
       case _ivoeyyyp.LotDetail():
         return 'LotDetail';
+      case _itazwe3y.MyAuction():
+        return 'MyAuction';
+      case _i95tnm7b.MyAuctions():
+        return 'MyAuctions';
       case _i7vyupo4.NewLot():
         return 'NewLot';
     }
@@ -281,6 +309,12 @@ class Protocol extends _isc.SerializationManager {
     }
     if (dataClassName == 'LotDetail') {
       return deserialize<_ivoeyyyp.LotDetail>(data['data']);
+    }
+    if (dataClassName == 'MyAuction') {
+      return deserialize<_itazwe3y.MyAuction>(data['data']);
+    }
+    if (dataClassName == 'MyAuctions') {
+      return deserialize<_i95tnm7b.MyAuctions>(data['data']);
     }
     if (dataClassName == 'NewLot') {
       return deserialize<_i7vyupo4.NewLot>(data['data']);

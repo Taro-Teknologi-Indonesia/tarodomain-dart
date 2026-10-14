@@ -12,6 +12,16 @@ void main() {
     });
   });
 
+  group('/mine', () {
+    test('signed out goes to sign in, remembering /mine', () {
+      expect(requireSignIn(false, Uri.parse('/mine')), '/sign-in?from=%2Fmine');
+    });
+
+    test('signed in comes back to /mine after signing in', () {
+      expect(leaveSignIn(true, Uri.parse('/sign-in?from=%2Fmine')), '/mine');
+    });
+  });
+
   group('/sign-in', () {
     test('signed in goes on to where the organizer was going', () {
       expect(leaveSignIn(true, Uri.parse('/sign-in?from=%2Fnew')), '/new');
