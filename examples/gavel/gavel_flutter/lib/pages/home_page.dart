@@ -228,6 +228,13 @@ class _Hero extends StatelessWidget {
                             ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  TextButton(
+                                    onPressed: client.auth.signOutDevice,
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Sign out'),
+                                  ),
                                   // Their auctions, from any browser
                                   // (UC-15).
                                   TextButton(
@@ -236,13 +243,6 @@ class _Hero extends StatelessWidget {
                                       foregroundColor: Colors.white,
                                     ),
                                     child: const Text('My auctions'),
-                                  ),
-                                  TextButton(
-                                    onPressed: client.auth.signOutDevice,
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Sign out'),
                                   ),
                                 ],
                               )
