@@ -146,11 +146,6 @@ class _LotCardWidgetState extends State<LotCardWidget>
                 style: title,
               ),
             ),
-            // On the board and the big screen it sits on the picture instead.
-            if (widget.size == LotCardSize.dense) ...[
-              const SizedBox(width: 8),
-              StatusBadge(lot.status),
-            ],
             if (lot.unpaid) ...[const SizedBox(width: 4), const UnpaidTag()],
           ],
         ),
@@ -218,16 +213,11 @@ class _LotCardWidgetState extends State<LotCardWidget>
                         ),
                       ),
                     ),
-                  if (widget.size != LotCardSize.dense)
-                    Positioned(
-                      left: padding * 0.75,
-                      top: padding * 0.75,
-                      child: StatusBadge(
-                        lot.status,
-                        large: _large,
-                        solid: true,
-                      ),
-                    ),
+                  Positioned(
+                    left: padding * 0.75,
+                    top: padding * 0.75,
+                    child: StatusBadge(lot.status, large: _large, solid: true),
+                  ),
                   if ((widget.closeAt, widget.offset) case (
                     final closeAt?,
                     final offset?,
@@ -249,13 +239,8 @@ class _LotCardWidgetState extends State<LotCardWidget>
                   if (accent != null)
                     Positioned(
                       left: padding * 0.75,
-                      // Under the status badge, where there is one.
-                      top: widget.size == LotCardSize.dense
-                          ? padding * 0.75
-                          : null,
-                      bottom: widget.size == LotCardSize.dense
-                          ? null
-                          : padding * 0.75,
+                      // Under the status badge.
+                      bottom: padding * 0.75,
                       child: _Overlay(
                         large: _large,
                         color: accent,
