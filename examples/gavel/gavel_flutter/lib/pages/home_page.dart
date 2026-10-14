@@ -220,40 +220,38 @@ class _Hero extends StatelessWidget {
                     children: [
                       const GavelLogo(),
                       const Spacer(),
-                      // Only a signed-in organizer has anything to sign
-                      // out of (X6). From here no redirect follows.
+                      // Only a signed-in organizer has auctions to list
+                      // (UC-15) or anything to sign out of (X6). From here
+                      // no redirect follows.
                       ValueListenableBuilder(
                         valueListenable: session,
-                        builder: (context, signedIn, _) => signedIn != null
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TextButton(
-                                    onPressed: client.auth.signOutDevice,
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Sign out'),
-                                  ),
-                                  // Their auctions, from any browser
-                                  // (UC-15).
-                                  TextButton(
-                                    onPressed: () => context.go('/mine'),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('My auctions'),
-                                  ),
-                                ],
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                      TextButton(
-                        onPressed: onCreate,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('For sellers'),
+                        builder: (context, signedIn, _) {
+                          final white = TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                          );
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (signedIn != null)
+                                TextButton(
+                                  onPressed: () => context.go('/mine'),
+                                  style: white,
+                                  child: const Text('My auctions'),
+                                ),
+                              TextButton(
+                                onPressed: onCreate,
+                                style: white,
+                                child: const Text('For sellers'),
+                              ),
+                              if (signedIn != null)
+                                TextButton(
+                                  onPressed: client.auth.signOutDevice,
+                                  style: white,
+                                  child: const Text('Sign out'),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
