@@ -365,7 +365,7 @@ class _ExampleLotState extends State<_ExampleLot> {
     ('Sari', 25000),
     ('Dewi', 50000),
   ];
-  static const _open = 250000;
+  static const _open = 150000;
 
   late final Timer _timer;
   var _step = 0;
@@ -446,6 +446,19 @@ class _ExampleLotState extends State<_ExampleLot> {
                       ),
                       child: Center(child: _Cabochon()),
                     ),
+                    // The demo's turquoise, served beside the app; the drawn
+                    // stone shows while it loads, or if it doesn't.
+                    Image.network(
+                      'lots/pirus-hubei.jpg',
+                      fit: BoxFit.cover,
+                      frameBuilder: (_, child, frame, synchronous) =>
+                          AnimatedOpacity(
+                            opacity: synchronous || frame != null ? 1 : 0,
+                            duration: const Duration(milliseconds: 300),
+                            child: child,
+                          ),
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
                     Positioned(
                       left: 12,
                       top: 12,
@@ -479,7 +492,7 @@ class _ExampleLotState extends State<_ExampleLot> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Bacan Doko Kristal',
+                      'Natural Pirus Hubei',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -596,7 +609,8 @@ class _ExampleLotState extends State<_ExampleLot> {
   }
 }
 
-/// A polished green stone, drawn so it never depends on an emoji font.
+/// A polished green stone, drawn so it never depends on an emoji font: the
+/// example lot's visual until its photo loads.
 class _Cabochon extends StatelessWidget {
   const _Cabochon();
 

@@ -3,8 +3,10 @@ import '../generated/protocol.dart';
 /// The default kelipatan ladder, in rupiah, as the lot form offers it.
 const _ladder = [25000, 50000, 100000, 150000, 200000, 300000];
 
-/// The lots of every demo auction (X2): three stones as a seller would post
-/// them, with emoji tiles rather than photos, so no link can break.
+/// The lots of every demo auction (X2): four rings as a seller would post
+/// them. Each [NewLot.imageUrl] is a path on the web server, the photos in
+/// `gavel_flutter/web/lots`, made absolute when the demo is seeded; the
+/// emoji tile shows where it isn't served.
 final demoLots = [
   NewLot(
     name: 'Natural Pirus Hubei',
@@ -14,53 +16,72 @@ final demoLots = [
     description: '''
 -----# LELANG #-----
 Natural Pirus Hubei, cabochon oval
-Ukuran: 18 x 13 mm
-Berat: 12,4 ct
-Warna biru langit, matrix tipis
+Ikat perak motif ukir
+Warna biru toska, matrix spiderweb hitam
+Kondisi mulus, siap pakai
 OB: 150rb
 KL: 25rb s/d 300rb
 Pemenang transfer max 1x24 jam
 -----# LELANG #-----''',
-    imageUrl: null,
+    imageUrl: 'lots/pirus-hubei.jpg',
     tileEmoji: '🔵',
-    tileColor: '#1E5AA8',
+    tileColor: '#2A8C82',
   ),
   NewLot(
-    name: 'Bacan Doko Kristal',
-    openBid: 250000,
+    name: 'Blue Star Sapphire',
+    openBid: 500000,
     increments: _ladder,
     buyNowPrice: null,
     description: '''
 -----# LELANG #-----
-Bacan Doko asli Halmahera, sudah kristal
-Ukuran: 14 x 11 mm
-Berat: 7,8 ct
-Hijau tua, tembus senter
-OB: 250rb
+Natural Blue Star Sapphire, cabochon oval
+Ikat perak, kuku empat
+Biru royal, bintang enam kaki tajam
+Bintang jalan dengan senter
+OB: 500rb
 KL: 25rb s/d 300rb
 Pemenang transfer max 1x24 jam
 -----# LELANG #-----''',
-    imageUrl: null,
-    tileEmoji: '🟢',
-    tileColor: '#2E7D6B',
+    imageUrl: 'lots/blue-star-sapphire.jpg',
+    tileEmoji: '⭐',
+    tileColor: '#1E3F9A',
   ),
   NewLot(
-    name: 'Kecubung Ungu Kalimantan',
+    name: 'Ruby Star',
+    openBid: 300000,
+    increments: _ladder,
+    buyNowPrice: null,
+    description: '''
+-----# LELANG #-----
+Natural Ruby Star, cabochon oval
+Ikat perak, kuku empat
+Merah keunguan, kilau sutra
+Natural apa adanya, ada guratan alami
+OB: 300rb
+KL: 25rb s/d 300rb
+Pemenang transfer max 1x24 jam
+-----# LELANG #-----''',
+    imageUrl: 'lots/star-ruby.jpg',
+    tileEmoji: '🔴',
+    tileColor: '#7A1E4A',
+  ),
+  NewLot(
+    name: 'Rhodonite Jumbo',
     openBid: 100000,
     increments: _ladder,
     buyNowPrice: null,
     description: '''
 -----# LELANG #-----
-Kecubung Ungu Kalimantan, potong faset
-Ukuran: 16 x 12 mm
-Berat: 9,1 ct
-Ungu rata, bersih tanpa retak
+Natural Rhodonite, cabochon oval jumbo
+Ikat kuningan
+Pink salem, urat putih alami
+Kondisi mulus, siap pakai
 OB: 100rb
 KL: 25rb s/d 300rb
 Pemenang transfer max 1x24 jam
 -----# LELANG #-----''',
-    imageUrl: null,
-    tileEmoji: '🔮',
-    tileColor: '#6B4FA0',
+    imageUrl: 'lots/rhodonite.jpg',
+    tileEmoji: '🌸',
+    tileColor: '#C25B6E',
   ),
 ];

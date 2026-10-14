@@ -60,6 +60,7 @@ Future<String> ensureDemoOpen(Session session, {DateTime? now}) async {
     now: at,
   );
   final auctionId = AuctionId.fromExisting(created.auctionId.uuid);
+  final photos = _webServerUrl(session);
   for (final lot in demoLots) {
     await TaroDomainServerpod.instance.dispatch(
       session,
@@ -72,7 +73,10 @@ Future<String> ensureDemoOpen(Session session, {DateTime? now}) async {
         increments: lot.increments,
         buyNowPrice: lot.buyNowPrice,
         description: lot.description,
-        imageUrl: lot.imageUrl,
+        imageUrl: switch ((photos, lot.imageUrl)) {
+          (final base?, final path?) => base.resolve(path).toString(),
+          _ => null,
+        },
         tileEmoji: lot.tileEmoji,
         tileColor: lot.tileColor,
         timestamp: at,
@@ -80,6 +84,19 @@ Future<String> ensureDemoOpen(Session session, {DateTime? now}) async {
     );
   }
   return created.code;
+}
+
+/// The public URL of the web server that serves the demo lots' photos, or
+/// null where there is none, as in tests: the lots then show their tiles.
+Uri? _webServerUrl(Session session) {
+  final web = session.serverpod.config.webServer;
+  if (web == null) return null;
+  return Uri(
+    scheme: web.publicScheme,
+    host: web.publicHost,
+    port: web.publicPort,
+    path: '/',
+  );
 }
 
 /// The code of the newest open demo auction, opening one first if there is

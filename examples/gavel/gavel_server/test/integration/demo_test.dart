@@ -84,7 +84,7 @@ void main() {
             .loadStream('Auction-${demo.auctionId.uuid}');
         expect(
           [for (final e in stream) e.eventName],
-          ['AuctionCreated', 'LotRegistered', 'LotRegistered', 'LotRegistered'],
+          ['AuctionCreated', for (final _ in demoLots) 'LotRegistered'],
         );
         expect(await endpoints.auction.currentDemo(sessionBuilder), first);
       });
