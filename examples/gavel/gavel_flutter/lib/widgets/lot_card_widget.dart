@@ -1,8 +1,10 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gavel_client/gavel_client.dart';
 
+import '../core/clock.dart';
 import '../core/money.dart';
 import '../core/names.dart';
 import '../theme.dart';
@@ -25,11 +27,20 @@ class LotCardWidget extends StatefulWidget {
     this.me,
     this.sharedNames = const {},
     this.size = LotCardSize.regular,
+    this.closeAt,
+    this.offset,
     this.onTap,
     super.key,
   });
 
   final LotCard lot;
+
+  /// When the auction closes, in UTC: the board's card counts down to it
+  /// while the lot is open.
+  final DateTime? closeAt;
+
+  /// Server clock minus local clock, for the countdown.
+  final ValueListenable<Duration>? offset;
 
   /// The participant this browser bids as, whose lead is highlighted.
   final UuidValue? me;
@@ -59,6 +70,9 @@ class _LotCardWidgetState extends State<LotCardWidget>
 
   bool get _large => widget.size == LotCardSize.large;
 
+  /// The board's card, styled like the example lot on the home page.
+  bool get _regular => widget.size == LotCardSize.regular;
+
   @override
   void didUpdateWidget(LotCardWidget old) {
     super.didUpdateWidget(old);
@@ -87,8 +101,16 @@ class _LotCardWidgetState extends State<LotCardWidget>
         12.0,
       ),
       LotCardSize.regular => (
-        text.titleMedium,
-        text.headlineMedium,
+        text.titleMedium?.copyWith(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: Brand.ink,
+        ),
+        text.headlineMedium?.copyWith(
+          fontSize: 34,
+          letterSpacing: -0.5,
+          color: Brand.ink,
+        ),
         text.bodyMedium,
         16.0,
       ),
@@ -124,12 +146,15 @@ class _LotCardWidgetState extends State<LotCardWidget>
                 style: title,
               ),
             ),
-            // On the big screen it sits on the picture instead.
-            if (!_large) ...[const SizedBox(width: 8), StatusBadge(lot.status)],
+            // On the board and the big screen it sits on the picture instead.
+            if (widget.size == LotCardSize.dense) ...[
+              const SizedBox(width: 8),
+              StatusBadge(lot.status),
+            ],
             if (lot.unpaid) ...[const SizedBox(width: 4), const UnpaidTag()],
           ],
         ),
-        SizedBox(height: _large ? 12 : 8),
+        SizedBox(height: _large || _regular ? 12 : 8),
         if (_large && lot.status != 'OPEN')
           _Hammered(lot: lot, sharedNames: widget.sharedNames, style: title)
         else ...[
@@ -155,11 +180,15 @@ class _LotCardWidgetState extends State<LotCardWidget>
         ],
       ],
     );
-    final cardShape = theme.cardTheme.shape as RoundedRectangleBorder?;
-    return Card(
+    final themeShape = theme.cardTheme.shape as RoundedRectangleBorder?;
+    final cardShape = _regular
+        ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
+        : themeShape;
+    final card = Card(
       clipBehavior: Clip.antiAlias,
+      color: _regular ? Colors.white : null,
       shape: accent == null
-          ? null
+          ? cardShape
           : cardShape?.copyWith(side: BorderSide(color: accent, width: 2)),
       child: InkWell(
         onTap: widget.onTap,
@@ -169,7 +198,7 @@ class _LotCardWidgetState extends State<LotCardWidget>
           children: [
             AspectRatio(
               // A wider visual leaves the price room on a projector.
-              aspectRatio: _large ? 16 / 9 : 4 / 3,
+              aspectRatio: widget.size == LotCardSize.dense ? 4 / 3 : 16 / 9,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -178,7 +207,7 @@ class _LotCardWidgetState extends State<LotCardWidget>
                     emoji: lot.tileEmoji,
                     color: lot.tileColor,
                   ),
-                  if (widget.size != LotCardSize.dense && lot.bidCount > 0)
+                  if (_regular || (_large && lot.bidCount > 0))
                     Positioned(
                       right: padding * 0.75,
                       top: padding * 0.75,
@@ -189,16 +218,44 @@ class _LotCardWidgetState extends State<LotCardWidget>
                         ),
                       ),
                     ),
-                  if (_large)
+                  if (widget.size != LotCardSize.dense)
                     Positioned(
                       left: padding * 0.75,
                       top: padding * 0.75,
-                      child: StatusBadge(lot.status, large: true),
+                      child: StatusBadge(
+                        lot.status,
+                        large: _large,
+                        solid: true,
+                      ),
+                    ),
+                  if ((widget.closeAt, widget.offset) case (
+                    final closeAt?,
+                    final offset?,
+                  ) when _regular && lot.status == 'OPEN')
+                    Positioned(
+                      right: padding * 0.75,
+                      bottom: padding * 0.75,
+                      child: _Overlay(
+                        large: false,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('⏱ '),
+                            CountdownText(closeAt: closeAt, offset: offset),
+                          ],
+                        ),
+                      ),
                     ),
                   if (accent != null)
                     Positioned(
                       left: padding * 0.75,
-                      top: padding * 0.75,
+                      // Under the status badge, where there is one.
+                      top: widget.size == LotCardSize.dense
+                          ? padding * 0.75
+                          : null,
+                      bottom: widget.size == LotCardSize.dense
+                          ? null
+                          : padding * 0.75,
                       child: _Overlay(
                         large: _large,
                         color: accent,
@@ -223,13 +280,35 @@ class _LotCardWidgetState extends State<LotCardWidget>
                 child: child,
               ),
               child: Padding(
-                padding: EdgeInsets.all(padding),
+                padding: _regular
+                    ? const EdgeInsets.fromLTRB(20, 16, 20, 20)
+                    : EdgeInsets.all(padding),
                 child: _large ? _flip(details) : details,
               ),
             ),
           ],
         ),
       ),
+    );
+    if (!_regular) return card;
+    // Lifted off the page, like the example lot.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: Brand.gold.withValues(alpha: 0.12),
+            blurRadius: 40,
+            spreadRadius: -10,
+          ),
+        ],
+      ),
+      child: card,
     );
   }
 
@@ -339,10 +418,10 @@ class _Overlay extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: EdgeInsets.symmetric(
       horizontal: large ? 16 : 10,
-      vertical: large ? 8 : 4,
+      vertical: large ? 8 : 5,
     ),
     decoration: BoxDecoration(
-      color: color ?? Colors.black.withValues(alpha: 0.6),
+      color: color ?? Colors.black.withValues(alpha: 0.55),
       borderRadius: BorderRadius.circular(999),
     ),
     child: DefaultTextStyle.merge(
@@ -350,7 +429,7 @@ class _Overlay extends StatelessWidget {
         color: foreground,
         fontSize: large ? 22 : 12,
         fontWeight: FontWeight.w800,
-        letterSpacing: 0.3,
+        letterSpacing: 0.4,
         fontFeatures: Brand.tabular,
       ),
       child: child,
@@ -518,25 +597,35 @@ class _Hammered extends StatelessWidget {
 
 /// An open lot as a red LIVE pill, SOLD in gold, PASSED in grey.
 class StatusBadge extends StatelessWidget {
-  const StatusBadge(this.status, {this.large = false, super.key});
+  const StatusBadge(
+    this.status, {
+    this.large = false,
+    this.solid = false,
+    super.key,
+  });
 
   final String status;
 
   /// Sized for the back of the room.
   final bool large;
 
+  /// Filled in, to stand out on a lot's picture.
+  final bool solid;
+
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = switch (status) {
-      // Solid on the big screen, where it sits on the picture.
-      'OPEN' when large => (Brand.live, Colors.white),
+      // Solid where it sits on the picture.
+      'OPEN' when solid => (Brand.live, Colors.white),
       'OPEN' => (Brand.live.withValues(alpha: 0.1), Brand.live),
       'SOLD' => (Brand.gold, Brand.ink),
       _ => (Colors.grey.shade200, Colors.grey.shade700),
     };
     final scale = large ? 2.0 : 1.0;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 3 * scale),
+      padding: solid && !large
+          ? const EdgeInsets.symmetric(horizontal: 10, vertical: 5)
+          : EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 3 * scale),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
@@ -561,7 +650,7 @@ class StatusBadge extends StatelessWidget {
               color: foreground,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8,
-              fontSize: 11 * scale,
+              fontSize: solid && !large ? 12 : 11 * scale,
             ),
           ),
         ],
@@ -580,6 +669,8 @@ class LotGrid extends StatelessWidget {
     this.sharedNames = const {},
     this.size = LotCardSize.regular,
     this.columns,
+    this.closeAt,
+    this.offset,
     this.onTap,
     super.key,
   });
@@ -595,6 +686,13 @@ class LotGrid extends StatelessWidget {
   final Set<String> sharedNames;
 
   final LotCardSize size;
+
+  /// When the auction closes, in UTC, for the board's countdowns.
+  final DateTime? closeAt;
+
+  /// Server clock minus local clock, for the countdowns.
+  final ValueListenable<Duration>? offset;
+
   final void Function(LotCard lot)? onTap;
 
   Widget _card(LotCard lot) => LotCardWidget(
@@ -604,6 +702,8 @@ class LotGrid extends StatelessWidget {
     me: me,
     sharedNames: sharedNames,
     size: size,
+    closeAt: closeAt,
+    offset: offset,
     onTap: onTap == null ? null : () => onTap!(lot),
   );
 

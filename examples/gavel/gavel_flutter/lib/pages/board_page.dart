@@ -193,6 +193,8 @@ class _BoardPageState extends State<BoardPage> {
                   lots: _auction.lots,
                   me: _identity?.participantId,
                   sharedNames: _auction.sharedNames,
+                  closeAt: auction.closeAt,
+                  offset: _auction.clockOffset,
                   onTap: (lot) =>
                       context.go('/a/${widget.code}/lot/${lot.lotId}'),
                   empty: 'No lots yet — the organizer is setting up.',

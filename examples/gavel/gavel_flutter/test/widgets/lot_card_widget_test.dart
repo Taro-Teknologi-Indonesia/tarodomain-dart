@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gavel_client/gavel_client.dart';
+import 'package:gavel_flutter/core/clock.dart';
 import 'package:gavel_flutter/widgets/lot_card_widget.dart';
 import 'package:gavel_flutter/widgets/lot_visual.dart';
 
@@ -83,6 +84,27 @@ void main() {
 
     expect(_texts(tester), contains('You lead'));
     expect(find.text('Budi leads'), findsNothing);
+  });
+
+  testWidgets('counts down to the close while the lot is open', (tester) async {
+    Widget card(LotCard lot) => MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          width: 360,
+          child: LotCardWidget(
+            lot,
+            closeAt: DateTime.now().toUtc().add(const Duration(minutes: 14)),
+            offset: ValueNotifier(Duration.zero),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(card(lotCard()));
+    expect(find.textContaining(RegExp(r'^1[34] m \d\d s$')), findsOneWidget);
+
+    await tester.pumpWidget(card(lotCard(version: 2, status: 'PASSED')));
+    expect(find.byType(CountdownText), findsNothing);
   });
 
   testWidgets('shows a sold lot with its winner', (tester) async {
